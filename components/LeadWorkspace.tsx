@@ -1,13 +1,13 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import Badge from './Badge';
 import {
   Customer, NoteVersion, CallRecord, Policy, Commission, Carrier, CarrierRule, LeadVendor
 } from '@/lib/types';
-import { fmtMoney, fmtMoney0, leadAgeLabel, localTimeForState, agentLocalTime, statusBadge, maskSSN, maskAccount, isValidRoutingNumber } from '@/lib/util';
+import { fmtMoney, fmtMoney0, leadAgeLabel, localTimeForState, agentLocalTime, statusBadge, isValidRoutingNumber, callsToday, MAX_CALLS_PER_DAY, isWithinCallingHours } from '@/lib/util';
 import { suggestCarriers } from '@/lib/underwriting';
 import RoutingLookup from './RoutingLookup';
 import SellModal from './SellModal';
@@ -16,62 +16,111 @@ type AnyRow = Record<string, any>;
 
 const NOTE_FIELDS: { key: keyof NoteVersion; label: string; type?: 'text' | 'textarea' | 'date' }[] = [
   { key: 'name', label: 'NAME' },
-  { key: 'note_date', label: 'DATE', type: 'date' },
+  { key: 'note_date', label: 'DOB', type: 'date' },
   { key: 'phone', label: 'PHONE #' },
   { key: 'beneficiary', label: 'BENI' },
+  { key: 'beneficiary_dob', label: 'BENI DOB', type: 'date' },
   { key: 'budget', label: 'BUDGET' },
   { key: 'health', label: 'HEALTH', type: 'textarea' },
   { key: 'discount', label: 'DISCOUNT (Non-Smoker)' },
   { key: 'mailing_address', label: 'MAILING ADDRESS' },
   { key: 'email', label: 'EMAIL' },
   { key: 'born_in', label: 'BORN IN' },
-  { key: 'plan_bronze', label: 'BRONZE' },
-  { key: 'plan_silver', label: 'SILVER' },
-  { key: 'plan_gold', label: 'GOLD' },
   { key: 'draft_date', label: 'DRAFT DATE' },
   { key: 'code_word', label: 'CODE WORD' }
+];
+
+const PLAN_TIERS: { tier: string; coverageKey: keyof NoteVersion; priceKey: keyof NoteVersion }[] = [
+  { tier: 'BRONZE', coverageKey: 'plan_bronze_coverage', priceKey: 'plan_bronze_price' },
+  { tier: 'SILVER', coverageKey: 'plan_silver_coverage', priceKey: 'plan_silver_price' },
+  { tier: 'GOLD', coverageKey: 'plan_gold_coverage', priceKey: 'plan_gold_price' }
 ];
 
 function emptyNoteForm(customer: Customer): AnyRow {
   return {
     label: 'Call Note',
     name: `${customer.first_name} ${customer.last_name}`,
-    note_date: new Date().toISOString().slice(0, 10),
+    note_date: customer.dob ? customer.dob.slice(0, 10) : '',
     phone: customer.phone || '',
-    beneficiary: '', budget: '', health: '', discount: '',
+    beneficiary: '', beneficiary_dob: '', budget: '', health: '', discount: '',
     bank_name: '', bank_state: customer.state || '', routing_number: '', account_number: '',
     mailing_address: '', email: customer.email || '', born_in: '', ssn: '',
-    plan_bronze: '', plan_silver: '', plan_gold: '', draft_date: '', code_word: '', free_text: ''
+    plan_bronze_coverage: '', plan_bronze_price: '', plan_silver_coverage: '', plan_silver_price: '',
+    plan_gold_coverage: '', plan_gold_price: '', draft_date: '', code_word: '', free_text: ''
   };
 }
 
+const NOTE_FORM_KEYS = [
+  'label', 'name', 'note_date', 'phone', 'beneficiary', 'beneficiary_dob', 'budget', 'health', 'discount',
+  'bank_name', 'bank_state', 'routing_number', 'account_number', 'mailing_address', 'email',
+  'born_in', 'ssn', 'plan_bronze_coverage', 'plan_bronze_price', 'plan_silver_coverage', 'plan_silver_price',
+  'plan_gold_coverage', 'plan_gold_price', 'draft_date', 'code_word', 'free_text'
+] as const;
+
+function noteFormFromNote(note: NoteVersion | undefined, customer: Customer): AnyRow {
+  if (!note) return emptyNoteForm(customer);
+  const form: AnyRow = {};
+  for (const key of NOTE_FORM_KEYS) form[key] = (note as AnyRow)[key] ?? '';
+  return form;
+}
+
 export default function LeadWorkspace({
-  customer, notes, calls, quotes, appointments, applications, policies, commissions, payments, audit, vendors, carriers, rules
+  customer, notes, calls, quotes, appointments, applications, policies, commissions, payments, vendors, carriers, rules, quoteToken
 }: {
   customer: Customer; notes: NoteVersion[]; calls: CallRecord[]; quotes: AnyRow[]; appointments: AnyRow[];
-  applications: AnyRow[]; policies: Policy[]; commissions: Commission[]; payments: AnyRow[]; audit: AnyRow[];
-  vendors: LeadVendor[]; carriers: Carrier[]; rules: CarrierRule[];
+  applications: AnyRow[]; policies: Policy[]; commissions: Commission[]; payments: AnyRow[];
+  vendors: LeadVendor[]; carriers: Carrier[]; rules: CarrierRule[]; quoteToken: string;
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const queue = (searchParams.get('queue') || '').split(',').filter(Boolean);
+  // Leads that went to 2 unanswered dials during pass 1 get held here instead
+  // of dropped — once the primary queue is exhausted they get one more pass
+  // (pass=2) rather than vanishing from Power Dial for the rest of the day.
+  const recycleQueue = (searchParams.get('recycle') || '').split(',').filter(Boolean);
+  const dialPass = searchParams.get('pass') || '1';
   const isDialing = searchParams.get('dialing') === '1';
+  const withinCallingHours = isWithinCallingHours(customer.state);
   const [busy, setBusy] = useState(false);
   const [quoBusy, setQuoBusy] = useState(false);
-  const [noteForm, setNoteForm] = useState<AnyRow>(() => emptyNoteForm(customer));
+  const [noteForm, setNoteForm] = useState<AnyRow>(() => noteFormFromNote(notes[0], customer));
+  const [editingNote, setEditingNote] = useState(() => !notes[0]);
   const [showSell, setShowSell] = useState(false);
   const [showQuote, setShowQuote] = useState(false);
   const [showAppt, setShowAppt] = useState(false);
-  const [showSensitive, setShowSensitive] = useState(false);
-  const [activeTab, setActiveTab] = useState<'timeline' | 'calls' | 'notes' | 'policy'>('timeline');
+  const [activeTab, setActiveTab] = useState<'calls' | 'notes'>('calls');
+  // Power Dial is meant to be fast — agents found the full three-panel
+  // workspace too busy while just dialing through a queue, so those panels
+  // start collapsed behind toggle buttons there and get opened on demand.
+  // Browsing a lead outside Power Dial keeps the original always-open layout.
+  const [showInfoPanel, setShowInfoPanel] = useState(!isDialing);
+  const [showNotesPanel, setShowNotesPanel] = useState(!isDialing);
+  const [showStatusPanel, setShowStatusPanel] = useState(!isDialing);
 
   const badge = statusBadge(customer.status, customer.purchased_at);
-  const suggestions = useMemo(() => suggestCarriers(noteForm.health || '', carriers, rules), [noteForm.health, carriers, rules]);
+  // Health conditions are often disclosed across several calls/notes rather than
+  // all at once, so carrier suggestions need the full history, not just whatever
+  // is in the note currently being typed — otherwise an earlier "cancer" note and
+  // a later "smoker" note never get weighed against each other together.
+  const combinedHealthText = useMemo(
+    () => [...notes.map((n) => n.health), noteForm.health].filter(Boolean).join('. '),
+    [notes, noteForm.health]
+  );
+  const suggestions = useMemo(() => suggestCarriers(combinedHealthText, carriers, rules), [combinedHealthText, carriers, rules]);
   const top3 = suggestions.filter((s) => !s.knockout).slice(0, 3);
   const knockouts = suggestions.filter((s) => s.knockout);
 
   const attemptCount = calls.length;
+  const todayCount = callsToday(calls);
+  const dailyLimitReached = todayCount >= MAX_CALLS_PER_DAY;
   const lastNote = notes[0];
+  const [callError, setCallError] = useState('');
+  // Recovered from the server's own call history, not just live client state —
+  // otherwise a reload mid-call (crash, accidental refresh) would silently
+  // drop the "must disposition before moving on" lock and leave the pending
+  // dial orphaned forever.
+  const [pendingCallId, setPendingCallId] = useState<string | null>(() => calls.find((c) => c.outcome === 'pending')?.id || null);
+  const pendingDisposition = pendingCallId !== null;
 
   async function refresh() {
     router.refresh();
@@ -89,13 +138,121 @@ export default function LeadWorkspace({
     }
   }
 
-  async function logCall(outcome: string, disposition?: string) {
+  // Tapping Call logs the dial immediately (as 'pending') instead of waiting
+  // for an outcome — that's the actual attempt being made, and the agent
+  // picks what happened once the call is over via the outcome buttons below,
+  // which complete this same row instead of creating a second one.
+  async function startCall() {
+    setCallError('');
+    try {
+      const res = await fetch(`/api/leads/${customer.id}/calls`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ outcome: 'pending' })
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setCallError(data.error || 'Could not start that call.');
+        return;
+      }
+      setPendingCallId(data.id);
+      await refresh();
+    } catch {
+      setCallError('Could not start that call.');
+    }
+  }
+
+  async function cancelPendingCall() {
+    if (!pendingCallId) return;
     setBusy(true);
     try {
-      await fetch(`/api/leads/${customer.id}/calls`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
+      await fetch(`/api/leads/${customer.id}/calls/${pendingCallId}`, { method: 'DELETE' });
+      setPendingCallId(null);
+      await refresh();
+    } finally { setBusy(false); }
+  }
+
+  // Single place that knows how to move to the next lead in a Power Dial
+  // session: pull from the live queue first, and once that's empty fall back
+  // to the recycled (maxed-out) leads for one more pass before finally
+  // exiting to the leads list. Pass maxedOutId when this lead just hit its
+  // 2nd unanswered dial so it rejoins the queue instead of disappearing.
+  function advanceQueue(maxedOutId?: string) {
+    const updatedRecycle =
+      maxedOutId && dialPass !== '2' && !recycleQueue.includes(maxedOutId)
+        ? [...recycleQueue, maxedOutId]
+        : recycleQueue;
+
+    if (queue.length > 0) {
+      const [next, ...rest] = queue;
+      const params = new URLSearchParams({ dialing: '1' });
+      if (rest.length) params.set('queue', rest.join(','));
+      if (updatedRecycle.length) params.set('recycle', updatedRecycle.join(','));
+      if (dialPass === '2') params.set('pass', '2');
+      router.push(`/leads/${next}?${params.toString()}`);
+      return;
+    }
+
+    if (dialPass !== '2' && updatedRecycle.length > 0) {
+      const [next, ...rest] = updatedRecycle;
+      const params = new URLSearchParams({ dialing: '1', pass: '2' });
+      if (rest.length) params.set('queue', rest.join(','));
+      router.push(`/leads/${next}?${params.toString()}`);
+      return;
+    }
+
+    router.push('/leads');
+  }
+
+  async function logCall(outcome: string, disposition?: string) {
+    setBusy(true);
+    setCallError('');
+    try {
+      const url = pendingCallId
+        ? `/api/leads/${customer.id}/calls/${pendingCallId}`
+        : `/api/leads/${customer.id}/calls`;
+      const res = await fetch(url, {
+        method: pendingCallId ? 'PATCH' : 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ outcome, disposition, duration_seconds: outcome === 'connected' ? 60 : 0 })
       });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setCallError(data.error || 'Could not log that call.');
+        return;
+      }
+      setPendingCallId(null);
+      if (outcome === 'dnc' && confirm('Marked Do Not Call. Delete this lead entirely too?')) {
+        await fetch(`/api/leads/${customer.id}`, { method: 'DELETE' });
+        router.push('/leads');
+        return;
+      }
+      // A "Sold" disposition needs the full Sell modal (policy/commission
+      // details) before this lead is really done — open it and stay put
+      // instead of auto-advancing Power Dial out from under the agent.
+      if (outcome === 'connected' && disposition === 'sold') {
+        await refresh();
+        setShowSell(true);
+        return;
+      }
+      // Power Dial: once this lead's disposition is logged, move straight to
+      // the next one instead of making the agent click Skip / Next Lead too —
+      // relying on the just-cleared pendingCallId here rather than the
+      // (still-stale-until-re-render) pendingDisposition flag. No Answer and
+      // Voicemail are the exception, but only once: after the FIRST such
+      // outcome on this lead, stay put for an immediate redial; once a
+      // SECOND one lands (this lead has now gone unanswered twice), it's
+      // "maxed out" — move on now, but let advanceQueue hold onto it for a
+      // second pass once the rest of the queue is worked through.
+      const isRedialOutcome = outcome === 'no_answer' || outcome === 'voicemail';
+      const priorRedialAttempts = calls.filter(
+        (c) => c.id !== pendingCallId && (c.outcome === 'no_answer' || c.outcome === 'voicemail')
+      ).length;
+      const redialAttemptsSoFar = priorRedialAttempts + (isRedialOutcome ? 1 : 0);
+      const shouldRedial = isRedialOutcome && redialAttemptsSoFar < 2;
+      if (isDialing && !shouldRedial) {
+        const maxedOutId = isRedialOutcome && redialAttemptsSoFar >= 2 ? customer.id : undefined;
+        advanceQueue(maxedOutId);
+        return;
+      }
       await refresh();
     } finally { setBusy(false); }
   }
@@ -103,9 +260,16 @@ export default function LeadWorkspace({
   async function saveNote() {
     setBusy(true);
     try {
-      await fetch(`/api/leads/${customer.id}/notes`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(noteForm)
-      });
+      if (lastNote) {
+        await fetch(`/api/leads/${customer.id}/notes/${lastNote.id}`, {
+          method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(noteForm)
+        });
+      } else {
+        await fetch(`/api/leads/${customer.id}/notes`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(noteForm)
+        });
+      }
+      setEditingNote(false);
       await refresh();
     } finally { setBusy(false); }
   }
@@ -122,20 +286,43 @@ export default function LeadWorkspace({
   }
 
   function nextInQueue() {
-    if (queue.length === 0) { router.push('/leads'); return; }
-    const [next, ...rest] = queue;
-    const dest = `/leads/${next}?dialing=1${rest.length ? `&queue=${rest.join(',')}` : ''}`;
-    router.push(dest);
+    if (pendingDisposition) return;
+    advanceQueue();
+  }
+
+  // A lead can still land here outside its state's calling window — the
+  // window closed after /dial built the queue, or this is a recycled lead
+  // being retried later. Skip it immediately rather than let the agent dial
+  // someone it isn't legal/appropriate to call right now; it stays eligible
+  // for a future Power Dial run once its window reopens.
+  useEffect(() => {
+    if (isDialing && !withinCallingHours) {
+      advanceQueue();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [customer.id, isDialing, withinCallingHours]);
+
+  if (isDialing && !withinCallingHours) {
+    return (
+      <div className="card p-8 text-center text-sm text-slate-500">
+        ⏰ {customer.first_name} {customer.last_name} ({customer.state || 'unknown state'}) is outside calling hours right now — skipping…
+      </div>
+    );
   }
 
   return (
     <div className="space-y-4">
       {isDialing && (
         <div className="card flex items-center justify-between bg-brand-50 p-3 text-sm">
-          <span className="font-medium text-brand-700">📞 Dialing for the day — {queue.length} more lead{queue.length === 1 ? '' : 's'} in queue</span>
-          <div className="flex gap-2">
-            <Link href="/leads" className="btn-secondary text-xs">Exit Queue</Link>
-            <button className="btn-primary text-xs" onClick={nextInQueue}>Skip / Next Lead ▶</button>
+          <span className="font-medium text-brand-700">⚡ Power Dial — {queue.length} more lead{queue.length === 1 ? '' : 's'} in queue</span>
+          <div className="flex items-center gap-2">
+            {pendingDisposition && <span className="text-xs text-amber-700">Log this call&apos;s outcome before moving on</span>}
+            {pendingDisposition ? (
+              <button className="btn-secondary text-xs" disabled title="Log this call's outcome first">Exit Queue</button>
+            ) : (
+              <Link href="/leads" className="btn-secondary text-xs">Exit Queue</Link>
+            )}
+            <button className="btn-primary text-xs" disabled={pendingDisposition} onClick={nextInQueue}>Skip This Lead ▶</button>
           </div>
         </div>
       )}
@@ -155,11 +342,33 @@ export default function LeadWorkspace({
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
-          {customer.phone && (
-            <a href={`tel:${customer.phone.replace(/[^\d+]/g, '')}`} className="btn-good" onClick={() => logCall('connected')}>
-              📞 Call {customer.phone}
-            </a>
-          )}
+          <div className="relative">
+            {customer.phone && (
+              <a href={`tel:${customer.phone.replace(/[^\d+]/g, '')}`} className="btn-good" onClick={startCall}>
+                📞 Call {customer.phone}
+              </a>
+            )}
+            {pendingCallId && (
+              <div className="absolute left-0 top-full z-30 mt-2 w-72 rounded-xl border border-line bg-panel p-3 shadow-2xl">
+                <div className="mb-2 text-xs font-semibold text-brand-400">📞 In progress — what happened?</div>
+                {callError && <div className="mb-2 rounded bg-red-50 p-2 text-xs text-red-700">{callError}</div>}
+                <div className="grid grid-cols-2 gap-1.5">
+                  <button disabled={busy} onClick={() => logCall('no_answer')} className="btn-secondary text-xs px-2 py-1.5">No Answer</button>
+                  <button disabled={busy} onClick={() => logCall('voicemail')} className="btn-secondary text-xs px-2 py-1.5">Voicemail</button>
+                  <button disabled={busy} onClick={() => logCall('google_voice')} className="btn-secondary text-xs px-2 py-1.5">Google Voice</button>
+                  <button disabled={busy} onClick={() => logCall('busy')} className="btn-secondary text-xs px-2 py-1.5">Busy</button>
+                  <button disabled={busy} onClick={() => logCall('wrong_number')} className="btn-secondary text-xs px-2 py-1.5">Wrong #</button>
+                  <button disabled={busy} onClick={() => logCall('connected', 'interested')} className="btn-good text-xs px-2 py-1.5">Connected</button>
+                  <button disabled={busy} onClick={() => logCall('connected', 'sold')} className="btn-good text-xs px-2 py-1.5">💰 Sold</button>
+                  <button disabled={busy} onClick={() => logCall('connected', 'not_interested')} className="btn-secondary text-xs px-2 py-1.5">Not Interested</button>
+                  <button disabled={busy} onClick={() => logCall('dnc')} className="btn-danger text-xs px-2 py-1.5">DNC</button>
+                </div>
+                <button className="mt-2 w-full text-center text-xs text-slate-400 hover:text-ink" disabled={busy} onClick={cancelPendingCall}>
+                  ↩️ Didn&apos;t mean to dial
+                </button>
+              </div>
+            )}
+          </div>
           <button
             className="btn-danger"
             disabled={quoBusy}
@@ -178,8 +387,23 @@ export default function LeadWorkspace({
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[340px_1fr_320px]">
+      {isDialing && (
+        <div className="flex flex-wrap gap-2">
+          <button className="btn-secondary text-xs" onClick={() => setShowInfoPanel((v) => !v)}>
+            {showInfoPanel ? '▾' : '▸'} Lead Info
+          </button>
+          <button className="btn-secondary text-xs" onClick={() => setShowNotesPanel((v) => !v)}>
+            {showNotesPanel ? '▾' : '▸'} Notes
+          </button>
+          <button className="btn-secondary text-xs" onClick={() => setShowStatusPanel((v) => !v)}>
+            {showStatusPanel ? '▾' : '▸'} Funnel &amp; Status
+          </button>
+        </div>
+      )}
+
+      <div className={`grid grid-cols-1 gap-4 ${isDialing ? '' : 'lg:grid-cols-[340px_1fr_320px]'}`}>
         {/* Lead info panel */}
+        {showInfoPanel && (
         <div className="card space-y-3 p-4">
           <div className="label">Lead Information</div>
           <dl className="space-y-2 text-sm">
@@ -198,15 +422,14 @@ export default function LeadWorkspace({
 
           <div className="border-t border-line pt-3">
             <div className="label mb-2">Call Attempts</div>
-            <div className="text-2xl font-bold tabular-nums">{attemptCount}</div>
-            <div className="mt-2 grid grid-cols-3 gap-1.5">
-              <button disabled={busy} onClick={() => logCall('no_answer')} className="btn-secondary text-xs px-2 py-1.5">No Answer</button>
-              <button disabled={busy} onClick={() => logCall('voicemail')} className="btn-secondary text-xs px-2 py-1.5">Voicemail</button>
-              <button disabled={busy} onClick={() => logCall('busy')} className="btn-secondary text-xs px-2 py-1.5">Busy</button>
-              <button disabled={busy} onClick={() => logCall('wrong_number')} className="btn-secondary text-xs px-2 py-1.5">Wrong #</button>
-              <button disabled={busy} onClick={() => logCall('dnc')} className="btn-danger text-xs px-2 py-1.5">DNC</button>
-              <button disabled={busy} onClick={() => logCall('connected', 'interested')} className="btn-good text-xs px-2 py-1.5">Connected</button>
+            <div className="flex items-baseline gap-2">
+              <div className="text-2xl font-bold tabular-nums">{attemptCount}</div>
+              <div className="text-xs text-slate-500">total · {todayCount}/{MAX_CALLS_PER_DAY} today</div>
             </div>
+            {dailyLimitReached && !pendingCallId && (
+              <div className="mt-2 rounded bg-amber-50 p-2 text-xs text-amber-800">Daily call limit reached for this lead — try again tomorrow.</div>
+            )}
+            {!pendingCallId && <div className="mt-2 text-xs text-slate-400">Tap 📞 Call above to log a dial and pick the outcome.</div>}
           </div>
 
           {/* Carrier suggestions based on HEALTH note */}
@@ -245,18 +468,18 @@ export default function LeadWorkspace({
             )}
           </div>
         </div>
+        )}
 
         {/* Notes panel */}
+        {showNotesPanel && (
         <div className="card p-4">
           <div className="mb-2 flex items-center justify-between">
-            <div className="label">Notes</div>
-            <button
-              className="text-xs font-medium text-brand-600 hover:underline"
-              onClick={() => setShowSensitive((v) => !v)}
-              type="button"
-            >
-              {showSensitive ? 'Hide' : 'Show'} bank / SSN fields
-            </button>
+            <div className="label">Notes {!editingNote && <span className="font-normal normal-case text-slate-400">(locked — click Edit to change)</span>}</div>
+            <div className="flex items-center gap-3">
+              {!editingNote && (
+                <button className="btn-secondary text-xs" type="button" onClick={() => setEditingNote(true)}>✏️ Edit</button>
+              )}
+            </div>
           </div>
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
             {NOTE_FIELDS.map((f) => (
@@ -264,14 +487,16 @@ export default function LeadWorkspace({
                 <label className="label mb-1 block">{f.label}</label>
                 {f.type === 'textarea' ? (
                   <textarea
-                    className="input min-h-[70px]"
+                    className="input min-h-[70px] disabled:bg-slate-50 disabled:text-slate-500"
+                    disabled={!editingNote}
                     value={noteForm[f.key] || ''}
                     onChange={(e) => setNoteForm((s) => ({ ...s, [f.key]: e.target.value }))}
                     placeholder="e.g. controlled diabetes, non-smoker, high blood pressure..."
                   />
                 ) : (
                   <input
-                    className="input"
+                    className="input disabled:bg-slate-50 disabled:text-slate-500"
+                    disabled={!editingNote}
                     type={f.type === 'date' ? 'date' : 'text'}
                     value={noteForm[f.key] || ''}
                     onChange={(e) => setNoteForm((s) => ({ ...s, [f.key]: e.target.value }))}
@@ -281,37 +506,76 @@ export default function LeadWorkspace({
             ))}
           </div>
 
-          {showSensitive && (
-            <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-3">
-              <div className="mb-2 text-xs font-semibold text-amber-800">🔒 Protected financial info — kept out of lead lists &amp; search</div>
-              <RoutingLookup
-                bankName={noteForm.bank_name}
-                state={noteForm.bank_state || customer.state || ''}
-                routingNumber={noteForm.routing_number}
-                onBankChange={(v) => setNoteForm((s) => ({ ...s, bank_name: v }))}
-                onStateChange={(v) => setNoteForm((s) => ({ ...s, bank_state: v }))}
-                onRoutingChange={(v) => setNoteForm((s) => ({ ...s, routing_number: v }))}
-              />
-              <div className="mt-2 grid grid-cols-2 gap-2">
-                <div>
-                  <label className="label mb-1 block">ACCOUNT #</label>
-                  <input className="input" value={noteForm.account_number || ''} onChange={(e) => setNoteForm((s) => ({ ...s, account_number: e.target.value }))} />
+          <div className="mt-3">
+            <label className="label mb-1 block">Plan Options</label>
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+              {PLAN_TIERS.map(({ tier, coverageKey, priceKey }) => (
+                <div key={tier} className="rounded-lg border border-line p-2.5">
+                  <div className="mb-1.5 text-xs font-semibold text-slate-500">{tier}</div>
+                  <div className="space-y-1.5">
+                    <input
+                      className="input disabled:bg-slate-50 disabled:text-slate-500"
+                      disabled={!editingNote}
+                      placeholder="Coverage amount"
+                      value={noteForm[coverageKey] || ''}
+                      onChange={(e) => setNoteForm((s) => ({ ...s, [coverageKey]: e.target.value }))}
+                    />
+                    <input
+                      className="input disabled:bg-slate-50 disabled:text-slate-500"
+                      disabled={!editingNote}
+                      placeholder="Price / month"
+                      value={noteForm[priceKey] || ''}
+                      onChange={(e) => setNoteForm((s) => ({ ...s, [priceKey]: e.target.value }))}
+                    />
+                  </div>
                 </div>
-                <div>
-                  <label className="label mb-1 block">SSN</label>
-                  <input className="input" value={noteForm.ssn || ''} onChange={(e) => setNoteForm((s) => ({ ...s, ssn: e.target.value }))} placeholder="XXX-XX-XXXX" />
-                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="mt-3 rounded-lg border border-line p-3">
+            <div className="mb-2 text-xs font-semibold text-slate-500">Bank / SSN</div>
+            <RoutingLookup
+              bankName={noteForm.bank_name}
+              state={noteForm.bank_state || customer.state || ''}
+              routingNumber={noteForm.routing_number}
+              onBankChange={(v) => setNoteForm((s) => ({ ...s, bank_name: v }))}
+              onStateChange={(v) => setNoteForm((s) => ({ ...s, bank_state: v }))}
+              onRoutingChange={(v) => setNoteForm((s) => ({ ...s, routing_number: v }))}
+              disabled={!editingNote}
+            />
+            <div className="mt-2 grid grid-cols-2 gap-2">
+              <div>
+                <label className="label mb-1 block">ACCOUNT #</label>
+                <input className="input disabled:bg-slate-50 disabled:text-slate-500" disabled={!editingNote} value={noteForm.account_number || ''} onChange={(e) => setNoteForm((s) => ({ ...s, account_number: e.target.value }))} />
+              </div>
+              <div>
+                <label className="label mb-1 block">SSN</label>
+                <input className="input disabled:bg-slate-50 disabled:text-slate-500" disabled={!editingNote} value={noteForm.ssn || ''} onChange={(e) => setNoteForm((s) => ({ ...s, ssn: e.target.value }))} placeholder="XXX-XX-XXXX" />
               </div>
             </div>
-          )}
+          </div>
 
           <div className="mt-3 flex items-center justify-between">
-            <span className="text-xs text-slate-400">{notes.length} saved version{notes.length === 1 ? '' : 's'}</span>
-            <button className="btn-primary" disabled={busy} onClick={saveNote}>💾 Save Note</button>
+            {editingNote ? (
+              <>
+                <button
+                  className="btn-secondary"
+                  onClick={() => { setNoteForm(noteFormFromNote(lastNote, customer)); setEditingNote(false); }}
+                >
+                  Cancel
+                </button>
+                <button className="btn-primary" disabled={busy} onClick={saveNote}>💾 Save Note</button>
+              </>
+            ) : (
+              <span className="text-xs text-slate-400">{lastNote ? `Last saved ${lastNote.created_at}` : 'No note saved yet'}</span>
+            )}
           </div>
         </div>
+        )}
 
         {/* Right: quick summary + status actions */}
+        {showStatusPanel && (
         <div className="space-y-4">
           <div className="card p-4">
             <div className="label mb-2">Funnel Status</div>
@@ -350,33 +614,22 @@ export default function LeadWorkspace({
             </div>
           </div>
         </div>
+        )}
       </div>
 
-      {/* Tabs: timeline / calls / notes history / policy */}
+      {/* Tabs: calls / notes history */}
       <div className="card p-4">
         <div className="mb-3 flex gap-1 border-b border-line">
-          {(['timeline', 'calls', 'notes'] as const).map((t) => (
+          {(['calls', 'notes'] as const).map((t) => (
             <button
               key={t}
               onClick={() => setActiveTab(t)}
               className={`px-3 py-2 text-sm font-medium capitalize border-b-2 -mb-px ${activeTab === t ? 'border-brand-500 text-brand-600' : 'border-transparent text-slate-500 hover:text-ink'}`}
             >
-              {t === 'timeline' ? 'Full Timeline' : t === 'calls' ? 'Call History' : 'Notes History'}
+              {t === 'calls' ? 'Call History' : 'Notes History'}
             </button>
           ))}
         </div>
-
-        {activeTab === 'timeline' && (
-          <ol className="space-y-2">
-            {audit.map((a) => (
-              <li key={a.id} className="flex gap-3 text-sm">
-                <span className="w-40 shrink-0 text-xs text-slate-400 tabular-nums">{a.occurred_at}</span>
-                <span className="text-ink">{a.summary}</span>
-              </li>
-            ))}
-            {audit.length === 0 && <div className="text-sm text-slate-400">No activity yet.</div>}
-          </ol>
-        )}
 
         {activeTab === 'calls' && (
           <div className="space-y-2">
@@ -405,8 +658,13 @@ export default function LeadWorkspace({
                   ))}
                   {n.bank_name && <div><span className="text-slate-400">BANK:</span> {n.bank_name}</div>}
                   {n.routing_number && <div><span className="text-slate-400">ROUTING:</span> {n.routing_number}</div>}
-                  {n.account_number && <div><span className="text-slate-400">ACCT:</span> {maskAccount(n.account_number)}</div>}
-                  {n.ssn && <div><span className="text-slate-400">SSN:</span> {maskSSN(n.ssn)}</div>}
+                  {n.account_number && <div><span className="text-slate-400">ACCT:</span> {n.account_number}</div>}
+                  {n.ssn && <div><span className="text-slate-400">SSN:</span> {n.ssn}</div>}
+                  {PLAN_TIERS.filter(({ coverageKey, priceKey }) => n[coverageKey] || n[priceKey]).map(({ tier, coverageKey, priceKey }) => (
+                    <div key={tier}>
+                      <span className="text-slate-400">{tier}:</span> {[n[coverageKey], n[priceKey]].filter(Boolean).join(' — ')}
+                    </div>
+                  ))}
                 </div>
               </details>
             ))}
@@ -415,7 +673,7 @@ export default function LeadWorkspace({
         )}
       </div>
 
-      {showQuote && <QuoteModal customer={customer} onClose={() => setShowQuote(false)} onSaved={refresh} />}
+      {showQuote && <QuoteModal customer={customer} quoteToken={quoteToken} onClose={() => setShowQuote(false)} onSaved={refresh} />}
       {showAppt && <ApptModal customer={customer} onClose={() => setShowAppt(false)} onSaved={refresh} />}
       {showSell && (
         <SellModal
@@ -450,7 +708,7 @@ function FunnelRow({ label, value }: { label: string; value: number }) {
 function Modal({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={onClose}>
-      <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-xl bg-white p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+      <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-xl bg-panel p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
         <div className="mb-3 flex items-center justify-between">
           <h2 className="text-lg font-bold">{title}</h2>
           <button onClick={onClose} className="text-slate-400 hover:text-ink">✕</button>
@@ -461,9 +719,51 @@ function Modal({ title, onClose, children }: { title: string; onClose: () => voi
   );
 }
 
-function QuoteModal({ customer, onClose, onSaved }: { customer: Customer; onClose: () => void; onSaved: () => void }) {
+function calcAge(dob: string | null): number | null {
+  if (!dob) return null;
+  const d = new Date(dob);
+  if (isNaN(d.getTime())) return null;
+  const now = new Date();
+  let age = now.getFullYear() - d.getFullYear();
+  const m = now.getMonth() - d.getMonth();
+  if (m < 0 || (m === 0 && now.getDate() < d.getDate())) age--;
+  return age >= 0 && age < 130 ? age : null;
+}
+
+function genderToSex(gender: string | null): string {
+  const g = (gender || '').trim().toLowerCase();
+  if (g === 'm' || g === 'male') return 'Male';
+  if (g === 'f' || g === 'female') return 'Female';
+  return '';
+}
+
+function QuoteModal({ customer, quoteToken, onClose, onSaved }: { customer: Customer; quoteToken: string; onClose: () => void; onSaved: () => void }) {
   const [form, setForm] = useState<AnyRow>({ carrier: '', product: '', face_amount: customer.coverage_wanted || '', monthly_premium: '', notes: '' });
   const [busy, setBusy] = useState(false);
+  const [quoteParams, setQuoteParams] = useState<AnyRow>({
+    age: calcAge(customer.dob) ?? '',
+    sex: genderToSex(customer.gender),
+    state: customer.state || '',
+    tobacco: 'None',
+    paymentType: 'Bank Draft/EFT',
+    coverageType: 'Level',
+    faceAmount: customer.coverage_wanted || ''
+  });
+
+  function openQuoter() {
+    const url = new URL('https://app.insurancetoolkits.com/fex/lite');
+    url.searchParams.set('age', String(quoteParams.age || ''));
+    url.searchParams.set('sex', quoteParams.sex || '');
+    url.searchParams.set('state', quoteParams.state || '');
+    url.searchParams.set('tobacco', quoteParams.tobacco || '');
+    url.searchParams.set('paymentType', quoteParams.paymentType || '');
+    url.searchParams.set('coverageType', quoteParams.coverageType || '');
+    url.searchParams.set('faceAmount', String(quoteParams.faceAmount || ''));
+    url.searchParams.set('runQuote', 'true');
+    if (quoteToken) url.searchParams.set('token', quoteToken);
+    window.open(url.toString(), '_blank', 'noopener,noreferrer');
+  }
+
   async function save() {
     setBusy(true);
     try {
@@ -473,13 +773,63 @@ function QuoteModal({ customer, onClose, onSaved }: { customer: Customer; onClos
   }
   return (
     <Modal title="🧮 Run Quote" onClose={onClose}>
-      <div className="space-y-2">
-        <Field label="Carrier"><input className="input" value={form.carrier} onChange={(e) => setForm({ ...form, carrier: e.target.value })} /></Field>
-        <Field label="Product"><input className="input" value={form.product} onChange={(e) => setForm({ ...form, product: e.target.value })} /></Field>
-        <Field label="Face Amount"><input className="input" type="number" value={form.face_amount} onChange={(e) => setForm({ ...form, face_amount: e.target.value })} /></Field>
-        <Field label="Monthly Premium"><input className="input" type="number" value={form.monthly_premium} onChange={(e) => setForm({ ...form, monthly_premium: e.target.value })} /></Field>
-        <Field label="Notes"><textarea className="input" value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} /></Field>
-        <button className="btn-primary w-full" disabled={busy} onClick={save}>Save Quote</button>
+      <div className="space-y-3">
+        <div className="rounded-lg border border-line bg-slate-50 p-3">
+          <div className="mb-2 text-xs font-semibold text-slate-500">FEX Lite Quoter — check the details below, then open it</div>
+          {!quoteToken && (
+            <div className="mb-2 text-xs text-amber-700">
+              No quoter account token configured — set INSURANCE_TOOLKIT_TOKEN in your environment to skip logging in each time.
+            </div>
+          )}
+          <div className="grid grid-cols-2 gap-2">
+            <Field label="Age"><input className="input" type="number" value={quoteParams.age} onChange={(e) => setQuoteParams({ ...quoteParams, age: e.target.value })} /></Field>
+            <Field label="Sex">
+              <select className="input" value={quoteParams.sex} onChange={(e) => setQuoteParams({ ...quoteParams, sex: e.target.value })}>
+                <option value="">Select…</option>
+                <option value="Male">Male</option>
+                <option value="Female">Female</option>
+              </select>
+            </Field>
+            <Field label="State"><input className="input" value={quoteParams.state} onChange={(e) => setQuoteParams({ ...quoteParams, state: e.target.value.toUpperCase() })} /></Field>
+            <Field label="Tobacco">
+              <select className="input" value={quoteParams.tobacco} onChange={(e) => setQuoteParams({ ...quoteParams, tobacco: e.target.value })}>
+                <option value="None">None</option>
+                <option value="Cigarettes">Cigarettes</option>
+                <option value="Other">Other</option>
+              </select>
+            </Field>
+            <Field label="Payment Type">
+              <select className="input" value={quoteParams.paymentType} onChange={(e) => setQuoteParams({ ...quoteParams, paymentType: e.target.value })}>
+                <option value="Bank Draft/EFT">Bank Draft/EFT</option>
+                <option value="Credit Card">Credit Card</option>
+                <option value="Direct Bill">Direct Bill</option>
+              </select>
+            </Field>
+            <Field label="Coverage Type">
+              <select className="input" value={quoteParams.coverageType} onChange={(e) => setQuoteParams({ ...quoteParams, coverageType: e.target.value })}>
+                <option value="Level">Level</option>
+                <option value="Graded">Graded</option>
+                <option value="Guaranteed">Guaranteed</option>
+              </select>
+            </Field>
+            <Field label="Face Amount">
+              <input className="input" type="number" value={quoteParams.faceAmount} onChange={(e) => setQuoteParams({ ...quoteParams, faceAmount: e.target.value })} />
+            </Field>
+          </div>
+          <button type="button" className="btn-primary mt-3 w-full" onClick={openQuoter}>Open FEX Lite Quoter →</button>
+        </div>
+
+        <div className="border-t border-line pt-3">
+          <div className="mb-2 text-xs font-semibold text-slate-500">Save the resulting quote to this lead</div>
+          <div className="space-y-2">
+            <Field label="Carrier"><input className="input" value={form.carrier} onChange={(e) => setForm({ ...form, carrier: e.target.value })} /></Field>
+            <Field label="Product"><input className="input" value={form.product} onChange={(e) => setForm({ ...form, product: e.target.value })} /></Field>
+            <Field label="Face Amount"><input className="input" type="number" value={form.face_amount} onChange={(e) => setForm({ ...form, face_amount: e.target.value })} /></Field>
+            <Field label="Monthly Premium"><input className="input" type="number" value={form.monthly_premium} onChange={(e) => setForm({ ...form, monthly_premium: e.target.value })} /></Field>
+            <Field label="Notes"><textarea className="input" value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} /></Field>
+            <button className="btn-primary w-full" disabled={busy} onClick={save}>Save Quote</button>
+          </div>
+        </div>
       </div>
     </Modal>
   );

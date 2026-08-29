@@ -2,18 +2,24 @@ import Link from 'next/link';
 import { getDb } from '@/lib/db';
 import { fmtMoney, fmtMoney0 } from '@/lib/util';
 import Badge from '@/components/Badge';
+import { getCurrentUser } from '@/lib/currentUser';
+import { redirect } from 'next/navigation';
 
 export const dynamic = 'force-dynamic';
 
-export default function PoliciesPage() {
+export default async function PoliciesPage() {
+  const user = await getCurrentUser();
+  if (!user) redirect('/login');
+
   const db = getDb();
   const rows = db
     .prepare(
       `SELECT p.*, c.first_name, c.last_name, c.id as customer_id
        FROM policies p JOIN customers c ON c.id = p.customer_id
+       WHERE c.owner_id = ?
        ORDER BY p.created_at DESC`
     )
-    .all() as any[];
+    .all(user.id) as any[];
 
   const totalFace = rows.reduce((s, r) => s + (r.face_amount || 0), 0);
   const totalAnnual = rows.reduce((s, r) => s + (r.annual_premium || 0), 0);

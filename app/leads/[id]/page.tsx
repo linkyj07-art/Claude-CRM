@@ -1,15 +1,19 @@
 import { getDb } from '@/lib/db';
-import { notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 import LeadWorkspace from '@/components/LeadWorkspace';
 import {
   Customer, NoteVersion, CallRecord, Policy, Commission, Carrier, CarrierRule, LeadVendor
 } from '@/lib/types';
+import { getCurrentUser } from '@/lib/currentUser';
 
 export const dynamic = 'force-dynamic';
 
-export default function LeadPage({ params }: { params: { id: string } }) {
+export default async function LeadPage({ params }: { params: { id: string } }) {
+  const user = await getCurrentUser();
+  if (!user) redirect('/login');
+
   const db = getDb();
-  const customer = db.prepare('SELECT * FROM customers WHERE id = ?').get(params.id) as Customer | undefined;
+  const customer = db.prepare('SELECT * FROM customers WHERE id = ? AND owner_id = ?').get(params.id, user.id) as Customer | undefined;
   if (!customer) notFound();
 
   const notes = db.prepare('SELECT * FROM note_versions WHERE customer_id = ? ORDER BY created_at DESC').all(params.id) as NoteVersion[];
@@ -20,7 +24,6 @@ export default function LeadPage({ params }: { params: { id: string } }) {
   const policies = db.prepare('SELECT * FROM policies WHERE customer_id = ? ORDER BY created_at DESC').all(params.id) as Policy[];
   const commissions = db.prepare('SELECT * FROM commissions WHERE customer_id = ? ORDER BY created_at DESC').all(params.id) as Commission[];
   const payments = db.prepare('SELECT * FROM payments WHERE customer_id = ? ORDER BY paid_at DESC').all(params.id);
-  const audit = db.prepare('SELECT * FROM audit_history WHERE customer_id = ? ORDER BY occurred_at DESC').all(params.id);
   const vendors = db.prepare('SELECT * FROM lead_vendors ORDER BY name').all() as LeadVendor[];
   const carriers = db.prepare('SELECT * FROM carriers ORDER BY sort_order, name').all() as Carrier[];
   const rules = db.prepare('SELECT * FROM carrier_underwriting_rules').all() as CarrierRule[];
@@ -36,10 +39,10 @@ export default function LeadPage({ params }: { params: { id: string } }) {
       policies={policies}
       commissions={commissions}
       payments={payments as any}
-      audit={audit as any}
       vendors={vendors}
       carriers={carriers}
       rules={rules}
+      quoteToken={process.env.INSURANCE_TOOLKIT_TOKEN || ''}
     />
   );
 }

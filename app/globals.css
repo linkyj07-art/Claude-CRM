@@ -20,7 +20,7 @@
     @apply btn bg-brand-500 text-white hover:bg-brand-600;
   }
   .btn-secondary {
-    @apply btn bg-white text-ink border border-line hover:bg-slate-50;
+    @apply btn bg-panel2 text-ink border border-line hover:bg-slate-100;
   }
   .btn-danger {
     @apply btn bg-red-50 text-red-700 border border-red-200 hover:bg-red-100;
@@ -29,7 +29,7 @@
     @apply btn bg-emerald-500 text-white hover:bg-emerald-600;
   }
   .input {
-    @apply w-full rounded-lg border border-line bg-white px-3 py-1.5 text-sm text-ink placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-400 focus:border-transparent;
+    @apply w-full rounded-lg border border-line bg-panel2 px-3 py-1.5 text-sm text-ink placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-400 focus:border-transparent;
   }
   .label {
     @apply text-[11px] font-semibold uppercase tracking-wide text-slate-500;

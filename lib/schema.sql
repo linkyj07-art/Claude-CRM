@@ -6,6 +6,14 @@
 
 PRAGMA foreign_keys = ON;
 
+CREATE TABLE IF NOT EXISTS users (
+  id TEXT PRIMARY KEY,
+  username TEXT NOT NULL UNIQUE,
+  password_hash TEXT NOT NULL,
+  name TEXT NOT NULL,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
 CREATE TABLE IF NOT EXISTS lead_vendors (
   id TEXT PRIMARY KEY,
   name TEXT NOT NULL,
@@ -15,6 +23,7 @@ CREATE TABLE IF NOT EXISTS lead_vendors (
 
 CREATE TABLE IF NOT EXISTS customers (
   id TEXT PRIMARY KEY,
+  owner_id TEXT REFERENCES users(id),
   first_name TEXT NOT NULL,
   last_name TEXT NOT NULL,
   phone TEXT,
@@ -35,6 +44,7 @@ CREATE TABLE IF NOT EXISTS customers (
   lead_vendor_id TEXT REFERENCES lead_vendors(id),
   best_time TEXT,
   lead_cost REAL DEFAULT 0,
+  trusted_form_url TEXT,
   status TEXT NOT NULL DEFAULT 'fresh',
     -- fresh | working | aging_45_90 | aging_90_plus | invalid | disputed | dnc | sold | lost | archived
   purchased_at TEXT NOT NULL DEFAULT (datetime('now')),
@@ -44,6 +54,12 @@ CREATE TABLE IF NOT EXISTS customers (
   updated_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
+-- idx_customers_owner is created in db.ts's migrate(), not here: on a
+-- pre-existing database (customers table already present without owner_id),
+-- this CREATE INDEX would run as part of the initial schema.sql exec, before
+-- the ALTER TABLE that actually adds the column ever gets a chance to run —
+-- "no such column: owner_id", failing the entire schema exec and preventing
+-- migrate() (and the fix) from running at all.
 CREATE INDEX IF NOT EXISTS idx_customers_status ON customers(status);
 CREATE INDEX IF NOT EXISTS idx_customers_state ON customers(state);
 CREATE INDEX IF NOT EXISTS idx_customers_vendor ON customers(lead_vendor_id);
@@ -58,6 +74,7 @@ CREATE TABLE IF NOT EXISTS note_versions (
   note_date TEXT,
   phone TEXT,
   beneficiary TEXT,
+  beneficiary_dob TEXT,
   budget TEXT,
   health TEXT,
   discount TEXT,
@@ -69,9 +86,12 @@ CREATE TABLE IF NOT EXISTS note_versions (
   email TEXT,
   born_in TEXT,
   ssn TEXT,
-  plan_bronze TEXT,
-  plan_silver TEXT,
-  plan_gold TEXT,
+  plan_bronze_coverage TEXT,
+  plan_bronze_price TEXT,
+  plan_silver_coverage TEXT,
+  plan_silver_price TEXT,
+  plan_gold_coverage TEXT,
+  plan_gold_price TEXT,
   draft_date TEXT,
   code_word TEXT,
   free_text TEXT,
@@ -253,3 +273,51 @@ CREATE TABLE IF NOT EXISTS routing_lookup (
 
 CREATE INDEX IF NOT EXISTS idx_routing_bank ON routing_lookup(bank_name);
 CREATE INDEX IF NOT EXISTS idx_routing_state ON routing_lookup(state);
+
+-- Small generic key/value store for app-wide settings (e.g. licensed_states)
+-- that don't warrant their own table.
+CREATE TABLE IF NOT EXISTS app_settings (
+  key TEXT PRIMARY KEY,
+  value TEXT
+);
+
+-- Leads caught by import-time duplicate detection (same name + phone + dob
+-- as an existing customer) are held here for manual review instead of being
+-- silently dropped or double-inserted into customers.
+CREATE TABLE IF NOT EXISTS duplicate_leads (
+  id TEXT PRIMARY KEY,
+  customer_id TEXT NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
+  first_name TEXT,
+  last_name TEXT,
+  phone TEXT,
+  email TEXT,
+  dob TEXT,
+  state TEXT,
+  raw_data TEXT NOT NULL, -- JSON snapshot of the imported row, for "add anyway"
+  source TEXT,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_dupe_customer ON duplicate_leads(customer_id);
+
+-- One row per user per day/week they've set goals for. Missing rows just
+-- mean "never set a goal for that period" — there's no default target.
+CREATE TABLE IF NOT EXISTS daily_goals (
+  date TEXT NOT NULL, -- YYYY-MM-DD, agent's local (Mountain) day
+  user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  target_dials INTEGER,
+  target_appointments INTEGER,
+  target_ap REAL, -- target annual premium written
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  PRIMARY KEY (date, user_id)
+);
+
+CREATE TABLE IF NOT EXISTS weekly_goals (
+  week_start TEXT NOT NULL, -- YYYY-MM-DD of that week's Monday, Mountain time
+  user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  target_dials INTEGER,
+  target_appointments INTEGER,
+  target_ap REAL,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  PRIMARY KEY (week_start, user_id)
+);

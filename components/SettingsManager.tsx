@@ -3,29 +3,32 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Carrier, CarrierRule, QuickLink } from '@/lib/types';
+import { US_STATES } from '@/lib/util';
 
 type AnyRow = Record<string, any>;
 
+interface TeamUser { id: string; username: string; name: string; created_at: string; }
+
 export default function SettingsManager({
-  carriers, rules, quickLinks
+  carriers, rules, quickLinks, licensedStates, users, currentUserId
 }: {
-  carriers: Carrier[]; rules: CarrierRule[]; quickLinks: QuickLink[];
+  carriers: Carrier[]; rules: CarrierRule[]; quickLinks: QuickLink[]; licensedStates: string[]; users: TeamUser[]; currentUserId: string;
 }) {
   const router = useRouter();
-  const [tab, setTab] = useState<'carriers' | 'rules' | 'links'>('carriers');
+  const [tab, setTab] = useState<'carriers' | 'rules' | 'links' | 'licensing' | 'team'>('carriers');
 
   async function refresh() { router.refresh(); }
 
   return (
     <div className="space-y-4">
       <div className="flex gap-1 border-b border-line">
-        {(['carriers', 'rules', 'links'] as const).map((t) => (
+        {(['carriers', 'rules', 'links', 'licensing', 'team'] as const).map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
             className={`px-3 py-2 text-sm font-medium border-b-2 -mb-px ${tab === t ? 'border-brand-500 text-brand-600' : 'border-transparent text-slate-500 hover:text-ink'}`}
           >
-            {t === 'carriers' ? '🏢 Carriers & Logins' : t === 'rules' ? '💡 Underwriting Rules' : '🔗 Quick Links'}
+            {t === 'carriers' ? '🏢 Carriers & Logins' : t === 'rules' ? '💡 Underwriting Rules' : t === 'links' ? '🔗 Quick Links' : t === 'licensing' ? '🪪 Licensed States' : '👥 Team'}
           </button>
         ))}
       </div>
@@ -33,6 +36,130 @@ export default function SettingsManager({
       {tab === 'carriers' && <CarriersTab carriers={carriers} onChanged={refresh} />}
       {tab === 'rules' && <RulesTab carriers={carriers} rules={rules} onChanged={refresh} />}
       {tab === 'links' && <LinksTab quickLinks={quickLinks} onChanged={refresh} />}
+      {tab === 'licensing' && <LicensingTab licensedStates={licensedStates} onChanged={refresh} />}
+      {tab === 'team' && <TeamTab users={users} currentUserId={currentUserId} onChanged={refresh} />}
+    </div>
+  );
+}
+
+function TeamTab({ users, currentUserId, onChanged }: { users: TeamUser[]; currentUserId: string; onChanged: () => void }) {
+  const [form, setForm] = useState<AnyRow>({ name: '', username: '', password: '' });
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [resetId, setResetId] = useState<string | null>(null);
+  const [resetPassword, setResetPassword] = useState('');
+
+  async function addUser() {
+    setBusy(true);
+    setError(null);
+    try {
+      const res = await fetch('/api/users', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form) });
+      const data = await res.json();
+      if (!res.ok) { setError(data.error || 'Could not create account.'); return; }
+      setForm({ name: '', username: '', password: '' });
+      onChanged();
+    } finally { setBusy(false); }
+  }
+
+  async function removeUser(id: string) {
+    if (!confirm('Remove this teammate\'s login? Their leads stay put, but they won\'t be able to sign in anymore.')) return;
+    const res = await fetch(`/api/users/${id}`, { method: 'DELETE' });
+    const data = await res.json();
+    if (!res.ok) { alert(data.error || 'Could not remove that account.'); return; }
+    onChanged();
+  }
+
+  async function savePassword(id: string) {
+    if (resetPassword.length < 6) { alert('Password must be at least 6 characters.'); return; }
+    const res = await fetch(`/api/users/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ password: resetPassword }) });
+    if (!res.ok) { alert('Could not reset password.'); return; }
+    setResetId(null);
+    setResetPassword('');
+  }
+
+  return (
+    <div className="card p-4">
+      <div className="mb-3 text-sm text-slate-600">
+        Each teammate gets their own login and only ever sees the leads they upload or are assigned — nobody sees anyone
+        else's book of business. Carriers, underwriting rules, quick links, and licensed states above are shared by everyone.
+      </div>
+
+      <div className="mb-4 grid grid-cols-1 gap-2 rounded-lg border border-line bg-slate-50 p-3 sm:grid-cols-[1fr_1fr_1fr_auto]">
+        <input className="input" placeholder="Full name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+        <input className="input" placeholder="Username" value={form.username} onChange={(e) => setForm({ ...form, username: e.target.value })} />
+        <input className="input" type="password" placeholder="Password (6+ chars)" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} />
+        <button className="btn-primary" disabled={busy || !form.username || !form.password} onClick={addUser}>+ Add Teammate</button>
+      </div>
+      {error && <div className="mb-3 text-sm text-red-600">{error}</div>}
+
+      <div className="space-y-2">
+        {users.map((u) => (
+          <div key={u.id} className="flex flex-wrap items-center gap-2 rounded-lg border border-line p-3">
+            <div className="flex-1">
+              <div className="font-medium">{u.name} {u.id === currentUserId && <span className="badge-brand ml-1">You</span>}</div>
+              <div className="text-xs text-slate-400">@{u.username}</div>
+            </div>
+            {resetId === u.id ? (
+              <>
+                <input className="input w-40" type="password" placeholder="New password" value={resetPassword} onChange={(e) => setResetPassword(e.target.value)} />
+                <button className="btn-secondary text-xs" onClick={() => savePassword(u.id)}>Save</button>
+                <button className="btn-secondary text-xs" onClick={() => { setResetId(null); setResetPassword(''); }}>Cancel</button>
+              </>
+            ) : (
+              <button className="btn-secondary text-xs" onClick={() => setResetId(u.id)}>Reset Password</button>
+            )}
+            {u.id !== currentUserId && <button className="btn-danger text-xs" onClick={() => removeUser(u.id)}>Remove</button>}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function LicensingTab({ licensedStates, onChanged }: { licensedStates: string[]; onChanged: () => void }) {
+  const [selected, setSelected] = useState<Set<string>>(new Set(licensedStates));
+  const [busy, setBusy] = useState(false);
+  const [saved, setSaved] = useState(false);
+
+  function toggle(state: string) {
+    setSaved(false);
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(state)) next.delete(state); else next.add(state);
+      return next;
+    });
+  }
+
+  async function save() {
+    setBusy(true);
+    try {
+      await fetch('/api/settings/licensed-states', {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ states: Array.from(selected) })
+      });
+      setSaved(true);
+      onChanged();
+    } finally { setBusy(false); }
+  }
+
+  return (
+    <div className="card p-4">
+      <div className="mb-3 text-sm text-slate-600">
+        Check every state you're licensed to sell in. When you log a call on a lead outside these states,
+        it gets flagged on the <strong>Review Queue</strong> instead of getting worked as a normal lead.
+      </div>
+      <div className="mb-3 grid grid-cols-4 gap-1.5 sm:grid-cols-8">
+        {US_STATES.map((s) => (
+          <label key={s} className={`flex cursor-pointer items-center justify-center rounded-lg border p-2 text-sm font-medium ${selected.has(s) ? 'border-brand-500 bg-brand-50 text-brand-700' : 'border-line text-slate-500 hover:bg-slate-50'}`}>
+            <input type="checkbox" className="sr-only" checked={selected.has(s)} onChange={() => toggle(s)} />
+            {s}
+          </label>
+        ))}
+      </div>
+      <div className="flex items-center gap-3">
+        <button className="btn-primary" disabled={busy} onClick={save}>{busy ? 'Saving…' : 'Save Licensed States'}</button>
+        {saved && <span className="text-sm text-emerald-600">Saved.</span>}
+      </div>
     </div>
   );
 }

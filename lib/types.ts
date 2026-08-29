@@ -32,6 +32,7 @@ export interface Customer {
   lead_vendor_id: string | null;
   best_time: string | null;
   lead_cost: number;
+  trusted_form_url: string | null;
   status: CustomerStatus;
   purchased_at: string;
   sold_at: string | null;
@@ -48,6 +49,7 @@ export interface NoteVersion {
   note_date: string | null;
   phone: string | null;
   beneficiary: string | null;
+  beneficiary_dob: string | null;
   budget: string | null;
   health: string | null;
   discount: string | null;
@@ -59,9 +61,12 @@ export interface NoteVersion {
   email: string | null;
   born_in: string | null;
   ssn: string | null;
-  plan_bronze: string | null;
-  plan_silver: string | null;
-  plan_gold: string | null;
+  plan_bronze_coverage: string | null;
+  plan_bronze_price: string | null;
+  plan_silver_coverage: string | null;
+  plan_silver_price: string | null;
+  plan_gold_coverage: string | null;
+  plan_gold_price: string | null;
   draft_date: string | null;
   code_word: string | null;
   free_text: string | null;
@@ -147,6 +152,36 @@ export interface QuickLink {
   label: string;
   url: string;
   sort_order: number;
+}
+
+export interface DuplicateLead {
+  id: string;
+  customer_id: string;
+  first_name: string | null;
+  last_name: string | null;
+  phone: string | null;
+  email: string | null;
+  dob: string | null;
+  state: string | null;
+  raw_data: string;
+  source: string | null;
+  created_at: string;
+}
+
+export interface DailyGoal {
+  date: string;
+  target_dials: number | null;
+  target_appointments: number | null;
+  target_ap: number | null;
+  created_at: string;
+}
+
+export interface WeeklyGoal {
+  week_start: string;
+  target_dials: number | null;
+  target_appointments: number | null;
+  target_ap: number | null;
+  created_at: string;
 }
 
 export interface RoutingEntry {

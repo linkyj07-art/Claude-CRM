@@ -2,15 +2,19 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
 import { newId } from '@/lib/util';
 import { logAudit } from '@/lib/audit';
+import { getCurrentUser } from '@/lib/currentUser';
 
 export async function GET(req: NextRequest) {
+  const user = await getCurrentUser();
+  if (!user) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+
   const db = getDb();
   const { searchParams } = new URL(req.url);
   const status = searchParams.get('status');
   const q = searchParams.get('q');
 
-  let sql = `SELECT c.*, v.name as vendor_name FROM customers c LEFT JOIN lead_vendors v ON v.id = c.lead_vendor_id WHERE 1=1`;
-  const params: unknown[] = [];
+  let sql = `SELECT c.*, v.name as vendor_name FROM customers c LEFT JOIN lead_vendors v ON v.id = c.lead_vendor_id WHERE c.owner_id = ?`;
+  const params: unknown[] = [user.id];
   if (status) {
     sql += ` AND c.status = ?`;
     params.push(status);
@@ -25,18 +29,22 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+  const user = await getCurrentUser();
+  if (!user) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+
   const body = await req.json();
   const db = getDb();
   const id = newId();
   db.prepare(
-    `INSERT INTO customers (id, first_name, last_name, phone, email, dob, gender, marital_status,
+    `INSERT INTO customers (id, owner_id, first_name, last_name, phone, email, dob, gender, marital_status,
       military, military_branch, coverage_wanted, address, city, state, postal_code, timezone,
       ad_type, platform, lead_vendor_id, best_time, lead_cost, status, purchased_at, created_at, updated_at)
-     VALUES (@id, @first_name, @last_name, @phone, @email, @dob, @gender, @marital_status,
+     VALUES (@id, @owner_id, @first_name, @last_name, @phone, @email, @dob, @gender, @marital_status,
       @military, @military_branch, @coverage_wanted, @address, @city, @state, @postal_code, @timezone,
       @ad_type, @platform, @lead_vendor_id, @best_time, @lead_cost, 'fresh', datetime('now'), datetime('now'), datetime('now'))`
   ).run({
     id,
+    owner_id: user.id,
     first_name: body.first_name || 'New',
     last_name: body.last_name || 'Lead',
     phone: body.phone || null,
@@ -60,4 +68,29 @@ export async function POST(req: NextRequest) {
   });
   logAudit(id, 'lead_purchased', `Lead added — ${body.ad_type || 'Final Expense'} / ${body.platform || 'manual entry'}`);
   return NextResponse.json({ id });
+}
+
+// Bulk delete: { ids: string[] } deletes just those leads; { all: true }
+// deletes every lead the CALLER owns. Both are scoped to the logged-in
+// user's own leads and are permanent (cascades to notes, calls, quotes,
+// appointments, etc. via ON DELETE CASCADE) — the client is responsible
+// for confirming with the user before calling this, especially for "all".
+export async function DELETE(req: NextRequest) {
+  const user = await getCurrentUser();
+  if (!user) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+
+  const body = await req.json().catch(() => ({}));
+  const db = getDb();
+
+  if (body.all === true) {
+    const result = db.prepare('DELETE FROM customers WHERE owner_id = ?').run(user.id);
+    return NextResponse.json({ deleted: result.changes });
+  }
+
+  const ids = Array.isArray(body.ids) ? body.ids.filter((id: unknown) => typeof id === 'string') : [];
+  if (ids.length === 0) return NextResponse.json({ error: 'No lead ids provided.' }, { status: 400 });
+
+  const placeholders = ids.map(() => '?').join(',');
+  const result = db.prepare(`DELETE FROM customers WHERE owner_id = ? AND id IN (${placeholders})`).run(user.id, ...ids);
+  return NextResponse.json({ deleted: result.changes });
 }

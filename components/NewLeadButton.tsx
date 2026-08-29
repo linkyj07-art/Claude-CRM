@@ -32,7 +32,7 @@ export default function NewLeadButton({ vendors }: { vendors: LeadVendor[] }) {
       <button className="btn-secondary" onClick={() => setOpen(true)}>+ Add Lead</button>
       {open && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setOpen(false)}>
-          <div className="w-full max-w-md rounded-xl bg-white p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+          <div className="w-full max-w-md rounded-xl bg-panel p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
             <h2 className="mb-3 text-lg font-bold">+ Add Lead</h2>
             <div className="grid grid-cols-2 gap-2">
               <input className="input" placeholder="First name" value={form.first_name} onChange={(e) => setForm({ ...form, first_name: e.target.value })} />
