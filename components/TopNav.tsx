@@ -9,6 +9,7 @@ import Logo from './Logo';
 const NAV_ITEMS = [
   { href: '/', label: 'Dashboard' },
   { href: '/leads', label: 'Leads' },
+  { href: '/calls', label: 'Calls' },
   { href: '/calendar', label: 'Calendar' },
   { href: '/policies', label: 'Policies' },
   { href: '/commissions', label: 'Commissions' },
