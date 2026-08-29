@@ -39,7 +39,7 @@ export default function LineChart({
       {coords.map((c, i) => (
         <g key={i}>
           <circle cx={c.x} cy={c.y} r={2.5} fill={color} />
-          <title>{c.label}: {formatValue(c.value)}</title>
+          <title>{`${c.label}: ${formatValue(c.value)}`}</title>
           {i % labelStep === 0 && (
             <text x={c.x} y={height - 4} fontSize="9" textAnchor="middle" fill="#8b95b3">{c.label}</text>
           )}

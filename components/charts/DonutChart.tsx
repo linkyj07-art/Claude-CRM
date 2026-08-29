@@ -33,7 +33,7 @@ export default function DonutChart({ slices, centerLabel, centerValue }: { slice
               strokeDashoffset={dashOffset}
               transform={`rotate(-90 ${CX} ${CY})`}
             >
-              <title>{s.label}: {s.value}</title>
+              <title>{`${s.label}: ${s.value}`}</title>
             </circle>
           );
         })}
