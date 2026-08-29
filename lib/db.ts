@@ -1,6 +1,7 @@
 import Database from 'better-sqlite3';
 import fs from 'fs';
 import path from 'path';
+import { newId } from './util';
 
 // DATA_DIR can be pointed at a mounted persistent volume in production
 // (e.g. Railway/Fly.io) via the DATA_DIR env var. Defaults to ./data for
@@ -55,6 +56,115 @@ function migrate(db: Database.Database) {
 
   addColumnIfMissing(db, 'customers', 'trusted_form_url', 'TEXT');
   addColumnIfMissing(db, 'note_versions', 'beneficiary_dob', 'TEXT');
+
+  seedStarterUnderwriting(db);
+}
+
+// One-time starter set of well-known, generally-taught final-expense
+// underwriting patterns, so the Suggested Carrier Order isn't empty out of
+// the box. This is explicitly NOT authoritative — every carrier's real field
+// guide varies by state and changes over time; the tier_note/notes fields say
+// so, matching the disclaimer already shown on the Underwriting Rules tab.
+// Guarded by an atomic flag in app_settings (not "is carriers empty?") because
+// Next.js's build spawns multiple worker processes that could otherwise both
+// see an empty table and both insert a full duplicate set.
+function seedStarterUnderwriting(db: Database.Database) {
+  const claimed = db
+    .prepare(`INSERT INTO app_settings (key, value) VALUES ('underwriting_seeded', '1') ON CONFLICT(key) DO NOTHING`)
+    .run();
+  if (claimed.changes === 0) return;
+
+  const insertCarrier = db.prepare(
+    `INSERT INTO carriers (id, name, notes, sort_order) VALUES (?, ?, ?, ?)`
+  );
+  const insertRule = db.prepare(
+    `INSERT INTO carrier_underwriting_rules (id, carrier_id, keywords, tier_note, priority, is_knockout)
+     VALUES (?, ?, ?, ?, ?, ?)`
+  );
+
+  const STARTER_NOTE = 'Starter data — general FEX practice, not this carrier\'s actual current field guide. Verify before quoting.';
+
+  const carriers: { name: string; rules: { keywords: string; tier_note: string; priority: number; knockout: boolean }[] }[] = [
+    {
+      name: 'Mutual of Omaha',
+      rules: [
+        { keywords: 'oxygen, copd, emphysema', tier_note: 'Typically declined/knockout on home oxygen', priority: 0, knockout: true },
+        { keywords: 'dialysis, kidney failure, renal failure', tier_note: 'Typically declined/knockout', priority: 0, knockout: true },
+        { keywords: 'hospice, terminal, terminally ill', tier_note: 'Typically declined/knockout', priority: 0, knockout: true },
+        { keywords: 'als, lou gehrig', tier_note: 'Typically declined/knockout', priority: 0, knockout: true },
+        { keywords: 'nursing home, bedridden, hospitalized', tier_note: 'Typically declined/knockout if currently confined', priority: 0, knockout: true },
+        { keywords: 'cancer, tumor, chemo, chemotherapy', tier_note: 'Often graded/declined if within last 2 years — verify', priority: 5, knockout: false },
+        { keywords: 'diabetes, insulin', tier_note: 'Often level if controlled without complications', priority: 3, knockout: false },
+        { keywords: 'non-smoker, no tobacco', tier_note: 'Best rate class', priority: 2, knockout: false }
+      ]
+    },
+    {
+      name: 'Americo',
+      rules: [
+        { keywords: 'oxygen, copd, emphysema', tier_note: 'Typically declined/knockout on home oxygen', priority: 0, knockout: true },
+        { keywords: 'dialysis, kidney failure, renal failure', tier_note: 'Typically declined/knockout', priority: 0, knockout: true },
+        { keywords: 'hospice, terminal, terminally ill', tier_note: 'Typically declined/knockout', priority: 0, knockout: true },
+        { keywords: 'als, lou gehrig', tier_note: 'Typically declined/knockout', priority: 0, knockout: true },
+        { keywords: 'cancer, tumor, chemo, chemotherapy', tier_note: 'Often graded/declined if within last 2 years — verify', priority: 5, knockout: false },
+        { keywords: 'diabetes, insulin', tier_note: 'Known for more lenient diabetes underwriting — verify current guide', priority: 4, knockout: false }
+      ]
+    },
+    {
+      name: 'Foresters Financial',
+      rules: [
+        { keywords: 'oxygen, copd, emphysema', tier_note: 'Typically declined/knockout on home oxygen', priority: 0, knockout: true },
+        { keywords: 'dialysis, kidney failure, renal failure', tier_note: 'Typically declined/knockout', priority: 0, knockout: true },
+        { keywords: 'hospice, terminal, terminally ill', tier_note: 'Typically declined/knockout', priority: 0, knockout: true },
+        { keywords: 'als, lou gehrig', tier_note: 'Typically declined/knockout', priority: 0, knockout: true },
+        { keywords: 'cancer, tumor, chemo, chemotherapy', tier_note: 'Often graded/declined if within last 2 years — verify', priority: 5, knockout: false },
+        { keywords: 'diabetes, insulin', tier_note: 'Often graded if insulin-dependent — verify', priority: 3, knockout: false }
+      ]
+    },
+    {
+      name: 'Royal Neighbors of America',
+      rules: [
+        { keywords: 'oxygen, copd, emphysema', tier_note: 'Typically declined/knockout on home oxygen', priority: 0, knockout: true },
+        { keywords: 'dialysis, kidney failure, renal failure', tier_note: 'Typically declined/knockout', priority: 0, knockout: true },
+        { keywords: 'hospice, terminal, terminally ill', tier_note: 'Typically declined/knockout', priority: 0, knockout: true },
+        { keywords: 'als, lou gehrig', tier_note: 'Typically declined/knockout', priority: 0, knockout: true },
+        { keywords: 'cancer, tumor, chemo, chemotherapy', tier_note: 'Often graded/declined if within last 2 years — verify', priority: 5, knockout: false },
+        { keywords: 'diabetes, insulin', tier_note: 'Often graded if insulin-dependent — verify', priority: 3, knockout: false }
+      ]
+    },
+    {
+      name: 'Liberty Bankers Life',
+      rules: [
+        { keywords: 'hospice, terminal, terminally ill', tier_note: 'Typically declined/knockout even on guaranteed-issue tiers', priority: 0, knockout: true },
+        { keywords: 'oxygen, copd, emphysema, dialysis, kidney failure, als, cancer, chemo', tier_note: 'Often still eligible on a guaranteed-issue tier at higher premium — verify', priority: 6, knockout: false },
+        { keywords: 'diabetes, insulin', tier_note: 'Often eligible — verify current tier', priority: 4, knockout: false }
+      ]
+    },
+    {
+      name: 'Corebridge Financial (American General)',
+      rules: [
+        { keywords: 'oxygen, copd, emphysema', tier_note: 'Typically declined/knockout on home oxygen', priority: 0, knockout: true },
+        { keywords: 'dialysis, kidney failure, renal failure', tier_note: 'Typically declined/knockout', priority: 0, knockout: true },
+        { keywords: 'hospice, terminal, terminally ill', tier_note: 'Typically declined/knockout', priority: 0, knockout: true },
+        { keywords: 'als, lou gehrig', tier_note: 'Typically declined/knockout', priority: 0, knockout: true },
+        { keywords: 'cancer, tumor, chemo, chemotherapy', tier_note: 'Often graded/declined if within last 2 years — verify', priority: 5, knockout: false },
+        { keywords: 'diabetes, insulin', tier_note: 'Often graded if insulin-dependent — verify', priority: 3, knockout: false }
+      ]
+    }
+  ];
+
+  const existingNames = new Set(
+    (db.prepare('SELECT name FROM carriers').all() as { name: string }[]).map((c) => c.name.trim().toLowerCase())
+  );
+
+  carriers.forEach((carrier, i) => {
+    // Don't duplicate a carrier the user already added themselves before this ran.
+    if (existingNames.has(carrier.name.toLowerCase())) return;
+    const carrierId = newId();
+    insertCarrier.run(carrierId, carrier.name, STARTER_NOTE, i);
+    for (const rule of carrier.rules) {
+      insertRule.run(newId(), carrierId, rule.keywords, rule.tier_note, rule.priority, rule.knockout ? 1 : 0);
+    }
+  });
 }
 
 function createConnection(): Database.Database {

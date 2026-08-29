@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import Papa from 'papaparse';
 import ExcelJS from 'exceljs';
 import { getDb } from '@/lib/db';
-import { newId, normalizeState, parseCoverageRange } from '@/lib/util';
+import { newId, normalizeState, parseCoverageRange, stateFromAreaCode } from '@/lib/util';
 import { logAudit } from '@/lib/audit';
 import { CustomerStatus } from '@/lib/types';
 
@@ -270,7 +270,7 @@ export async function POST(req: NextRequest) {
         coverage_wanted: parseCoverageRange(get('coverage_wanted')),
         address: get('address') || null,
         city: get('city') || null,
-        state: normalizeState(get('state')),
+        state: normalizeState(get('state')) || stateFromAreaCode(phone),
         postal_code: get('postal_code') || null,
         ad_type: get('ad_type') || 'Final Expense',
         platform: get('platform') || null,
