@@ -81,7 +81,6 @@ export default function GoalsManager() {
           if (!data.goal) return;
           const metrics: [string, number | null, number][] = [
             ['dials', data.goal.target_dials, data.progress.dials],
-            ['appointments', data.goal.target_appointments, data.progress.appointments],
             ['ap', data.goal.target_ap, data.progress.ap]
           ];
           for (const [metric, target, actual] of metrics) {
@@ -91,7 +90,7 @@ export default function GoalsManager() {
               const notifyKey = `${kind}-${key}-${metric}-${threshold}`;
               if (pct >= threshold && !notified.has(notifyKey)) {
                 notified.add(notifyKey);
-                const metricLabel = metric === 'ap' ? 'AP' : metric === 'dials' ? 'dial' : 'appointment';
+                const metricLabel = metric === 'ap' ? 'AP' : 'dial';
                 const msg = threshold >= 100
                   ? `🎉 ${label} ${metricLabel} goal hit! (${actual}/${target})`
                   : `🔥 ${threshold}% to your ${label.toLowerCase()} ${metricLabel} goal (${actual}/${target})`;
@@ -189,9 +188,8 @@ export default function GoalsManager() {
   );
 }
 
-function GoalModal({ title, onSave, onSkip }: { title: string; onSave: (vals: { target_dials: number | null; target_appointments: number | null; target_ap: number | null }) => Promise<void>; onSkip: () => void }) {
+function GoalModal({ title, onSave, onSkip }: { title: string; onSave: (vals: { target_dials: number | null; target_ap: number | null }) => Promise<void>; onSkip: () => void }) {
   const [dials, setDials] = useState('');
-  const [appointments, setAppointments] = useState('');
   const [ap, setAp] = useState('');
   const [busy, setBusy] = useState(false);
 
@@ -200,7 +198,6 @@ function GoalModal({ title, onSave, onSkip }: { title: string; onSave: (vals: { 
     try {
       await onSave({
         target_dials: dials ? Number(dials) : null,
-        target_appointments: appointments ? Number(appointments) : null,
         target_ap: ap ? Number(ap) : null
       });
     } finally { setBusy(false); }
@@ -214,10 +211,6 @@ function GoalModal({ title, onSave, onSkip }: { title: string; onSave: (vals: { 
           <div>
             <label className="label mb-1 block">Dial Goal</label>
             <input className="input" type="number" placeholder="e.g. 60" value={dials} onChange={(e) => setDials(e.target.value)} />
-          </div>
-          <div>
-            <label className="label mb-1 block">Appointment Goal</label>
-            <input className="input" type="number" placeholder="e.g. 5" value={appointments} onChange={(e) => setAppointments(e.target.value)} />
           </div>
           <div>
             <label className="label mb-1 block">AP Goal ($)</label>

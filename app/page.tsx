@@ -3,7 +3,7 @@ import { getDb } from '@/lib/db';
 import StatCard from '@/components/StatCard';
 import { fmtMoney, fmtMoney0, fmtPct, agentDateStr, agentWeekStart, agentHour } from '@/lib/util';
 import { getMoneyTiles, getActivityStats, getConversionRates, getLeadEconomics, getGoalProgress, getDailyTrend, Period } from '@/lib/metrics';
-import { DailyGoal, WeeklyGoal } from '@/lib/types';
+import { DailyGoal, WeeklyGoal, LeadVendor } from '@/lib/types';
 import { quoteOfTheDay } from '@/lib/quotes';
 import { getCurrentUser } from '@/lib/currentUser';
 import { redirect } from 'next/navigation';
@@ -35,17 +35,19 @@ function greeting(hour: number): string {
   return 'Good evening';
 }
 
-export default async function DashboardPage({ searchParams }: { searchParams: { period?: string } }) {
+export default async function DashboardPage({ searchParams }: { searchParams: { period?: string; vendor?: string } }) {
   const user = await getCurrentUser();
   if (!user) redirect('/login');
 
   const db = getDb();
   const period = (['today', 'week', 'month', 'all'].includes(searchParams.period || '') ? searchParams.period : 'today') as Period;
+  const vendorId = searchParams.vendor || undefined;
+  const vendors = db.prepare('SELECT * FROM lead_vendors ORDER BY name').all() as LeadVendor[];
 
   const money = getMoneyTiles(db, user.id);
-  const activity = getActivityStats(db, period, user.id);
+  const activity = getActivityStats(db, period, user.id, vendorId);
   const conversion = getConversionRates(activity);
-  const leadEcon = getLeadEconomics(db, activity, period, user.id);
+  const leadEcon = getLeadEconomics(db, activity, period, user.id, vendorId);
 
   const freshCount = (db.prepare(`SELECT COUNT(*) n FROM customers WHERE status = 'fresh' AND archived = 0 AND owner_id = ?`).get(user.id) as { n: number }).n;
   const workingCount = (db.prepare(`SELECT COUNT(*) n FROM customers WHERE status IN ('working','aging_45_90') AND archived = 0 AND owner_id = ?`).get(user.id) as { n: number }).n;
@@ -57,7 +59,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: { 
 
   const dailyProgress = getGoalProgress(db, 'daily', today, user.id);
   const weeklyProgress = getGoalProgress(db, 'weekly', weekStart, user.id);
-  const hasAnyGoal = !!(dailyGoal?.target_dials || dailyGoal?.target_appointments || dailyGoal?.target_ap || weeklyGoal?.target_dials || weeklyGoal?.target_appointments || weeklyGoal?.target_ap);
+  const hasAnyGoal = !!(dailyGoal?.target_dials || dailyGoal?.target_ap || weeklyGoal?.target_dials || weeklyGoal?.target_ap);
 
   const firstName = user.name.split(' ')[0];
   const quote = quoteOfTheDay(today);
@@ -80,19 +82,17 @@ export default async function DashboardPage({ searchParams }: { searchParams: { 
 
       {hasAnyGoal && (
         <section className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          {(weeklyGoal?.target_dials || weeklyGoal?.target_appointments || weeklyGoal?.target_ap) && (
+          {(weeklyGoal?.target_dials || weeklyGoal?.target_ap) && (
             <div className="card space-y-2 p-4">
               <div className="label">🗓️ This Week&apos;s Goals</div>
               <GoalBar label="Dials" actual={weeklyProgress.dials} target={weeklyGoal?.target_dials ?? null} />
-              <GoalBar label="Appointments" actual={weeklyProgress.appointments} target={weeklyGoal?.target_appointments ?? null} />
               <GoalBar label="AP" actual={weeklyProgress.ap} target={weeklyGoal?.target_ap ?? null} />
             </div>
           )}
-          {(dailyGoal?.target_dials || dailyGoal?.target_appointments || dailyGoal?.target_ap) && (
+          {(dailyGoal?.target_dials || dailyGoal?.target_ap) && (
             <div className="card space-y-2 p-4">
               <div className="label">☀️ Today&apos;s Goals</div>
               <GoalBar label="Dials" actual={dailyProgress.dials} target={dailyGoal?.target_dials ?? null} />
-              <GoalBar label="Appointments" actual={dailyProgress.appointments} target={dailyGoal?.target_appointments ?? null} />
               <GoalBar label="AP" actual={dailyProgress.ap} target={dailyGoal?.target_ap ?? null} />
             </div>
           )}
@@ -115,22 +115,31 @@ export default async function DashboardPage({ searchParams }: { searchParams: { 
         </div>
       </section>
 
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         {(['today', 'week', 'month', 'all'] as Period[]).map((p) => (
           <a
             key={p}
-            href={`/?period=${p}`}
+            href={`/?period=${p}${vendorId ? `&vendor=${vendorId}` : ''}`}
             className={`rounded-lg px-3 py-1.5 text-sm font-medium ${period === p ? 'bg-brand-500 text-white' : 'bg-panel2 border border-line text-slate-600 hover:bg-slate-100'}`}
           >
             {PERIOD_LABEL[p]}
           </a>
         ))}
+        <form action="/" method="get" className="flex items-center gap-1.5">
+          <input type="hidden" name="period" value={period} />
+          <select name="vendor" defaultValue={vendorId || ''} className="input h-[34px] w-44 py-1 text-sm">
+            <option value="">All vendors</option>
+            {vendors.map((v) => <option key={v.id} value={v.id}>{v.name}</option>)}
+          </select>
+          <button type="submit" className="btn-secondary text-sm">Filter</button>
+          {vendorId && <a href={`/?period=${period}`} className="text-xs text-slate-400 hover:underline">Reset</a>}
+        </form>
         <span className="text-xs text-slate-400">— activity, conversion &amp; lead economics below</span>
       </div>
 
       {/* ACTIVITY */}
       <section>
-        <div className="mb-2 label">📞 Activity ({PERIOD_LABEL[period]})</div>
+        <div className="mb-2 label">📞 Activity ({PERIOD_LABEL[period]}{vendorId ? ` · ${vendors.find((v) => v.id === vendorId)?.name || 'Vendor'}` : ''})</div>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
           <StatCard label="Calls" value={String(activity.calls)} />
           <StatCard label="Contacts" value={String(activity.contacts)} />
@@ -143,7 +152,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: { 
 
       {/* CONVERSION */}
       <section>
-        <div className="mb-2 label">📈 Conversion</div>
+        <div className="mb-2 label">📈 Conversion{vendorId ? ` · ${vendors.find((v) => v.id === vendorId)?.name || 'Vendor'}` : ''}</div>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           <StatCard label="Contact Rate" value={fmtPct(conversion.contactRate)} />
           <StatCard label="Appointment Rate" value={fmtPct(conversion.appointmentRate)} />

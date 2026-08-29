@@ -113,36 +113,36 @@ export interface ActivityStats {
   leadSpend: number;
 }
 
-export function getActivityStats(db: Database.Database, period: Period, ownerId: string): ActivityStats {
+export function getActivityStats(db: Database.Database, period: Period, ownerId: string, vendorId?: string): ActivityStats {
   const since = periodStartISO(period);
-  const args = since ? [ownerId, since] : [ownerId];
-  const dateOp = since ? 'AND' : '';
-  const dateColClause = (alias: string, col: string) => (since ? `${dateOp} ${alias}.${col} >= ?` : '');
+  const vendorClause = vendorId ? 'AND c.lead_vendor_id = ?' : '';
+  const args = [ownerId, ...(vendorId ? [vendorId] : []), ...(since ? [since] : [])];
+  const dateColClause = (alias: string, col: string) => (since ? `AND ${alias}.${col} >= ?` : '');
 
   const calls = (
-    db.prepare(`SELECT COUNT(*) n FROM calls ca JOIN customers c ON c.id = ca.customer_id WHERE c.owner_id = ? ${dateColClause('ca', 'occurred_at')}`).get(...args) as { n: number }
+    db.prepare(`SELECT COUNT(*) n FROM calls ca JOIN customers c ON c.id = ca.customer_id WHERE c.owner_id = ? ${vendorClause} ${dateColClause('ca', 'occurred_at')}`).get(...args) as { n: number }
   ).n;
   const conversations = (
-    db.prepare(`SELECT COUNT(*) n FROM calls ca JOIN customers c ON c.id = ca.customer_id WHERE c.owner_id = ? ${dateColClause('ca', 'occurred_at')} AND ca.outcome = 'connected'`).get(...args) as { n: number }
+    db.prepare(`SELECT COUNT(*) n FROM calls ca JOIN customers c ON c.id = ca.customer_id WHERE c.owner_id = ? ${vendorClause} ${dateColClause('ca', 'occurred_at')} AND ca.outcome = 'connected'`).get(...args) as { n: number }
   ).n;
   const contactsRow = db
-    .prepare(`SELECT COUNT(DISTINCT ca.customer_id) n FROM calls ca JOIN customers c ON c.id = ca.customer_id WHERE c.owner_id = ? ${dateColClause('ca', 'occurred_at')} AND ca.outcome = 'connected'`)
+    .prepare(`SELECT COUNT(DISTINCT ca.customer_id) n FROM calls ca JOIN customers c ON c.id = ca.customer_id WHERE c.owner_id = ? ${vendorClause} ${dateColClause('ca', 'occurred_at')} AND ca.outcome = 'connected'`)
     .get(...args) as { n: number };
 
   const appointments = (
-    db.prepare(`SELECT COUNT(*) n FROM appointments a JOIN customers c ON c.id = a.customer_id WHERE c.owner_id = ? ${dateColClause('a', 'created_at')}`).get(...args) as { n: number }
+    db.prepare(`SELECT COUNT(*) n FROM appointments a JOIN customers c ON c.id = a.customer_id WHERE c.owner_id = ? ${vendorClause} ${dateColClause('a', 'created_at')}`).get(...args) as { n: number }
   ).n;
   const applications = (
-    db.prepare(`SELECT COUNT(*) n FROM applications ap JOIN customers c ON c.id = ap.customer_id WHERE c.owner_id = ? ${dateColClause('ap', 'submitted_at')}`).get(...args) as { n: number }
+    db.prepare(`SELECT COUNT(*) n FROM applications ap JOIN customers c ON c.id = ap.customer_id WHERE c.owner_id = ? ${vendorClause} ${dateColClause('ap', 'submitted_at')}`).get(...args) as { n: number }
   ).n;
   const issued = (
-    db.prepare(`SELECT COUNT(*) n FROM policies p JOIN customers c ON c.id = p.customer_id WHERE c.owner_id = ? ${dateColClause('p', 'created_at')}`).get(...args) as { n: number }
+    db.prepare(`SELECT COUNT(*) n FROM policies p JOIN customers c ON c.id = p.customer_id WHERE c.owner_id = ? ${vendorClause} ${dateColClause('p', 'created_at')}`).get(...args) as { n: number }
   ).n;
   const leads = (
-    db.prepare(`SELECT COUNT(*) n FROM customers c WHERE c.owner_id = ? ${dateColClause('c', 'purchased_at')}`).get(...args) as { n: number }
+    db.prepare(`SELECT COUNT(*) n FROM customers c WHERE c.owner_id = ? ${vendorClause} ${dateColClause('c', 'purchased_at')}`).get(...args) as { n: number }
   ).n;
   const leadSpend = (
-    db.prepare(`SELECT COALESCE(SUM(c.lead_cost),0) s FROM customers c WHERE c.owner_id = ? ${dateColClause('c', 'purchased_at')}`).get(...args) as { s: number }
+    db.prepare(`SELECT COALESCE(SUM(c.lead_cost),0) s FROM customers c WHERE c.owner_id = ? ${vendorClause} ${dateColClause('c', 'purchased_at')}`).get(...args) as { s: number }
   ).s;
 
   return { calls, contacts: contactsRow.n, conversations, appointments, applications, issued, leads, leadSpend };
@@ -173,11 +173,13 @@ export interface LeadEconomics {
   roi: number | null;
 }
 
-export function getLeadEconomics(db: Database.Database, activity: ActivityStats, period: Period, ownerId: string): LeadEconomics {
+export function getLeadEconomics(db: Database.Database, activity: ActivityStats, period: Period, ownerId: string, vendorId?: string): LeadEconomics {
   const since = periodStartISO(period);
-  const netCommission = since
-    ? (db.prepare(`SELECT COALESCE(SUM(cm.net_commission),0) s FROM commissions cm JOIN customers c ON c.id = cm.customer_id WHERE c.owner_id = ? AND cm.created_at >= ?`).get(ownerId, since) as { s: number }).s
-    : (db.prepare(`SELECT COALESCE(SUM(cm.net_commission),0) s FROM commissions cm JOIN customers c ON c.id = cm.customer_id WHERE c.owner_id = ?`).get(ownerId) as { s: number }).s;
+  const vendorClause = vendorId ? 'AND c.lead_vendor_id = ?' : '';
+  const args = [ownerId, ...(vendorId ? [vendorId] : []), ...(since ? [since] : [])];
+  const netCommission = (
+    db.prepare(`SELECT COALESCE(SUM(cm.net_commission),0) s FROM commissions cm JOIN customers c ON c.id = cm.customer_id WHERE c.owner_id = ? ${vendorClause} ${since ? 'AND cm.created_at >= ?' : ''}`).get(...args) as { s: number }
+  ).s;
   const { leadSpend, leads, issued } = activity;
   return {
     leadSpend,

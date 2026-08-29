@@ -82,6 +82,13 @@ export default function LeadWorkspace({
   const [showQuote, setShowQuote] = useState(false);
   const [showAppt, setShowAppt] = useState(false);
   const [activeTab, setActiveTab] = useState<'calls' | 'notes'>('calls');
+  // Power Dial is meant to be fast — agents found the full three-panel
+  // workspace too busy while just dialing through a queue, so those panels
+  // start collapsed behind toggle buttons there and get opened on demand.
+  // Browsing a lead outside Power Dial keeps the original always-open layout.
+  const [showInfoPanel, setShowInfoPanel] = useState(!isDialing);
+  const [showNotesPanel, setShowNotesPanel] = useState(!isDialing);
+  const [showStatusPanel, setShowStatusPanel] = useState(!isDialing);
 
   const badge = statusBadge(customer.status, customer.purchased_at);
   // Health conditions are often disclosed across several calls/notes rather than
@@ -167,6 +174,16 @@ export default function LeadWorkspace({
         router.push('/leads');
         return;
       }
+      // Power Dial: once this lead's disposition is logged, move straight to
+      // the next one instead of making the agent click Skip / Next Lead too —
+      // relying on the just-cleared pendingCallId here rather than the
+      // (still-stale-until-re-render) pendingDisposition flag.
+      if (isDialing) {
+        if (queue.length === 0) { router.push('/leads'); return; }
+        const [next, ...rest] = queue;
+        router.push(`/leads/${next}?dialing=1${rest.length ? `&queue=${rest.join(',')}` : ''}`);
+        return;
+      }
       await refresh();
     } finally { setBusy(false); }
   }
@@ -219,7 +236,7 @@ export default function LeadWorkspace({
             ) : (
               <Link href="/leads" className="btn-secondary text-xs">Exit Queue</Link>
             )}
-            <button className="btn-primary text-xs" disabled={pendingDisposition} onClick={nextInQueue}>Skip / Next Lead ▶</button>
+            <button className="btn-primary text-xs" disabled={pendingDisposition} onClick={nextInQueue}>Skip This Lead ▶</button>
           </div>
         </div>
       )}
@@ -239,14 +256,30 @@ export default function LeadWorkspace({
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
-          {customer.phone && (
-            <a href={`tel:${customer.phone.replace(/[^\d+]/g, '')}`} className="btn-good" onClick={startCall}>
-              📞 Call {customer.phone}
-            </a>
-          )}
-          {pendingCallId && (
-            <button className="btn-secondary" disabled={busy} onClick={cancelPendingCall}>↩️ Didn&apos;t mean to dial</button>
-          )}
+          <div className="relative">
+            {customer.phone && (
+              <a href={`tel:${customer.phone.replace(/[^\d+]/g, '')}`} className="btn-good" onClick={startCall}>
+                📞 Call {customer.phone}
+              </a>
+            )}
+            {pendingCallId && (
+              <div className="absolute left-0 top-full z-30 mt-2 w-64 rounded-xl border border-line bg-panel p-3 shadow-2xl">
+                <div className="mb-2 text-xs font-semibold text-brand-400">📞 In progress — what happened?</div>
+                {callError && <div className="mb-2 rounded bg-red-50 p-2 text-xs text-red-700">{callError}</div>}
+                <div className="grid grid-cols-2 gap-1.5">
+                  <button disabled={busy} onClick={() => logCall('no_answer')} className="btn-secondary text-xs px-2 py-1.5">No Answer</button>
+                  <button disabled={busy} onClick={() => logCall('voicemail')} className="btn-secondary text-xs px-2 py-1.5">Voicemail</button>
+                  <button disabled={busy} onClick={() => logCall('busy')} className="btn-secondary text-xs px-2 py-1.5">Busy</button>
+                  <button disabled={busy} onClick={() => logCall('wrong_number')} className="btn-secondary text-xs px-2 py-1.5">Wrong #</button>
+                  <button disabled={busy} onClick={() => logCall('connected', 'interested')} className="btn-good text-xs px-2 py-1.5">Connected</button>
+                  <button disabled={busy} onClick={() => logCall('dnc')} className="btn-danger text-xs px-2 py-1.5">DNC</button>
+                </div>
+                <button className="mt-2 w-full text-center text-xs text-slate-400 hover:text-ink" disabled={busy} onClick={cancelPendingCall}>
+                  ↩️ Didn&apos;t mean to dial
+                </button>
+              </div>
+            )}
+          </div>
           <button className="btn-secondary" onClick={() => setShowQuote(true)}>🧮 Run Quote</button>
           <button className="btn-secondary" onClick={() => setShowAppt(true)}>📅 Appointment</button>
           {customer.status !== 'sold' && (
@@ -257,8 +290,23 @@ export default function LeadWorkspace({
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[340px_1fr_320px]">
+      {isDialing && (
+        <div className="flex flex-wrap gap-2">
+          <button className="btn-secondary text-xs" onClick={() => setShowInfoPanel((v) => !v)}>
+            {showInfoPanel ? '▾' : '▸'} Lead Info
+          </button>
+          <button className="btn-secondary text-xs" onClick={() => setShowNotesPanel((v) => !v)}>
+            {showNotesPanel ? '▾' : '▸'} Notes
+          </button>
+          <button className="btn-secondary text-xs" onClick={() => setShowStatusPanel((v) => !v)}>
+            {showStatusPanel ? '▾' : '▸'} Funnel &amp; Status
+          </button>
+        </div>
+      )}
+
+      <div className={`grid grid-cols-1 gap-4 ${isDialing ? '' : 'lg:grid-cols-[340px_1fr_320px]'}`}>
         {/* Lead info panel */}
+        {showInfoPanel && (
         <div className="card space-y-3 p-4">
           <div className="label">Lead Information</div>
           <dl className="space-y-2 text-sm">
@@ -284,18 +332,7 @@ export default function LeadWorkspace({
             {dailyLimitReached && !pendingCallId && (
               <div className="mt-2 rounded bg-amber-50 p-2 text-xs text-amber-800">Daily call limit reached for this lead — try again tomorrow.</div>
             )}
-            {callError && <div className="mt-2 rounded bg-red-50 p-2 text-xs text-red-700">{callError}</div>}
-            {pendingCallId && (
-              <div className="mt-2 rounded bg-brand-50 p-2 text-xs font-medium text-brand-700">📞 Call in progress — pick what happened:</div>
-            )}
-            <div className="mt-2 grid grid-cols-3 gap-1.5">
-              <button disabled={busy || (dailyLimitReached && !pendingCallId)} onClick={() => logCall('no_answer')} className="btn-secondary text-xs px-2 py-1.5">No Answer</button>
-              <button disabled={busy || (dailyLimitReached && !pendingCallId)} onClick={() => logCall('voicemail')} className="btn-secondary text-xs px-2 py-1.5">Voicemail</button>
-              <button disabled={busy || (dailyLimitReached && !pendingCallId)} onClick={() => logCall('busy')} className="btn-secondary text-xs px-2 py-1.5">Busy</button>
-              <button disabled={busy || (dailyLimitReached && !pendingCallId)} onClick={() => logCall('wrong_number')} className="btn-secondary text-xs px-2 py-1.5">Wrong #</button>
-              <button disabled={busy} onClick={() => logCall('dnc')} className="btn-danger text-xs px-2 py-1.5">DNC</button>
-              <button disabled={busy || (dailyLimitReached && !pendingCallId)} onClick={() => logCall('connected', 'interested')} className="btn-good text-xs px-2 py-1.5">Connected</button>
-            </div>
+            {!pendingCallId && <div className="mt-2 text-xs text-slate-400">Tap 📞 Call above to log a dial and pick the outcome.</div>}
           </div>
 
           {/* Carrier suggestions based on HEALTH note */}
@@ -334,8 +371,10 @@ export default function LeadWorkspace({
             )}
           </div>
         </div>
+        )}
 
         {/* Notes panel */}
+        {showNotesPanel && (
         <div className="card p-4">
           <div className="mb-2 flex items-center justify-between">
             <div className="label">Notes {!editingNote && <span className="font-normal normal-case text-slate-400">(locked — click Edit to change)</span>}</div>
@@ -436,8 +475,10 @@ export default function LeadWorkspace({
             )}
           </div>
         </div>
+        )}
 
         {/* Right: quick summary + status actions */}
+        {showStatusPanel && (
         <div className="space-y-4">
           <div className="card p-4">
             <div className="label mb-2">Funnel Status</div>
@@ -476,6 +517,7 @@ export default function LeadWorkspace({
             </div>
           </div>
         </div>
+        )}
       </div>
 
       {/* Tabs: calls / notes history */}

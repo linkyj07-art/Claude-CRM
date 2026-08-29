@@ -50,6 +50,7 @@ export default function TopNav({ user }: { user: SessionUser | null }) {
           ))}
         </nav>
         <span className="mr-1 hidden text-sm text-slate-500 sm:inline">{user.name}</span>
+        <Link href="/quick-links" className="btn-secondary hidden sm:inline-flex">👥 Team</Link>
         <QuickAccessMenu carriers={carriers} quickLinks={quickLinks} />
         <LogoutButton />
       </div>
