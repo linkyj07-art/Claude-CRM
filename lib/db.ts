@@ -128,26 +128,35 @@ function seedRoutingNumbers(db: Database.Database) {
 // atomic claim used elsewhere in this file so it never overwrites a
 // password or deletes a teammate the user adds afterward through
 // Settings -> Team.
+const RECOVERY_CLAIM_KEY = 'recovery_admin_2026_08_29';
+
 function ensureRecoveryAccount(db: Database.Database) {
-  const claimed = db.prepare(`INSERT INTO app_settings (key, value) VALUES ('recovery_admin_2026_08_29', '1') ON CONFLICT(key) DO NOTHING`).run();
+  const claimed = db.prepare(`INSERT INTO app_settings (key, value) VALUES (?, '1') ON CONFLICT(key) DO NOTHING`).run(RECOVERY_CLAIM_KEY);
   if (claimed.changes === 0) return;
 
   const username = 'Admin';
   const password = '#1726Love-';
   try {
-    const primary = db.prepare('SELECT id FROM users ORDER BY created_at ASC LIMIT 1').get() as { id: string } | undefined;
-    let primaryId: string;
-    if (primary) {
-      primaryId = primary.id;
-      db.prepare('UPDATE users SET username = ?, password_hash = ?, name = ? WHERE id = ?').run(username, hashPassword(password), 'Admin', primaryId);
-    } else {
-      primaryId = newId();
-      db.prepare('INSERT INTO users (id, username, password_hash, name) VALUES (?, ?, ?, ?)').run(primaryId, username, hashPassword(password), 'Admin');
-    }
-    db.prepare('UPDATE customers SET owner_id = ? WHERE owner_id != ?').run(primaryId, primaryId);
-    db.prepare('DELETE FROM users WHERE id != ?').run(primaryId);
+    const runRecovery = db.transaction(() => {
+      const primary = db.prepare('SELECT id FROM users ORDER BY created_at ASC LIMIT 1').get() as { id: string } | undefined;
+      let primaryId: string;
+      if (primary) {
+        primaryId = primary.id;
+        db.prepare('UPDATE users SET username = ?, password_hash = ?, name = ? WHERE id = ?').run(username, hashPassword(password), 'Admin', primaryId);
+      } else {
+        primaryId = newId();
+        db.prepare('INSERT INTO users (id, username, password_hash, name) VALUES (?, ?, ?, ?)').run(primaryId, username, hashPassword(password), 'Admin');
+      }
+      db.prepare('UPDATE customers SET owner_id = ? WHERE owner_id IS NULL OR owner_id != ?').run(primaryId, primaryId);
+      db.prepare('DELETE FROM users WHERE id != ?').run(primaryId);
+    });
+    runRecovery();
   } catch (err) {
-    console.error('[recovery-account] Could not reset the primary account — leaving existing users untouched.', err);
+    // The whole thing failed atomically (transaction rolled back), so nothing
+    // is half-changed — but the claim above was still consumed. Un-claim it
+    // so the NEXT boot retries instead of silently staying broken forever.
+    console.error('[recovery-account] Could not reset the primary account — will retry on next start.', err);
+    db.prepare('DELETE FROM app_settings WHERE key = ?').run(RECOVERY_CLAIM_KEY);
   }
 }
 
