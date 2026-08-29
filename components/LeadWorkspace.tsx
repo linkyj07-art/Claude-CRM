@@ -81,6 +81,7 @@ export default function LeadWorkspace({
   type DialSession = { currentLeadId: string | null; queue: string[]; recycle: string[]; pass: number };
   const [dialSession, setDialSession] = useState<DialSession | null>(null);
   const [busy, setBusy] = useState(false);
+  const [quoBusy, setQuoBusy] = useState(false);
   const [noteForm, setNoteForm] = useState<AnyRow>(() => noteFormFromNote(notes[0], customer));
   const [editingNote, setEditingNote] = useState(() => !notes[0]);
   const [showSell, setShowSell] = useState(false);
@@ -122,6 +123,18 @@ export default function LeadWorkspace({
 
   async function refresh() {
     router.refresh();
+  }
+
+  async function endQuoCall() {
+    setQuoBusy(true);
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_QUO_HELPER_URL || 'http://127.0.0.1:8787'}/end-call`, { method: 'POST' });
+      if (!res.ok) throw new Error(await res.text());
+    } catch {
+      alert('Could not reach the Quo helper. Make sure it\'s running on this Mac (`npm run quo-helper`) and try again.');
+    } finally {
+      setQuoBusy(false);
+    }
   }
 
   // Tapping Call logs the dial immediately (as 'pending') instead of waiting
@@ -432,6 +445,14 @@ export default function LeadWorkspace({
               </div>
             )}
           </div>
+          <button
+            className="btn-danger"
+            disabled={quoBusy}
+            onClick={endQuoCall}
+            title="Ends the active call in Quo (requires the local Quo helper running on this Mac — npm run quo-helper)"
+          >
+            {quoBusy ? '⏳ Ending…' : '☎️ End Quo Call'}
+          </button>
           <button className="btn-secondary" onClick={() => setShowQuote(true)}>🧮 Run Quote</button>
           <button className="btn-secondary" onClick={() => setShowAppt(true)}>📅 Appointment</button>
           {customer.status !== 'sold' && (
