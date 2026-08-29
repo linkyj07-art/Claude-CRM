@@ -154,6 +154,44 @@ carries a reminder to verify against the carrier's actual field guide.
 Manage the rules (and your real carrier list) from **⚡ Quick Access →
 Manage Quick Links → Underwriting Rules**.
 
+## Ending Quo calls from the CRM (macOS only)
+
+The Lead Workspace has a **☎️ End Quo Call** button that hangs up the active
+call in [Quo](https://www.getquo.com) without you having to switch windows —
+useful when you've got several tabs/sites open and Quo isn't the focused app.
+
+The CRM runs in your browser and Quo is a separate desktop app, so the button
+can't click Quo's UI directly (browsers can't reach outside the tab). Instead
+it talks to a tiny local helper that runs alongside the CRM on your Mac:
+
+1. **One-time setup:** open **System Settings → Privacy & Security →
+   Accessibility** and enable whatever terminal app you'll run the helper
+   from (Terminal, iTerm, your editor's integrated terminal, etc.) — it needs
+   permission to control the Mac via System Events to switch focus to Quo and
+   send its hangup shortcut.
+2. **Start the helper** in a terminal tab and leave it running while you make
+   calls:
+   ```bash
+   npm run quo-helper
+   ```
+   It listens on `http://127.0.0.1:8787` and does three things per click:
+   switches focus to Quo, sends Quo's own end-call shortcut (`Cmd+Shift+H` by
+   default), then switches focus back to whatever you were using.
+3. **Click ☎️ End Quo Call** in the Lead Workspace. If the helper isn't
+   running, the button tells you so instead of failing silently.
+
+If your Quo hangup shortcut isn't `Cmd+Shift+H`, or Quo's app name differs,
+override with environment variables before starting the helper:
+```bash
+QUO_APP_NAME="Quo" QUO_HANGUP_KEY="h" npm run quo-helper
+```
+
+This is deliberately narrow: the helper only performs that one hardcoded
+action (send the hangup shortcut) and only listens on `127.0.0.1`, so it's
+not reachable from outside your machine. See the comments in
+`scripts/quo-helper-server.js` for the full detail, including why it has no
+auth token (the only thing it can do is hang up a call).
+
 ## Protected fields & login
 
 SSN, bank name/state, routing number, and account number live in
