@@ -371,41 +371,63 @@ const CALL_WINDOW_OVERRIDES: Record<string, CallWindowRule> = {
 };
 
 const WEEKDAY_FMT_CACHE = new Map<string, Intl.DateTimeFormat>();
-function weekdayAndHour(tz: string, reference: Date): { weekday: string; hour: number } {
+function weekdayHourMinute(tz: string, reference: Date): { weekday: string; hour: number; minute: number } {
   let fmt = WEEKDAY_FMT_CACHE.get(tz);
   if (!fmt) {
-    fmt = new Intl.DateTimeFormat('en-US', { hour: 'numeric', hourCycle: 'h23', weekday: 'short', timeZone: tz });
+    fmt = new Intl.DateTimeFormat('en-US', { hour: 'numeric', minute: 'numeric', hourCycle: 'h23', weekday: 'short', timeZone: tz });
     WEEKDAY_FMT_CACHE.set(tz, fmt);
   }
   const parts = fmt.formatToParts(reference);
   const hour = Number(parts.find((p) => p.type === 'hour')?.value);
+  const minute = Number(parts.find((p) => p.type === 'minute')?.value);
   const weekday = parts.find((p) => p.type === 'weekday')?.value || '';
-  return { weekday, hour };
+  return { weekday, hour, minute };
+}
+
+// Resolves a state's rule down to "today's" actual start/end/closed, since
+// several states carry different Saturday or Sunday hours.
+function todaysWindow(rule: CallWindowRule, weekday: string): { start: number; end: number; closed: boolean } {
+  if (weekday === 'Sun') {
+    if (rule.sundayClosed) return { start: 0, end: 0, closed: true };
+    return { start: rule.sundayStart ?? rule.start, end: rule.sundayEnd ?? rule.end, closed: false };
+  }
+  if (weekday === 'Sat' && (rule.saturdayStart !== undefined || rule.saturdayEnd !== undefined)) {
+    return { start: rule.saturdayStart ?? rule.start, end: rule.saturdayEnd ?? rule.end, closed: false };
+  }
+  return { start: rule.start, end: rule.end, closed: false };
+}
+
+function callWindowRuleFor(state: string | null): CallWindowRule {
+  return (state && CALL_WINDOW_OVERRIDES[state]) || { start: CALL_WINDOW_START_HOUR, end: CALL_WINDOW_END_HOUR };
 }
 
 export function isWithinCallingHours(state: string | null, reference: Date = new Date()): boolean {
   const tz = (state && STATE_TIMEZONES[state]) || 'America/New_York';
   try {
-    const { weekday, hour } = weekdayAndHour(tz, reference);
-    const rule: CallWindowRule = (state && CALL_WINDOW_OVERRIDES[state]) || {
-      start: CALL_WINDOW_START_HOUR,
-      end: CALL_WINDOW_END_HOUR
-    };
-
-    if (weekday === 'Sun') {
-      if (rule.sundayClosed) return false;
-      const start = rule.sundayStart ?? rule.start;
-      const end = rule.sundayEnd ?? rule.end;
-      return hour >= start && hour < end;
-    }
-    if (weekday === 'Sat' && (rule.saturdayStart !== undefined || rule.saturdayEnd !== undefined)) {
-      const start = rule.saturdayStart ?? rule.start;
-      const end = rule.saturdayEnd ?? rule.end;
-      return hour >= start && hour < end;
-    }
-    return hour >= rule.start && hour < rule.end;
+    const { weekday, hour } = weekdayHourMinute(tz, reference);
+    const { start, end, closed } = todaysWindow(callWindowRuleFor(state), weekday);
+    if (closed) return false;
+    return hour >= start && hour < end;
   } catch {
     return true;
+  }
+}
+
+// How many minutes remain before this lead's state stops being callable
+// today (Infinity if it isn't currently within its window at all — that
+// case is handled separately by isWithinCallingHours). Powers Power Dial's
+// "closing soon" prioritization: a lead in a state whose window shuts in 20
+// minutes is worth calling before one that's open until 9pm, even if the
+// latter would otherwise sort first by status.
+export function minutesUntilCallingWindowCloses(state: string | null, reference: Date = new Date()): number {
+  const tz = (state && STATE_TIMEZONES[state]) || 'America/New_York';
+  try {
+    const { weekday, hour, minute } = weekdayHourMinute(tz, reference);
+    const { end, closed } = todaysWindow(callWindowRuleFor(state), weekday);
+    if (closed) return Infinity;
+    return (end - hour) * 60 - minute;
+  } catch {
+    return Infinity;
   }
 }
 

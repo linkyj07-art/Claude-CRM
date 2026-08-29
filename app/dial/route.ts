@@ -1,7 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
 import { getCurrentUser } from '@/lib/currentUser';
-import { isWithinCallingHours, MAX_CALLS_PER_DAY } from '@/lib/util';
+import { isWithinCallingHours, minutesUntilCallingWindowCloses, MAX_CALLS_PER_DAY } from '@/lib/util';
+
+// A lead whose state is closing for the day within this many minutes jumps
+// to the front of the queue — otherwise it's easy to work through fresher
+// leads all morning and never circle back before that window shuts, even
+// though the lead has only been dialed once or twice.
+const CLOSING_SOON_MINUTES = 90;
 
 export async function GET(req: NextRequest) {
   const user = await getCurrentUser();
@@ -48,7 +54,22 @@ export async function GET(req: NextRequest) {
   // Leads whose local time is outside the 8am-9pm calling window get held
   // back rather than queued dead-on-arrival — they'll be picked up again on
   // a later Power Dial run once their state's window opens.
-  const rows = allRows.filter((r) => isWithinCallingHours(r.state));
+  const callable = allRows.filter((r) => isWithinCallingHours(r.state));
+
+  // Within the callable set, leads whose window closes soon jump ahead of
+  // the normal status-based order (stable sort keeps everyone else exactly
+  // where they were) — otherwise a lead an hour from closing could sit
+  // behind a hundred "fresh" leads and never get reached in time.
+  const rows = callable
+    .map((r) => ({ ...r, minutesLeft: minutesUntilCallingWindowCloses(r.state) }))
+    .sort((a, b) => {
+      const aUrgent = a.minutesLeft <= CLOSING_SOON_MINUTES;
+      const bUrgent = b.minutesLeft <= CLOSING_SOON_MINUTES;
+      if (aUrgent && bUrgent) return a.minutesLeft - b.minutesLeft;
+      if (aUrgent) return -1;
+      if (bUrgent) return 1;
+      return 0;
+    });
 
   if (rows.length === 0) {
     const reason = allRows.length > 0 ? '&closed=1' : '';
