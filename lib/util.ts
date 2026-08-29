@@ -431,6 +431,60 @@ export function minutesUntilCallingWindowCloses(state: string | null, reference:
   }
 }
 
+const WEEKDAY_ORDER = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const WEEKDAY_FULL: Record<string, string> = {
+  Sun: 'Sunday', Mon: 'Monday', Tue: 'Tuesday', Wed: 'Wednesday', Thu: 'Thursday', Fri: 'Friday', Sat: 'Saturday'
+};
+
+export interface CallingWindowStatus {
+  isOpen: boolean;
+  label: string;
+}
+
+// Tells the agent, in their OWN clock (not the lead's), whether this lead's
+// state is callable right now and when that changes — "Open until 6:42 PM
+// your time" or "Closed — opens 10:00 AM your time (Monday)". Converts by
+// shifting the reference instant by the difference between the lead's local
+// hour and the target hour, then formatting that instant in AGENT_TIMEZONE;
+// accurate for same-day/next-few-days lookups, which is all this needs.
+export function callingWindowStatus(state: string | null, reference: Date = new Date()): CallingWindowStatus {
+  const tz = (state && STATE_TIMEZONES[state]) || 'America/New_York';
+  try {
+    const { weekday, hour, minute } = weekdayHourMinute(tz, reference);
+    const rule = callWindowRuleFor(state);
+    const today = todaysWindow(rule, weekday);
+
+    function instantAtLeadHour(targetHour: number, dayOffset: number): Date {
+      const deltaMinutes = (targetHour - hour) * 60 - minute + dayOffset * 24 * 60;
+      return new Date(reference.getTime() + deltaMinutes * 60000);
+    }
+    function formatAgentTime(d: Date): string {
+      return new Intl.DateTimeFormat('en-US', { hour: 'numeric', minute: '2-digit', hour12: true, timeZone: AGENT_TIMEZONE }).format(d);
+    }
+
+    const isOpenNow = !today.closed && hour >= today.start && hour < today.end;
+    if (isOpenNow) {
+      return { isOpen: true, label: `Open until ${formatAgentTime(instantAtLeadHour(today.end, 0))} your time` };
+    }
+    if (!today.closed && hour < today.start) {
+      return { isOpen: false, label: `Closed — opens ${formatAgentTime(instantAtLeadHour(today.start, 0))} your time (today)` };
+    }
+
+    const todayIdx = WEEKDAY_ORDER.indexOf(weekday);
+    for (let i = 1; i <= 7; i++) {
+      const nextWeekday = WEEKDAY_ORDER[(todayIdx + i) % 7];
+      const nextWindow = todaysWindow(rule, nextWeekday);
+      if (!nextWindow.closed) {
+        const dayLabel = i === 1 ? 'tomorrow' : WEEKDAY_FULL[nextWeekday];
+        return { isOpen: false, label: `Closed — opens ${formatAgentTime(instantAtLeadHour(nextWindow.start, i))} your time (${dayLabel})` };
+      }
+    }
+    return { isOpen: false, label: 'Closed' };
+  } catch {
+    return { isOpen: true, label: '' };
+  }
+}
+
 export const AGENT_TIMEZONE = 'America/Boise';
 
 export function agentLocalTime(): string {
