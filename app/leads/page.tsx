@@ -4,6 +4,7 @@ import { US_STATES } from '@/lib/util';
 import { Customer, LeadVendor } from '@/lib/types';
 import NewLeadButton from '@/components/NewLeadButton';
 import ImportLeadsButton from '@/components/ImportLeadsButton';
+import FixMisalignedButton from '@/components/FixMisalignedButton';
 import LeadsTable from '@/components/LeadsTable';
 import { getCurrentUser } from '@/lib/currentUser';
 import { redirect } from 'next/navigation';
@@ -53,6 +54,8 @@ export default async function LeadsPage({ searchParams }: { searchParams: { stat
           <a href="/dial" className="btn-primary">⚡ Power Dial</a>
         </div>
       </div>
+
+      <FixMisalignedButton />
 
       {searchParams.empty && searchParams.closed && (
         <div className="card border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">

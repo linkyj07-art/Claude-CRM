@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import Papa from 'papaparse';
 import ExcelJS from 'exceljs';
 import { getDb } from '@/lib/db';
-import { newId, normalizeState, parseCoverageRange, stateFromAreaCode } from '@/lib/util';
+import { newId, normalizeState, parseCoverageRange, stateFromAreaCode, reconcileContactFields } from '@/lib/util';
 import { logAudit } from '@/lib/audit';
 import { CustomerStatus } from '@/lib/types';
 import { getCurrentUser } from '@/lib/currentUser';
@@ -80,51 +80,6 @@ function parsePurchaseDate(value: string | Date): string | null {
   const d = new Date(t.length <= 10 && !t.includes('T') ? `${t}T12:00:00Z` : t);
   if (isNaN(d.getTime())) return null;
   return d.toISOString().slice(0, 19).replace('T', ' ');
-}
-
-function looksLikePhone(s: string): boolean {
-  const digits = (s || '').replace(/\D/g, '');
-  return digits.length === 10 || digits.length === 11;
-}
-
-function looksLikeEmail(s: string): boolean {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test((s || '').trim());
-}
-
-function looksLikeDob(s: string): boolean {
-  const t = (s || '').trim();
-  if (!t) return false;
-  const d = new Date(t);
-  if (isNaN(d.getTime())) return false;
-  const year = d.getFullYear();
-  return year >= 1900 && year <= new Date().getFullYear();
-}
-
-function looksLikeGender(s: string): boolean {
-  return ['male', 'female', 'm', 'f'].includes((s || '').trim().toLowerCase());
-}
-
-// Some vendor batches ship with a block of columns (Phone/DOB/Age/State/
-// Email/Gender) shuffled out of alignment with the header for a subset of
-// rows — seen in practice as: Phone slot holding an email, DOB slot holding
-// a phone number, Age slot holding the real DOB, Email slot holding the
-// gender, and Gender slot holding the state name. Rather than trust column
-// position, this checks the *shape* of each value (a date, a phone number,
-// an email, Male/Female, a recognized state) and reconstructs the real
-// fields from whichever slot actually matches that shape. Only engages when
-// the telltale sign is present — a phone number sitting in the DOB slot —
-// so normal, correctly-aligned rows are never touched.
-function fixShiftedContactBlock(fields: { phone: string; dob: string; age: string; email: string; gender: string; state: string }) {
-  const { phone, dob, age, email, gender, state } = fields;
-  if (!(dob && !looksLikeDob(dob) && looksLikePhone(dob))) return fields;
-
-  return {
-    phone: dob,
-    dob: looksLikeDob(age) ? age : '',
-    email: looksLikeEmail(phone) ? phone : (looksLikeEmail(email) ? email : ''),
-    gender: looksLikeGender(email) ? email : (looksLikeGender(gender) ? gender : ''),
-    state: normalizeState(gender) ? gender : (normalizeState(state) ? state : '')
-  };
 }
 
 function normalizeDupeKey(first: string, last: string, phone: string, dob: string): string | null {
@@ -301,7 +256,7 @@ export async function POST(req: NextRequest) {
         return;
       }
 
-      const { phone, dob, email, gender, state: fixedState } = fixShiftedContactBlock({
+      const { phone, dob, email, gender, state: fixedState } = reconcileContactFields({
         phone: rawPhone, dob: rawDob, age: get('age'), email: get('email'), gender: get('gender'), state: get('state')
       });
 

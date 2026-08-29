@@ -198,6 +198,112 @@ export function normalizeState(value: string | null | undefined): string | null 
   return STATE_NAME_TO_ABBR[v.toLowerCase()] || null;
 }
 
+export function looksLikePhone(s: string | null | undefined): boolean {
+  const digits = (s || '').replace(/\D/g, '');
+  return digits.length === 10 || digits.length === 11;
+}
+
+export function looksLikeEmail(s: string | null | undefined): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test((s || '').trim());
+}
+
+export function looksLikeDob(s: string | null | undefined): boolean {
+  const t = (s || '').trim();
+  if (!t) return false;
+  // Require an actual date shape (separators or a month name) before even
+  // trying Date parsing — JS treats a bare 1-2 digit number as a two-digit
+  // year ("62" -> 1962), which would otherwise make every "age" column
+  // value look like a valid DOB.
+  const hasDateShape =
+    /\d{1,4}[\/\-.]\d{1,2}[\/\-.]\d{1,4}/.test(t) || /[A-Za-z]{3,9}\.?\s+\d{1,2},?\s+\d{4}/.test(t);
+  if (!hasDateShape) return false;
+  const d = new Date(t);
+  if (isNaN(d.getTime())) return false;
+  const year = d.getFullYear();
+  return year >= 1900 && year <= new Date().getFullYear();
+}
+
+export function looksLikeGender(s: string | null | undefined): boolean {
+  return ['male', 'female', 'm', 'f'].includes((s || '').trim().toLowerCase());
+}
+
+export interface ContactFieldInputs {
+  phone: string;
+  dob: string;
+  age: string;
+  email: string;
+  gender: string;
+  state: string;
+}
+
+// Vendor sheets — and, in practice, leads already sitting in the database
+// from a bad past import — are inconsistent about which of these columns
+// end up where, not just one known shift pattern but any shuffle across
+// phone/dob/email/gender/state (sometimes with the real DOB hiding in an
+// "age" slot instead). Rather than trust column position, or only recognize
+// one specific known shift, this treats every one of these values as an
+// unlabeled bag: anything that already matches its own field's shape stays
+// put; anything that doesn't gets pooled together with the other misfits
+// (age included, since it's never itself stored — only mined for a
+// misplaced DOB) and handed to whichever field actually needs a value
+// matching its shape. If a field's own value doesn't fit anywhere AND
+// nothing claims it away to another field, it's left exactly as it was
+// rather than guessed blank — an odd-shaped value (e.g. a gender entry
+// outside male/female/m/f) might still be real data, not corruption; it's
+// only cleared when something else in the row actually takes its slot.
+// Rows that are already aligned correctly pass through completely
+// untouched, which is what makes it safe to re-run against every existing
+// lead, not just fresh imports.
+export function reconcileContactFields(fields: ContactFieldInputs) {
+  const { phone, dob, age, email, gender, state } = fields;
+
+  const ownValid = {
+    phone: looksLikePhone(phone),
+    dob: looksLikeDob(dob),
+    email: looksLikeEmail(email),
+    gender: looksLikeGender(gender),
+    state: !!normalizeState(state)
+  };
+
+  const pool: string[] = [];
+  if (phone && !ownValid.phone) pool.push(phone);
+  if (dob && !ownValid.dob) pool.push(dob);
+  if (email && !ownValid.email) pool.push(email);
+  if (gender && !ownValid.gender) pool.push(gender);
+  if (state && !ownValid.state) pool.push(state);
+  if (age) pool.push(age);
+
+  function claim(matches: (v: string) => boolean): string | null {
+    const idx = pool.findIndex(matches);
+    if (idx === -1) return null;
+    return pool.splice(idx, 1)[0];
+  }
+
+  function resolve(valid: boolean, original: string, matches: (v: string) => boolean): string {
+    if (valid) return original;
+    const claimed = claim(matches);
+    if (claimed !== null) return claimed;
+    // Nothing else fits either. If our own (shape-mismatched) value is
+    // still sitting unclaimed in the pool, nobody else needed it — keep it.
+    // If it's already gone (another field just claimed it out from under
+    // us), returning it here would duplicate it into two fields.
+    const idx = pool.indexOf(original);
+    if (idx !== -1) {
+      pool.splice(idx, 1);
+      return original;
+    }
+    return '';
+  }
+
+  return {
+    phone: resolve(ownValid.phone, phone, looksLikePhone),
+    dob: resolve(ownValid.dob, dob, looksLikeDob),
+    email: resolve(ownValid.email, email, looksLikeEmail),
+    gender: resolve(ownValid.gender, gender, looksLikeGender),
+    state: resolve(ownValid.state, state, (v) => !!normalizeState(v))
+  };
+}
+
 // Lead sheets often give coverage as a range or a bound ("$10k - $25k",
 // "$25,001 - $50,000", "Less than $250,000") rather than a single number.
 // Returns the average of every number found (a single number if there's only
