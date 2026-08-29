@@ -4,6 +4,7 @@ import Badge from '@/components/Badge';
 import { statusBadge, leadAgeLabel, fmtMoney0, US_STATES } from '@/lib/util';
 import { Customer, LeadVendor } from '@/lib/types';
 import NewLeadButton from '@/components/NewLeadButton';
+import ImportLeadsButton from '@/components/ImportLeadsButton';
 
 export const dynamic = 'force-dynamic';
 
@@ -42,6 +43,7 @@ export default function LeadsPage({ searchParams }: { searchParams: { status?: s
         </div>
         <div className="flex gap-2">
           <NewLeadButton vendors={vendors} />
+          <ImportLeadsButton />
           <a href="/dial" className="btn-primary">☎️ Dial For The Day</a>
         </div>
       </div>
