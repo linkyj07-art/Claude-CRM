@@ -61,3 +61,25 @@ export async function POST(req: NextRequest) {
   logAudit(id, 'lead_purchased', `Lead added — ${body.ad_type || 'Final Expense'} / ${body.platform || 'manual entry'}`);
   return NextResponse.json({ id });
 }
+
+// Bulk delete: { ids: string[] } deletes just those leads; { all: true }
+// deletes every lead in the system. Both are permanent (cascades to notes,
+// calls, quotes, appointments, etc. via ON DELETE CASCADE) — the client is
+// responsible for confirming with the user before calling this, especially
+// for "all".
+export async function DELETE(req: NextRequest) {
+  const body = await req.json().catch(() => ({}));
+  const db = getDb();
+
+  if (body.all === true) {
+    const result = db.prepare('DELETE FROM customers').run();
+    return NextResponse.json({ deleted: result.changes });
+  }
+
+  const ids = Array.isArray(body.ids) ? body.ids.filter((id: unknown) => typeof id === 'string') : [];
+  if (ids.length === 0) return NextResponse.json({ error: 'No lead ids provided.' }, { status: 400 });
+
+  const placeholders = ids.map(() => '?').join(',');
+  const result = db.prepare(`DELETE FROM customers WHERE id IN (${placeholders})`).run(...ids);
+  return NextResponse.json({ deleted: result.changes });
+}

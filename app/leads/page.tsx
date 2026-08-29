@@ -1,10 +1,10 @@
 import Link from 'next/link';
 import { getDb } from '@/lib/db';
-import Badge from '@/components/Badge';
-import { statusBadge, leadAgeLabel, fmtMoney0, US_STATES } from '@/lib/util';
+import { US_STATES } from '@/lib/util';
 import { Customer, LeadVendor } from '@/lib/types';
 import NewLeadButton from '@/components/NewLeadButton';
 import ImportLeadsButton from '@/components/ImportLeadsButton';
+import LeadsTable from '@/components/LeadsTable';
 
 export const dynamic = 'force-dynamic';
 
@@ -82,47 +82,7 @@ export default function LeadsPage({ searchParams }: { searchParams: { status?: s
         <a href="/leads" className="text-xs text-slate-400 hover:underline">Reset</a>
       </form>
 
-      <div className="card overflow-x-auto">
-        <table className="w-full min-w-[900px] text-sm">
-          <thead>
-            <tr className="border-b border-line text-left text-xs uppercase text-slate-400">
-              <th className="px-3 py-2">Name</th>
-              <th className="px-3 py-2">Status</th>
-              <th className="px-3 py-2">State</th>
-              <th className="px-3 py-2">Coverage</th>
-              <th className="px-3 py-2">Ad / Platform</th>
-              <th className="px-3 py-2">Vendor</th>
-              <th className="px-3 py-2">Age</th>
-              <th className="px-3 py-2">Lead Cost</th>
-            </tr>
-          </thead>
-          <tbody>
-            {leads.map((l) => {
-              const badge = statusBadge(l.status, l.purchased_at);
-              return (
-                <tr key={l.id} className="border-b border-line last:border-0 hover:bg-slate-50">
-                  <td className="px-3 py-2">
-                    <Link href={`/leads/${l.id}`} className="font-medium text-ink hover:text-brand-600">
-                      {l.first_name} {l.last_name}
-                    </Link>
-                    <div className="text-xs text-slate-400">{l.phone}</div>
-                  </td>
-                  <td className="px-3 py-2"><Badge label={badge.label} color={badge.color} /></td>
-                  <td className="px-3 py-2 text-slate-600">{l.state}</td>
-                  <td className="px-3 py-2 text-slate-600">{l.coverage_wanted ? fmtMoney0(l.coverage_wanted) : '—'}</td>
-                  <td className="px-3 py-2 text-slate-600">{l.ad_type} / {l.platform}</td>
-                  <td className="px-3 py-2 text-slate-600">{l.vendor_name || '—'}</td>
-                  <td className="px-3 py-2 text-xs text-slate-500">{leadAgeLabel(l.purchased_at)}</td>
-                  <td className="px-3 py-2 text-slate-600">{fmtMoney0(l.lead_cost)}</td>
-                </tr>
-              );
-            })}
-            {leads.length === 0 && (
-              <tr><td colSpan={8} className="px-3 py-8 text-center text-slate-400">No leads match these filters.</td></tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+      <LeadsTable leads={leads} />
     </div>
   );
 }

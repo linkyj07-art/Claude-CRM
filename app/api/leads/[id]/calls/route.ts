@@ -1,16 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
 import { newId, callsToday, MAX_CALLS_PER_DAY } from '@/lib/util';
-import { logAudit, touchCustomer } from '@/lib/audit';
-
-const OUTCOME_LABEL: Record<string, string> = {
-  no_answer: 'No Answer',
-  voicemail: 'Voicemail',
-  connected: 'Connected',
-  busy: 'Busy',
-  wrong_number: 'Wrong Number',
-  dnc: 'Requested DNC'
-};
+import { applyCallOutcome } from '@/lib/audit';
 
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
   const body = await req.json();
@@ -35,23 +26,6 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
      VALUES (?, ?, 'outbound', ?, ?, ?, ?, ?, datetime('now'))`
   ).run(id, params.id, attempt, body.outcome, body.disposition || null, body.duration_seconds || 0, body.notes || null);
 
-  const outcomeLabel = OUTCOME_LABEL[body.outcome] || body.outcome;
-  logAudit(params.id, 'call', `Call attempt #${attempt} — ${outcomeLabel}${body.disposition ? ` (${body.disposition})` : ''}`);
-
-  // Auto status nudges
-  if (body.outcome === 'dnc') {
-    db.prepare(`UPDATE customers SET status = 'dnc' WHERE id = ?`).run(params.id);
-  } else if (body.outcome === 'wrong_number' && attempt >= 2) {
-    db.prepare(`UPDATE customers SET status = 'invalid' WHERE id = ?`).run(params.id);
-  } else if (body.outcome === 'connected' && body.disposition) {
-    const map: Record<string, string> = {
-      not_interested: 'lost', unqualified: 'lost', qualified: 'working',
-      interested: 'working', callback: 'working', sold: 'sold'
-    };
-    if (map[body.disposition]) {
-      db.prepare(`UPDATE customers SET status = ? WHERE id = ?`).run(map[body.disposition], params.id);
-    }
-  }
-  touchCustomer(params.id);
+  applyCallOutcome(params.id, body.outcome, body.disposition, attempt);
   return NextResponse.json({ id, attempt });
 }

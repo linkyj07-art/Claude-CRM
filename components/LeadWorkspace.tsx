@@ -101,18 +101,59 @@ export default function LeadWorkspace({
   const dailyLimitReached = todayCount >= MAX_CALLS_PER_DAY;
   const lastNote = notes[0];
   const [callError, setCallError] = useState('');
-  const [pendingDisposition, setPendingDisposition] = useState(false);
+  // Recovered from the server's own call history, not just live client state —
+  // otherwise a reload mid-call (crash, accidental refresh) would silently
+  // drop the "must disposition before moving on" lock and leave the pending
+  // dial orphaned forever.
+  const [pendingCallId, setPendingCallId] = useState<string | null>(() => calls.find((c) => c.outcome === 'pending')?.id || null);
+  const pendingDisposition = pendingCallId !== null;
 
   async function refresh() {
     router.refresh();
+  }
+
+  // Tapping Call logs the dial immediately (as 'pending') instead of waiting
+  // for an outcome — that's the actual attempt being made, and the agent
+  // picks what happened once the call is over via the outcome buttons below,
+  // which complete this same row instead of creating a second one.
+  async function startCall() {
+    setCallError('');
+    try {
+      const res = await fetch(`/api/leads/${customer.id}/calls`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ outcome: 'pending' })
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setCallError(data.error || 'Could not start that call.');
+        return;
+      }
+      setPendingCallId(data.id);
+      await refresh();
+    } catch {
+      setCallError('Could not start that call.');
+    }
+  }
+
+  async function cancelPendingCall() {
+    if (!pendingCallId) return;
+    setBusy(true);
+    try {
+      await fetch(`/api/leads/${customer.id}/calls/${pendingCallId}`, { method: 'DELETE' });
+      setPendingCallId(null);
+      await refresh();
+    } finally { setBusy(false); }
   }
 
   async function logCall(outcome: string, disposition?: string) {
     setBusy(true);
     setCallError('');
     try {
-      const res = await fetch(`/api/leads/${customer.id}/calls`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
+      const url = pendingCallId
+        ? `/api/leads/${customer.id}/calls/${pendingCallId}`
+        : `/api/leads/${customer.id}/calls`;
+      const res = await fetch(url, {
+        method: pendingCallId ? 'PATCH' : 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ outcome, disposition, duration_seconds: outcome === 'connected' ? 60 : 0 })
       });
       if (!res.ok) {
@@ -120,7 +161,7 @@ export default function LeadWorkspace({
         setCallError(data.error || 'Could not log that call.');
         return;
       }
-      setPendingDisposition(false);
+      setPendingCallId(null);
       if (outcome === 'dnc' && confirm('Marked Do Not Call. Delete this lead entirely too?')) {
         await fetch(`/api/leads/${customer.id}`, { method: 'DELETE' });
         router.push('/leads');
@@ -173,7 +214,11 @@ export default function LeadWorkspace({
           <span className="font-medium text-brand-700">⚡ Power Dial — {queue.length} more lead{queue.length === 1 ? '' : 's'} in queue</span>
           <div className="flex items-center gap-2">
             {pendingDisposition && <span className="text-xs text-amber-700">Log this call&apos;s outcome before moving on</span>}
-            <Link href="/leads" className="btn-secondary text-xs">Exit Queue</Link>
+            {pendingDisposition ? (
+              <button className="btn-secondary text-xs" disabled title="Log this call's outcome first">Exit Queue</button>
+            ) : (
+              <Link href="/leads" className="btn-secondary text-xs">Exit Queue</Link>
+            )}
             <button className="btn-primary text-xs" disabled={pendingDisposition} onClick={nextInQueue}>Skip / Next Lead ▶</button>
           </div>
         </div>
@@ -195,9 +240,12 @@ export default function LeadWorkspace({
         </div>
         <div className="flex flex-wrap gap-2">
           {customer.phone && (
-            <a href={`tel:${customer.phone.replace(/[^\d+]/g, '')}`} className="btn-good" onClick={() => setPendingDisposition(true)}>
+            <a href={`tel:${customer.phone.replace(/[^\d+]/g, '')}`} className="btn-good" onClick={startCall}>
               📞 Call {customer.phone}
             </a>
+          )}
+          {pendingCallId && (
+            <button className="btn-secondary" disabled={busy} onClick={cancelPendingCall}>↩️ Didn&apos;t mean to dial</button>
           )}
           <button className="btn-secondary" onClick={() => setShowQuote(true)}>🧮 Run Quote</button>
           <button className="btn-secondary" onClick={() => setShowAppt(true)}>📅 Appointment</button>
@@ -233,17 +281,20 @@ export default function LeadWorkspace({
               <div className="text-2xl font-bold tabular-nums">{attemptCount}</div>
               <div className="text-xs text-slate-500">total · {todayCount}/{MAX_CALLS_PER_DAY} today</div>
             </div>
-            {dailyLimitReached && (
+            {dailyLimitReached && !pendingCallId && (
               <div className="mt-2 rounded bg-amber-50 p-2 text-xs text-amber-800">Daily call limit reached for this lead — try again tomorrow.</div>
             )}
             {callError && <div className="mt-2 rounded bg-red-50 p-2 text-xs text-red-700">{callError}</div>}
+            {pendingCallId && (
+              <div className="mt-2 rounded bg-brand-50 p-2 text-xs font-medium text-brand-700">📞 Call in progress — pick what happened:</div>
+            )}
             <div className="mt-2 grid grid-cols-3 gap-1.5">
-              <button disabled={busy || dailyLimitReached} onClick={() => logCall('no_answer')} className="btn-secondary text-xs px-2 py-1.5">No Answer</button>
-              <button disabled={busy || dailyLimitReached} onClick={() => logCall('voicemail')} className="btn-secondary text-xs px-2 py-1.5">Voicemail</button>
-              <button disabled={busy || dailyLimitReached} onClick={() => logCall('busy')} className="btn-secondary text-xs px-2 py-1.5">Busy</button>
-              <button disabled={busy || dailyLimitReached} onClick={() => logCall('wrong_number')} className="btn-secondary text-xs px-2 py-1.5">Wrong #</button>
+              <button disabled={busy || (dailyLimitReached && !pendingCallId)} onClick={() => logCall('no_answer')} className="btn-secondary text-xs px-2 py-1.5">No Answer</button>
+              <button disabled={busy || (dailyLimitReached && !pendingCallId)} onClick={() => logCall('voicemail')} className="btn-secondary text-xs px-2 py-1.5">Voicemail</button>
+              <button disabled={busy || (dailyLimitReached && !pendingCallId)} onClick={() => logCall('busy')} className="btn-secondary text-xs px-2 py-1.5">Busy</button>
+              <button disabled={busy || (dailyLimitReached && !pendingCallId)} onClick={() => logCall('wrong_number')} className="btn-secondary text-xs px-2 py-1.5">Wrong #</button>
               <button disabled={busy} onClick={() => logCall('dnc')} className="btn-danger text-xs px-2 py-1.5">DNC</button>
-              <button disabled={busy || dailyLimitReached} onClick={() => logCall('connected', 'interested')} className="btn-good text-xs px-2 py-1.5">Connected</button>
+              <button disabled={busy || (dailyLimitReached && !pendingCallId)} onClick={() => logCall('connected', 'interested')} className="btn-good text-xs px-2 py-1.5">Connected</button>
             </div>
           </div>
 

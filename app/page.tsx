@@ -36,12 +36,11 @@ export default function DashboardPage({ searchParams }: { searchParams: { period
       {/* MONEY */}
       <section>
         <div className="mb-2 label">💰 Money</div>
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
           <StatCard label="Today's Commission" value={fmtMoney(money.today)} tone="good" icon="💵" />
           <StatCard label="This Week" value={fmtMoney(money.week)} tone="good" icon="📆" />
           <StatCard label="This Month" value={fmtMoney(money.month)} tone="good" icon="📈" />
           <StatCard label="Pending" value={fmtMoney(money.pending)} icon="⏳" />
-          <StatCard label="Chargebacks (30d)" value={fmtMoney(-money.chargebacks)} tone="bad" icon="⚠️" />
           <StatCard label="Net" value={fmtMoney(money.net)} tone="good" icon="🏆" />
         </div>
       </section>
