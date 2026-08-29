@@ -321,3 +321,17 @@ CREATE TABLE IF NOT EXISTS weekly_goals (
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
   PRIMARY KEY (week_start, user_id)
 );
+
+-- One live Power Dial session per user, so opening the dialer on a second
+-- device (phone alongside laptop) follows the same queue instead of each
+-- device building its own independent one. current_lead_id is whichever
+-- lead the queue is presently on; other devices poll this row and jump to
+-- match it when it changes.
+CREATE TABLE IF NOT EXISTS dial_sessions (
+  user_id TEXT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+  current_lead_id TEXT,
+  queue TEXT NOT NULL DEFAULT '', -- comma-separated customer ids, in order
+  recycle TEXT NOT NULL DEFAULT '', -- comma-separated ids held for a 2nd pass
+  pass INTEGER NOT NULL DEFAULT 1,
+  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);

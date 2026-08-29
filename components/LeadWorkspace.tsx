@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import Link from 'next/link';
 import Badge from './Badge';
 import {
   Customer, NoteVersion, CallRecord, Policy, Commission, Carrier, CarrierRule, LeadVendor
@@ -73,14 +72,14 @@ export default function LeadWorkspace({
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const queue = (searchParams.get('queue') || '').split(',').filter(Boolean);
-  // Leads that went to 2 unanswered dials during pass 1 get held here instead
-  // of dropped — once the primary queue is exhausted they get one more pass
-  // (pass=2) rather than vanishing from Power Dial for the rest of the day.
-  const recycleQueue = (searchParams.get('recycle') || '').split(',').filter(Boolean);
-  const dialPass = searchParams.get('pass') || '1';
   const isDialing = searchParams.get('dialing') === '1';
   const withinCallingHours = isWithinCallingHours(customer.state);
+  // The Power Dial queue lives server-side (dial_sessions, one row per user)
+  // instead of in the URL, specifically so a second device (phone alongside
+  // laptop) can follow the same session — polled below, and re-fetched
+  // on-demand by advanceQueue whenever this hasn't loaded yet.
+  type DialSession = { currentLeadId: string | null; queue: string[]; recycle: string[]; pass: number };
+  const [dialSession, setDialSession] = useState<DialSession | null>(null);
   const [busy, setBusy] = useState(false);
   const [noteForm, setNoteForm] = useState<AnyRow>(() => noteFormFromNote(notes[0], customer));
   const [editingNote, setEditingNote] = useState(() => !notes[0]);
@@ -158,37 +157,104 @@ export default function LeadWorkspace({
     } finally { setBusy(false); }
   }
 
+  // Picks up the latest known session, fetching fresh if this device hasn't
+  // loaded it yet (e.g. the calling-hours effect below can fire before the
+  // first poll resolves) — never falls back to an empty queue just because
+  // local state is momentarily behind, which would wrongly end the session
+  // for every device sharing it.
+  async function currentDialSession(): Promise<DialSession | null> {
+    if (dialSession) return dialSession;
+    try {
+      const res = await fetch('/api/dial-session');
+      return await res.json();
+    } catch {
+      return null;
+    }
+  }
+
   // Single place that knows how to move to the next lead in a Power Dial
   // session: pull from the live queue first, and once that's empty fall back
   // to the recycled (maxed-out) leads for one more pass before finally
-  // exiting to the leads list. Pass maxedOutId when this lead just hit its
-  // 2nd unanswered dial so it rejoins the queue instead of disappearing.
-  function advanceQueue(maxedOutId?: string) {
+  // ending the session. Pass maxedOutId when this lead just hit its 2nd
+  // unanswered dial so it rejoins the queue instead of disappearing. Writes
+  // the new position to the server (not just this device's own URL) so
+  // every device sharing this session follows along within one poll.
+  async function advanceQueue(maxedOutId?: string) {
+    const session = (await currentDialSession()) || { currentLeadId: customer.id, queue: [], recycle: [], pass: 1 };
     const updatedRecycle =
-      maxedOutId && dialPass !== '2' && !recycleQueue.includes(maxedOutId)
-        ? [...recycleQueue, maxedOutId]
-        : recycleQueue;
+      maxedOutId && session.pass !== 2 && !session.recycle.includes(maxedOutId)
+        ? [...session.recycle, maxedOutId]
+        : session.recycle;
 
-    if (queue.length > 0) {
-      const [next, ...rest] = queue;
-      const params = new URLSearchParams({ dialing: '1' });
-      if (rest.length) params.set('queue', rest.join(','));
-      if (updatedRecycle.length) params.set('recycle', updatedRecycle.join(','));
-      if (dialPass === '2') params.set('pass', '2');
-      router.push(`/leads/${next}?${params.toString()}`);
+    async function moveTo(next: string, queue: string[], recycle: string[], pass: number) {
+      try {
+        await fetch('/api/dial-session', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ currentLeadId: next, queue, recycle, pass })
+        });
+      } catch {
+        // Network hiccup — still navigate locally; the next poll on any
+        // device (including this one) will reconcile once it succeeds.
+      }
+      router.push(`/leads/${next}?dialing=1`);
+    }
+
+    if (session.queue.length > 0) {
+      const [next, ...rest] = session.queue;
+      await moveTo(next, rest, updatedRecycle, session.pass);
       return;
     }
 
-    if (dialPass !== '2' && updatedRecycle.length > 0) {
+    if (session.pass !== 2 && updatedRecycle.length > 0) {
       const [next, ...rest] = updatedRecycle;
-      const params = new URLSearchParams({ dialing: '1', pass: '2' });
-      if (rest.length) params.set('queue', rest.join(','));
-      router.push(`/leads/${next}?${params.toString()}`);
+      await moveTo(next, rest, [], 2);
       return;
     }
 
+    try {
+      await fetch('/api/dial-session', { method: 'DELETE' });
+    } catch {
+      // best-effort — a stray session row just means /dial resumes it later
+    }
     router.push('/leads');
   }
+
+  // Poll the shared session while dialing so a disposition logged on another
+  // device (or this same one, from an earlier tab) carries this view along
+  // — no websocket infra needed, just a cheap same-origin GET every few
+  // seconds. Also the single source of truth for this device's own queue
+  // position, refreshed on every tick.
+  useEffect(() => {
+    if (!isDialing) return;
+    let cancelled = false;
+
+    async function poll() {
+      try {
+        const res = await fetch('/api/dial-session');
+        const data: DialSession | null = await res.json();
+        if (cancelled) return;
+        if (!data) {
+          router.push('/leads');
+          return;
+        }
+        if (data.currentLeadId && data.currentLeadId !== customer.id) {
+          router.push(`/leads/${data.currentLeadId}?dialing=1`);
+          return;
+        }
+        setDialSession(data);
+      } catch {
+        // transient network error — next tick retries
+      }
+    }
+
+    poll();
+    const interval = setInterval(poll, 4000);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isDialing, customer.id]);
 
   async function logCall(outcome: string, disposition?: string) {
     setBusy(true);
@@ -272,9 +338,19 @@ export default function LeadWorkspace({
     } finally { setBusy(false); }
   }
 
-  function nextInQueue() {
+  async function nextInQueue() {
     if (pendingDisposition) return;
-    advanceQueue();
+    await advanceQueue();
+  }
+
+  async function exitQueue() {
+    if (pendingDisposition) return;
+    try {
+      await fetch('/api/dial-session', { method: 'DELETE' });
+    } catch {
+      // best-effort
+    }
+    router.push('/leads');
   }
 
   // A lead can still land here outside its state's calling window — the
@@ -301,14 +377,14 @@ export default function LeadWorkspace({
     <div className="space-y-4">
       {isDialing && (
         <div className="card flex items-center justify-between bg-brand-50 p-3 text-sm">
-          <span className="font-medium text-brand-700">⚡ Power Dial — {queue.length} more lead{queue.length === 1 ? '' : 's'} in queue</span>
+          <span className="font-medium text-brand-700">
+            ⚡ Power Dial — {dialSession ? `${dialSession.queue.length} more lead${dialSession.queue.length === 1 ? '' : 's'} in queue` : 'syncing…'}
+          </span>
           <div className="flex items-center gap-2">
             {pendingDisposition && <span className="text-xs text-amber-700">Log this call&apos;s outcome before moving on</span>}
-            {pendingDisposition ? (
-              <button className="btn-secondary text-xs" disabled title="Log this call's outcome first">Exit Queue</button>
-            ) : (
-              <Link href="/leads" className="btn-secondary text-xs">Exit Queue</Link>
-            )}
+            <button className="btn-secondary text-xs" disabled={pendingDisposition} title={pendingDisposition ? "Log this call's outcome first" : undefined} onClick={exitQueue}>
+              Exit Queue
+            </button>
             <button className="btn-primary text-xs" disabled={pendingDisposition} onClick={nextInQueue}>Skip This Lead ▶</button>
           </div>
         </div>

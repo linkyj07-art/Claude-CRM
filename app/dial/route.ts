@@ -8,6 +8,30 @@ export async function GET(req: NextRequest) {
   if (!user) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
 
   const db = getDb();
+
+  // Behind a reverse proxy (Railway, etc.), req.url's origin can resolve to an
+  // internal address like localhost instead of the public domain, which would
+  // send the browser to a Location header it can never actually reach. Build
+  // the redirect target from the forwarded headers the proxy sets instead.
+  const proto = req.headers.get('x-forwarded-proto') || new URL(req.url).protocol.replace(':', '');
+  const host = req.headers.get('x-forwarded-host') || req.headers.get('host') || new URL(req.url).host;
+  const origin = `${proto}://${host}`;
+
+  // A second device tapping Power Dial while a session is already in
+  // progress (started from a laptop, say) joins that same session instead
+  // of building a competing one — as long as the lead it's parked on is
+  // still actually a real, owned lead.
+  const existing = db.prepare('SELECT current_lead_id FROM dial_sessions WHERE user_id = ?').get(user.id) as
+    | { current_lead_id: string | null }
+    | undefined;
+  if (existing?.current_lead_id) {
+    const stillOwned = db.prepare('SELECT id FROM customers WHERE id = ? AND owner_id = ?').get(existing.current_lead_id, user.id);
+    if (stillOwned) {
+      return NextResponse.redirect(new URL(`/leads/${existing.current_lead_id}?dialing=1`, origin));
+    }
+    db.prepare('DELETE FROM dial_sessions WHERE user_id = ?').run(user.id);
+  }
+
   const allRows = db
     .prepare(
       `SELECT id, status, state FROM customers
@@ -21,22 +45,18 @@ export async function GET(req: NextRequest) {
   // a later Power Dial run once their state's window opens.
   const rows = allRows.filter((r) => isWithinCallingHours(r.state));
 
-  // Behind a reverse proxy (Railway, etc.), req.url's origin can resolve to an
-  // internal address like localhost instead of the public domain, which would
-  // send the browser to a Location header it can never actually reach. Build
-  // the redirect target from the forwarded headers the proxy sets instead.
-  const proto = req.headers.get('x-forwarded-proto') || new URL(req.url).protocol.replace(':', '');
-  const host = req.headers.get('x-forwarded-host') || req.headers.get('host') || new URL(req.url).host;
-  const origin = `${proto}://${host}`;
-
   if (rows.length === 0) {
     const reason = allRows.length > 0 ? '&closed=1' : '';
     return NextResponse.redirect(new URL(`/leads?empty=1${reason}`, origin));
   }
   const [first, ...rest] = rows;
-  const queue = rest.map((r) => r.id).join(',');
-  const dest = new URL(`/leads/${first.id}`, origin);
-  if (queue) dest.searchParams.set('queue', queue);
-  dest.searchParams.set('dialing', '1');
-  return NextResponse.redirect(dest);
+  db.prepare(
+    `INSERT INTO dial_sessions (user_id, current_lead_id, queue, recycle, pass, updated_at)
+     VALUES (?, ?, ?, '', 1, datetime('now'))
+     ON CONFLICT(user_id) DO UPDATE SET
+       current_lead_id = excluded.current_lead_id, queue = excluded.queue,
+       recycle = '', pass = 1, updated_at = excluded.updated_at`
+  ).run(user.id, first.id, rest.map((r) => r.id).join(','));
+
+  return NextResponse.redirect(new URL(`/leads/${first.id}?dialing=1`, origin));
 }
