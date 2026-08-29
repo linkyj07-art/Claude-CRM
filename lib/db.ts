@@ -2,6 +2,7 @@ import Database from 'better-sqlite3';
 import fs from 'fs';
 import path from 'path';
 import { newId } from './util';
+import { hashPassword } from './auth';
 
 // DATA_DIR can be pointed at a mounted persistent volume in production
 // (e.g. Railway/Fly.io) via the DATA_DIR env var. Defaults to ./data for
@@ -56,8 +57,75 @@ function migrate(db: Database.Database) {
 
   addColumnIfMissing(db, 'customers', 'trusted_form_url', 'TEXT');
   addColumnIfMissing(db, 'note_versions', 'beneficiary_dob', 'TEXT');
+  addColumnIfMissing(db, 'customers', 'owner_id', 'TEXT REFERENCES users(id)');
+
+  const defaultUserId = seedDefaultUser(db);
+  db.prepare('UPDATE customers SET owner_id = ? WHERE owner_id IS NULL').run(defaultUserId);
+  migrateGoalsTables(db, defaultUserId);
 
   seedStarterUnderwriting(db);
+}
+
+// Every deployment needs at least one login. If no users exist yet, create
+// one from ADMIN_USERNAME/ADMIN_PASSWORD (falling back to the old
+// BASIC_AUTH_USER/PASSWORD so the same credentials people already use keep
+// working), so real-account login replaces the shared Basic Auth gate
+// without locking anyone out. Race-safe across Next.js's multiple build
+// workers via the UNIQUE(username) constraint + ON CONFLICT DO NOTHING,
+// same pattern as seedStarterUnderwriting below.
+function seedDefaultUser(db: Database.Database): string {
+  const existing = db.prepare('SELECT id FROM users ORDER BY created_at ASC LIMIT 1').get() as { id: string } | undefined;
+  if (existing) return existing.id;
+
+  const username = process.env.ADMIN_USERNAME || process.env.BASIC_AUTH_USER || 'admin';
+  const password = process.env.ADMIN_PASSWORD || process.env.BASIC_AUTH_PASSWORD || 'changeme';
+  db.prepare(
+    `INSERT INTO users (id, username, password_hash, name) VALUES (?, ?, ?, ?) ON CONFLICT(username) DO NOTHING`
+  ).run(newId(), username, hashPassword(password), 'Admin');
+
+  const row = db.prepare('SELECT id FROM users WHERE username = ?').get(username) as { id: string };
+  return row.id;
+}
+
+// daily_goals/weekly_goals originally shipped with a single-column primary
+// key (date / week_start) before becoming per-user tables. SQLite can't
+// ALTER a primary key, so an existing table with the old shape has to be
+// rebuilt rather than column-patched. Guarded by an atomic claim (like
+// seedStarterUnderwriting) since a plain column-check-then-rebuild would
+// race across Next.js's concurrent build workers.
+function migrateGoalsTables(db: Database.Database, defaultUserId: string) {
+  if (tableColumns(db, 'daily_goals').includes('user_id')) return;
+
+  const claimed = db.prepare(`INSERT INTO app_settings (key, value) VALUES ('goals_v2_migrated', '1') ON CONFLICT(key) DO NOTHING`).run();
+  if (claimed.changes === 0) return;
+
+  const specs = [
+    { table: 'daily_goals', keyCol: 'date' },
+    { table: 'weekly_goals', keyCol: 'week_start' }
+  ] as const;
+
+  for (const spec of specs) {
+    if (tableColumns(db, spec.table).includes('user_id')) continue;
+    const oldRows = db.prepare(`SELECT * FROM ${spec.table}`).all() as Record<string, unknown>[];
+    db.exec(`DROP TABLE ${spec.table};`);
+    db.exec(`
+      CREATE TABLE ${spec.table} (
+        ${spec.keyCol} TEXT NOT NULL,
+        user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        target_dials INTEGER,
+        target_appointments INTEGER,
+        target_ap REAL,
+        created_at TEXT NOT NULL DEFAULT (datetime('now')),
+        PRIMARY KEY (${spec.keyCol}, user_id)
+      );
+    `);
+    const insert = db.prepare(
+      `INSERT INTO ${spec.table} (${spec.keyCol}, user_id, target_dials, target_appointments, target_ap, created_at) VALUES (?, ?, ?, ?, ?, ?)`
+    );
+    for (const row of oldRows) {
+      insert.run(row[spec.keyCol], defaultUserId, row.target_dials ?? null, row.target_appointments ?? null, row.target_ap ?? null, row.created_at);
+    }
+  }
 }
 
 // One-time starter set of well-known, generally-taught final-expense

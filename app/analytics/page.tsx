@@ -3,20 +3,27 @@ import { fmtMoney, fmtMoney0, fmtPct } from '@/lib/util';
 import {
   getFunnel, getRoiByVendor, getRoiByAge, getRoiByState, getRoiBySource, getTopLifetimeValue
 } from '@/lib/metrics';
+import { getCurrentUser } from '@/lib/currentUser';
+import { redirect } from 'next/navigation';
 
 export const dynamic = 'force-dynamic';
 
-export default function AnalyticsPage() {
-  const db = getDb();
-  const funnel = getFunnel(db);
-  const vendorRoi = getRoiByVendor(db);
-  const ageRoi = getRoiByAge(db);
-  const stateRoi = getRoiByState(db).slice(0, 12);
-  const sourceRoi = getRoiBySource(db).slice(0, 12);
-  const ltv = getTopLifetimeValue(db, 8);
+export default async function AnalyticsPage() {
+  const user = await getCurrentUser();
+  if (!user) redirect('/login');
 
-  const leadSpendTotal = (db.prepare(`SELECT COALESCE(SUM(lead_cost),0) s FROM customers`).get() as { s: number }).s;
-  const netCommissionTotal = (db.prepare(`SELECT COALESCE(SUM(net_commission),0) s FROM commissions`).get() as { s: number }).s;
+  const db = getDb();
+  const funnel = getFunnel(db, user.id);
+  const vendorRoi = getRoiByVendor(db, user.id);
+  const ageRoi = getRoiByAge(db, user.id);
+  const stateRoi = getRoiByState(db, user.id).slice(0, 12);
+  const sourceRoi = getRoiBySource(db, user.id).slice(0, 12);
+  const ltv = getTopLifetimeValue(db, user.id, 8);
+
+  const leadSpendTotal = (db.prepare(`SELECT COALESCE(SUM(lead_cost),0) s FROM customers WHERE owner_id = ?`).get(user.id) as { s: number }).s;
+  const netCommissionTotal = (
+    db.prepare(`SELECT COALESCE(SUM(cm.net_commission),0) s FROM commissions cm JOIN customers c ON c.id = cm.customer_id WHERE c.owner_id = ?`).get(user.id) as { s: number }
+  ).s;
   const overallRoi = leadSpendTotal > 0 ? ((netCommissionTotal - leadSpendTotal) / leadSpendTotal) * 100 : null;
 
   const maxFunnel = funnel[0]?.count || 1;

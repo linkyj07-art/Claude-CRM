@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
 import { logAudit, touchCustomer } from '@/lib/audit';
+import { getCurrentUser } from '@/lib/currentUser';
+import { ownsCustomer } from '@/lib/ownership';
 
 const FIELDS = [
   'label', 'name', 'note_date', 'phone', 'beneficiary', 'beneficiary_dob', 'budget', 'health', 'discount',
@@ -10,8 +12,13 @@ const FIELDS = [
 ];
 
 export async function PATCH(req: NextRequest, { params }: { params: { id: string; noteId: string } }) {
-  const body = await req.json();
+  const user = await getCurrentUser();
+  if (!user) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+
   const db = getDb();
+  if (!ownsCustomer(db, params.id, user.id)) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+
+  const body = await req.json();
   const set = FIELDS.map((f) => `${f} = @${f}`).join(', ');
   const row: Record<string, unknown> = { id: params.noteId, customer_id: params.id };
   for (const f of FIELDS) row[f] = body[f] ?? null;

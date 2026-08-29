@@ -14,26 +14,36 @@ export interface GoalProgress {
 // Both need to be bucketed by the agent's own calendar day/week, not a naive
 // UTC or string-range comparison, or activity near midnight lands on the
 // wrong side of the boundary.
-export function getGoalProgress(db: Database.Database, kind: 'daily' | 'weekly', key: string): GoalProgress {
+export function getGoalProgress(db: Database.Database, kind: 'daily' | 'weekly', key: string, ownerId: string): GoalProgress {
   const matchesPeriod = (dateStr: string) => (kind === 'daily' ? agentDateStr(new Date(dateStr)) === key : agentWeekStart(new Date(dateStr)) === key);
   const windowDays = kind === 'daily' ? 2 : 9;
 
   const calls = db
-    .prepare(`SELECT occurred_at FROM calls WHERE occurred_at >= datetime(?, '-2 days') AND occurred_at <= datetime(?, ?)`)
-    .all(key, key, `+${windowDays} days`) as { occurred_at: string }[];
+    .prepare(
+      `SELECT ca.occurred_at FROM calls ca JOIN customers c ON c.id = ca.customer_id
+       WHERE c.owner_id = ? AND ca.occurred_at >= datetime(?, '-2 days') AND ca.occurred_at <= datetime(?, ?)`
+    )
+    .all(ownerId, key, key, `+${windowDays} days`) as { occurred_at: string }[];
   const dials = calls.filter((c) => matchesPeriod(c.occurred_at.replace(' ', 'T') + 'Z')).length;
 
   let appointments: number;
   if (kind === 'daily') {
-    appointments = (db.prepare('SELECT COUNT(*) n FROM appointments WHERE scheduled_at LIKE ?').get(`${key}%`) as { n: number }).n;
+    appointments = (
+      db.prepare(`SELECT COUNT(*) n FROM appointments a JOIN customers c ON c.id = a.customer_id WHERE c.owner_id = ? AND a.scheduled_at LIKE ?`).get(ownerId, `${key}%`) as { n: number }
+    ).n;
   } else {
     const weekEnd = new Date(new Date(key + 'T00:00:00Z').getTime() + 7 * 86400000).toISOString().slice(0, 10);
-    appointments = (db.prepare('SELECT COUNT(*) n FROM appointments WHERE scheduled_at >= ? AND scheduled_at < ?').get(key, weekEnd) as { n: number }).n;
+    appointments = (
+      db.prepare(`SELECT COUNT(*) n FROM appointments a JOIN customers c ON c.id = a.customer_id WHERE c.owner_id = ? AND a.scheduled_at >= ? AND a.scheduled_at < ?`).get(ownerId, key, weekEnd) as { n: number }
+    ).n;
   }
 
   const policies = db
-    .prepare(`SELECT annual_premium, created_at FROM policies WHERE created_at >= datetime(?, '-2 days') AND created_at <= datetime(?, ?)`)
-    .all(key, key, `+${windowDays} days`) as { annual_premium: number | null; created_at: string }[];
+    .prepare(
+      `SELECT p.annual_premium, p.created_at FROM policies p JOIN customers c ON c.id = p.customer_id
+       WHERE c.owner_id = ? AND p.created_at >= datetime(?, '-2 days') AND p.created_at <= datetime(?, ?)`
+    )
+    .all(ownerId, key, key, `+${windowDays} days`) as { annual_premium: number | null; created_at: string }[];
   const ap = policies
     .filter((p) => matchesPeriod(p.created_at.replace(' ', 'T') + 'Z'))
     .reduce((sum, p) => sum + (p.annual_premium || 0), 0);
@@ -68,15 +78,19 @@ export interface MoneyTiles {
   net: number;
 }
 
-export function getMoneyTiles(db: Database.Database): MoneyTiles {
+export function getMoneyTiles(db: Database.Database, ownerId: string): MoneyTiles {
   const sumSince = (since: string | null) => {
     const row = since
-      ? db.prepare(`SELECT COALESCE(SUM(net_commission),0) s FROM commissions WHERE created_at >= ?`).get(since)
-      : db.prepare(`SELECT COALESCE(SUM(net_commission),0) s FROM commissions`).get();
+      ? db.prepare(`SELECT COALESCE(SUM(cm.net_commission),0) s FROM commissions cm JOIN customers c ON c.id = cm.customer_id WHERE c.owner_id = ? AND cm.created_at >= ?`).get(ownerId, since)
+      : db.prepare(`SELECT COALESCE(SUM(cm.net_commission),0) s FROM commissions cm JOIN customers c ON c.id = cm.customer_id WHERE c.owner_id = ?`).get(ownerId);
     return (row as { s: number }).s;
   };
-  const pending = (db.prepare(`SELECT COALESCE(SUM(expected_commission - chargeback),0) s FROM commissions WHERE status = 'pending'`).get() as { s: number }).s;
-  const chargebacks = (db.prepare(`SELECT COALESCE(SUM(chargeback),0) s FROM commissions WHERE created_at >= ?`).get(periodStartISO('month')) as { s: number }).s;
+  const pending = (
+    db.prepare(`SELECT COALESCE(SUM(cm.expected_commission - cm.chargeback),0) s FROM commissions cm JOIN customers c ON c.id = cm.customer_id WHERE c.owner_id = ? AND cm.status = 'pending'`).get(ownerId) as { s: number }
+  ).s;
+  const chargebacks = (
+    db.prepare(`SELECT COALESCE(SUM(cm.chargeback),0) s FROM commissions cm JOIN customers c ON c.id = cm.customer_id WHERE c.owner_id = ? AND cm.created_at >= ?`).get(ownerId, periodStartISO('month')) as { s: number }
+  ).s;
   const month = sumSince(periodStartISO('month'));
   return {
     today: sumSince(periodStartISO('today')),
@@ -99,25 +113,37 @@ export interface ActivityStats {
   leadSpend: number;
 }
 
-export function getActivityStats(db: Database.Database, period: Period): ActivityStats {
+export function getActivityStats(db: Database.Database, period: Period, ownerId: string): ActivityStats {
   const since = periodStartISO(period);
-  const clause = since ? 'WHERE occurred_at >= ?' : '';
-  const args = since ? [since] : [];
+  const args = since ? [ownerId, since] : [ownerId];
+  const dateOp = since ? 'AND' : '';
+  const dateColClause = (alias: string, col: string) => (since ? `${dateOp} ${alias}.${col} >= ?` : '');
 
-  const calls = (db.prepare(`SELECT COUNT(*) n FROM calls ${clause}`).get(...args) as { n: number }).n;
+  const calls = (
+    db.prepare(`SELECT COUNT(*) n FROM calls ca JOIN customers c ON c.id = ca.customer_id WHERE c.owner_id = ? ${dateColClause('ca', 'occurred_at')}`).get(...args) as { n: number }
+  ).n;
   const conversations = (
-    db.prepare(`SELECT COUNT(*) n FROM calls ${clause ? clause + " AND outcome = 'connected'" : "WHERE outcome = 'connected'"}`).get(...args) as { n: number }
+    db.prepare(`SELECT COUNT(*) n FROM calls ca JOIN customers c ON c.id = ca.customer_id WHERE c.owner_id = ? ${dateColClause('ca', 'occurred_at')} AND ca.outcome = 'connected'`).get(...args) as { n: number }
   ).n;
   const contactsRow = db
-    .prepare(`SELECT COUNT(DISTINCT customer_id) n FROM calls ${clause ? clause + " AND outcome = 'connected'" : "WHERE outcome = 'connected'"}`)
+    .prepare(`SELECT COUNT(DISTINCT ca.customer_id) n FROM calls ca JOIN customers c ON c.id = ca.customer_id WHERE c.owner_id = ? ${dateColClause('ca', 'occurred_at')} AND ca.outcome = 'connected'`)
     .get(...args) as { n: number };
 
-  const dateClause = (col: string) => (since ? `WHERE ${col} >= ?` : '');
-  const appointments = (db.prepare(`SELECT COUNT(*) n FROM appointments ${dateClause('created_at')}`).get(...args) as { n: number }).n;
-  const applications = (db.prepare(`SELECT COUNT(*) n FROM applications ${dateClause('submitted_at')}`).get(...args) as { n: number }).n;
-  const issued = (db.prepare(`SELECT COUNT(*) n FROM policies ${dateClause('created_at')}`).get(...args) as { n: number }).n;
-  const leads = (db.prepare(`SELECT COUNT(*) n FROM customers ${dateClause('purchased_at')}`).get(...args) as { n: number }).n;
-  const leadSpend = (db.prepare(`SELECT COALESCE(SUM(lead_cost),0) s FROM customers ${dateClause('purchased_at')}`).get(...args) as { s: number }).s;
+  const appointments = (
+    db.prepare(`SELECT COUNT(*) n FROM appointments a JOIN customers c ON c.id = a.customer_id WHERE c.owner_id = ? ${dateColClause('a', 'created_at')}`).get(...args) as { n: number }
+  ).n;
+  const applications = (
+    db.prepare(`SELECT COUNT(*) n FROM applications ap JOIN customers c ON c.id = ap.customer_id WHERE c.owner_id = ? ${dateColClause('ap', 'submitted_at')}`).get(...args) as { n: number }
+  ).n;
+  const issued = (
+    db.prepare(`SELECT COUNT(*) n FROM policies p JOIN customers c ON c.id = p.customer_id WHERE c.owner_id = ? ${dateColClause('p', 'created_at')}`).get(...args) as { n: number }
+  ).n;
+  const leads = (
+    db.prepare(`SELECT COUNT(*) n FROM customers c WHERE c.owner_id = ? ${dateColClause('c', 'purchased_at')}`).get(...args) as { n: number }
+  ).n;
+  const leadSpend = (
+    db.prepare(`SELECT COALESCE(SUM(c.lead_cost),0) s FROM customers c WHERE c.owner_id = ? ${dateColClause('c', 'purchased_at')}`).get(...args) as { s: number }
+  ).s;
 
   return { calls, contacts: contactsRow.n, conversations, appointments, applications, issued, leads, leadSpend };
 }
@@ -147,11 +173,11 @@ export interface LeadEconomics {
   roi: number | null;
 }
 
-export function getLeadEconomics(db: Database.Database, activity: ActivityStats, period: Period): LeadEconomics {
+export function getLeadEconomics(db: Database.Database, activity: ActivityStats, period: Period, ownerId: string): LeadEconomics {
   const since = periodStartISO(period);
   const netCommission = since
-    ? (db.prepare(`SELECT COALESCE(SUM(net_commission),0) s FROM commissions WHERE created_at >= ?`).get(since) as { s: number }).s
-    : (db.prepare(`SELECT COALESCE(SUM(net_commission),0) s FROM commissions`).get() as { s: number }).s;
+    ? (db.prepare(`SELECT COALESCE(SUM(cm.net_commission),0) s FROM commissions cm JOIN customers c ON c.id = cm.customer_id WHERE c.owner_id = ? AND cm.created_at >= ?`).get(ownerId, since) as { s: number }).s
+    : (db.prepare(`SELECT COALESCE(SUM(cm.net_commission),0) s FROM commissions cm JOIN customers c ON c.id = cm.customer_id WHERE c.owner_id = ?`).get(ownerId) as { s: number }).s;
   const { leadSpend, leads, issued } = activity;
   return {
     leadSpend,
@@ -168,18 +194,20 @@ export interface FunnelStage {
   count: number;
 }
 
-export function getFunnel(db: Database.Database): FunnelStage[] {
-  const leads = (db.prepare(`SELECT COUNT(*) n FROM customers`).get() as { n: number }).n;
-  const calls = (db.prepare(`SELECT COUNT(*) n FROM calls`).get() as { n: number }).n;
-  const contacts = (db.prepare(`SELECT COUNT(DISTINCT customer_id) n FROM calls WHERE outcome = 'connected'`).get() as { n: number }).n;
-  const qualified = (
-    db.prepare(`SELECT COUNT(DISTINCT customer_id) n FROM calls WHERE disposition IN ('qualified','interested')`).get() as { n: number }
+export function getFunnel(db: Database.Database, ownerId: string): FunnelStage[] {
+  const leads = (db.prepare(`SELECT COUNT(*) n FROM customers c WHERE c.owner_id = ?`).get(ownerId) as { n: number }).n;
+  const calls = (db.prepare(`SELECT COUNT(*) n FROM calls ca JOIN customers c ON c.id = ca.customer_id WHERE c.owner_id = ?`).get(ownerId) as { n: number }).n;
+  const contacts = (
+    db.prepare(`SELECT COUNT(DISTINCT ca.customer_id) n FROM calls ca JOIN customers c ON c.id = ca.customer_id WHERE c.owner_id = ? AND ca.outcome = 'connected'`).get(ownerId) as { n: number }
   ).n;
-  const appointments = (db.prepare(`SELECT COUNT(*) n FROM appointments`).get() as { n: number }).n;
-  const sat = (db.prepare(`SELECT COUNT(*) n FROM appointments WHERE status = 'sat'`).get() as { n: number }).n;
-  const applications = (db.prepare(`SELECT COUNT(*) n FROM applications`).get() as { n: number }).n;
-  const approved = (db.prepare(`SELECT COUNT(*) n FROM applications WHERE status IN ('approved','issued')`).get() as { n: number }).n;
-  const issued = (db.prepare(`SELECT COUNT(*) n FROM policies`).get() as { n: number }).n;
+  const qualified = (
+    db.prepare(`SELECT COUNT(DISTINCT ca.customer_id) n FROM calls ca JOIN customers c ON c.id = ca.customer_id WHERE c.owner_id = ? AND ca.disposition IN ('qualified','interested')`).get(ownerId) as { n: number }
+  ).n;
+  const appointments = (db.prepare(`SELECT COUNT(*) n FROM appointments a JOIN customers c ON c.id = a.customer_id WHERE c.owner_id = ?`).get(ownerId) as { n: number }).n;
+  const sat = (db.prepare(`SELECT COUNT(*) n FROM appointments a JOIN customers c ON c.id = a.customer_id WHERE c.owner_id = ? AND a.status = 'sat'`).get(ownerId) as { n: number }).n;
+  const applications = (db.prepare(`SELECT COUNT(*) n FROM applications ap JOIN customers c ON c.id = ap.customer_id WHERE c.owner_id = ?`).get(ownerId) as { n: number }).n;
+  const approved = (db.prepare(`SELECT COUNT(*) n FROM applications ap JOIN customers c ON c.id = ap.customer_id WHERE c.owner_id = ? AND ap.status IN ('approved','issued')`).get(ownerId) as { n: number }).n;
+  const issued = (db.prepare(`SELECT COUNT(*) n FROM policies p JOIN customers c ON c.id = p.customer_id WHERE c.owner_id = ?`).get(ownerId) as { n: number }).n;
 
   return [
     { key: 'leads', label: 'Leads', count: leads },
@@ -203,7 +231,7 @@ export interface VendorRoi {
   roi: number | null;
 }
 
-export function getRoiByVendor(db: Database.Database): VendorRoi[] {
+export function getRoiByVendor(db: Database.Database, ownerId: string): VendorRoi[] {
   const rows = db
     .prepare(
       `SELECT COALESCE(v.name, 'Unassigned') as vendor,
@@ -211,9 +239,10 @@ export function getRoiByVendor(db: Database.Database): VendorRoi[] {
               COALESCE(SUM(c.lead_cost),0) as spend
        FROM customers c
        LEFT JOIN lead_vendors v ON v.id = c.lead_vendor_id
+       WHERE c.owner_id = ?
        GROUP BY vendor`
     )
-    .all() as { vendor: string; leads: number; spend: number }[];
+    .all(ownerId) as { vendor: string; leads: number; spend: number }[];
 
   const issuedRows = db
     .prepare(
@@ -222,9 +251,10 @@ export function getRoiByVendor(db: Database.Database): VendorRoi[] {
        JOIN customers c ON c.id = p.customer_id
        LEFT JOIN lead_vendors v ON v.id = c.lead_vendor_id
        LEFT JOIN commissions cm ON cm.policy_id = p.id
+       WHERE c.owner_id = ?
        GROUP BY vendor`
     )
-    .all() as { vendor: string; issued: number; commission: number }[];
+    .all(ownerId) as { vendor: string; issued: number; commission: number }[];
   const issuedMap = Object.fromEntries(issuedRows.map((r) => [r.vendor, r]));
 
   return rows.map((r) => {
@@ -249,10 +279,14 @@ export interface AgeBucketRoi {
   roi: number | null;
 }
 
-export function getRoiByAge(db: Database.Database): AgeBucketRoi[] {
-  const customers = db.prepare(`SELECT id, lead_cost, purchased_at FROM customers`).all() as { id: string; lead_cost: number; purchased_at: string }[];
-  const policies = db.prepare(`SELECT customer_id, id FROM policies`).all() as { customer_id: string; id: string }[];
-  const commissions = db.prepare(`SELECT policy_id, net_commission FROM commissions`).all() as { policy_id: string; net_commission: number }[];
+export function getRoiByAge(db: Database.Database, ownerId: string): AgeBucketRoi[] {
+  const customers = db.prepare(`SELECT id, lead_cost, purchased_at FROM customers WHERE owner_id = ?`).all(ownerId) as { id: string; lead_cost: number; purchased_at: string }[];
+  const policies = db
+    .prepare(`SELECT p.customer_id, p.id FROM policies p JOIN customers c ON c.id = p.customer_id WHERE c.owner_id = ?`)
+    .all(ownerId) as { customer_id: string; id: string }[];
+  const commissions = db
+    .prepare(`SELECT cm.policy_id, cm.net_commission FROM commissions cm JOIN customers c ON c.id = cm.customer_id WHERE c.owner_id = ?`)
+    .all(ownerId) as { policy_id: string; net_commission: number }[];
   const commByPolicy = Object.fromEntries(commissions.map((c) => [c.policy_id, c.net_commission]));
   const policyByCustomer: Record<string, string[]> = {};
   for (const p of policies) {
@@ -291,21 +325,22 @@ export interface StateRoi {
   roi: number | null;
 }
 
-export function getRoiByState(db: Database.Database): StateRoi[] {
+export function getRoiByState(db: Database.Database, ownerId: string): StateRoi[] {
   const rows = db
     .prepare(
       `SELECT c.state as state, COUNT(DISTINCT c.id) as leads, COALESCE(SUM(c.lead_cost),0) as spend
-       FROM customers c GROUP BY c.state`
+       FROM customers c WHERE c.owner_id = ? GROUP BY c.state`
     )
-    .all() as { state: string; leads: number; spend: number }[];
+    .all(ownerId) as { state: string; leads: number; spend: number }[];
   const issuedRows = db
     .prepare(
       `SELECT c.state as state, COUNT(p.id) as issued, COALESCE(SUM(cm.net_commission),0) as commission
        FROM policies p JOIN customers c ON c.id = p.customer_id
        LEFT JOIN commissions cm ON cm.policy_id = p.id
+       WHERE c.owner_id = ?
        GROUP BY c.state`
     )
-    .all() as { state: string; issued: number; commission: number }[];
+    .all(ownerId) as { state: string; issued: number; commission: number }[];
   const issuedMap = Object.fromEntries(issuedRows.map((r) => [r.state, r]));
   return rows
     .map((r) => {
@@ -335,15 +370,16 @@ export interface SourceRoi {
   roi: number | null;
 }
 
-export function getRoiBySource(db: Database.Database): SourceRoi[] {
+export function getRoiBySource(db: Database.Database, ownerId: string): SourceRoi[] {
   const rows = db
     .prepare(
       `SELECT c.platform as platform, c.ad_type as adType, COALESCE(v.name,'Unassigned') as vendor,
               COUNT(DISTINCT c.id) as leads, COALESCE(SUM(c.lead_cost),0) as spend
        FROM customers c LEFT JOIN lead_vendors v ON v.id = c.lead_vendor_id
+       WHERE c.owner_id = ?
        GROUP BY c.platform, c.ad_type, vendor`
     )
-    .all() as { platform: string; adType: string; vendor: string; leads: number; spend: number }[];
+    .all(ownerId) as { platform: string; adType: string; vendor: string; leads: number; spend: number }[];
   const issuedRows = db
     .prepare(
       `SELECT c.platform as platform, c.ad_type as adType, COALESCE(v.name,'Unassigned') as vendor,
@@ -351,9 +387,10 @@ export function getRoiBySource(db: Database.Database): SourceRoi[] {
        FROM policies p JOIN customers c ON c.id = p.customer_id
        LEFT JOIN lead_vendors v ON v.id = c.lead_vendor_id
        LEFT JOIN commissions cm ON cm.policy_id = p.id
+       WHERE c.owner_id = ?
        GROUP BY c.platform, c.ad_type, vendor`
     )
-    .all() as { platform: string; adType: string; vendor: string; issued: number; commission: number }[];
+    .all(ownerId) as { platform: string; adType: string; vendor: string; issued: number; commission: number }[];
   const keyOf = (p: string, a: string, v: string) => `${p}||${a}||${v}`;
   const issuedMap = Object.fromEntries(issuedRows.map((r) => [keyOf(r.platform, r.adType, r.vendor), r]));
 
@@ -386,10 +423,10 @@ export interface ClientLtv {
   ltv: number;
 }
 
-export function getTopLifetimeValue(db: Database.Database, limit = 10): ClientLtv[] {
+export function getTopLifetimeValue(db: Database.Database, ownerId: string, limit = 10): ClientLtv[] {
   const customers = db
-    .prepare(`SELECT id, first_name, last_name FROM customers WHERE status = 'sold'`)
-    .all() as { id: string; first_name: string; last_name: string }[];
+    .prepare(`SELECT id, first_name, last_name FROM customers WHERE status = 'sold' AND owner_id = ?`)
+    .all(ownerId) as { id: string; first_name: string; last_name: string }[];
 
   const results: ClientLtv[] = customers.map((c) => {
     const policies = db.prepare(`SELECT id FROM policies WHERE customer_id = ?`).all(c.id) as { id: string }[];

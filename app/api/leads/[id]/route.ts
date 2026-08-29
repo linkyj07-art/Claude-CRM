@@ -1,10 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
-import { logAudit, touchCustomer } from '@/lib/audit';
+import { logAudit } from '@/lib/audit';
+import { getCurrentUser } from '@/lib/currentUser';
+import { ownsCustomer } from '@/lib/ownership';
 
 export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
+  const user = await getCurrentUser();
+  if (!user) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+
   const db = getDb();
-  const customer = db.prepare('SELECT * FROM customers WHERE id = ?').get(params.id);
+  const customer = db.prepare('SELECT * FROM customers WHERE id = ? AND owner_id = ?').get(params.id, user.id);
   if (!customer) return NextResponse.json({ error: 'Not found' }, { status: 404 });
   const notes = db.prepare('SELECT * FROM note_versions WHERE customer_id = ? ORDER BY created_at DESC').all(params.id);
   const calls = db.prepare('SELECT * FROM calls WHERE customer_id = ? ORDER BY occurred_at DESC').all(params.id);
@@ -22,8 +27,13 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
 }
 
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
-  const body = await req.json();
+  const user = await getCurrentUser();
+  if (!user) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+
   const db = getDb();
+  if (!ownsCustomer(db, params.id, user.id)) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+
+  const body = await req.json();
   const fields: string[] = [];
   const values: unknown[] = [];
   const allowed = [
@@ -57,7 +67,11 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 }
 
 export async function DELETE(_req: NextRequest, { params }: { params: { id: string } }) {
+  const user = await getCurrentUser();
+  if (!user) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+
   const db = getDb();
+  if (!ownsCustomer(db, params.id, user.id)) return NextResponse.json({ error: 'Not found' }, { status: 404 });
   db.prepare('DELETE FROM customers WHERE id = ?').run(params.id);
   return NextResponse.json({ ok: true });
 }

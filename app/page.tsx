@@ -1,9 +1,12 @@
 import Link from 'next/link';
 import { getDb } from '@/lib/db';
 import StatCard from '@/components/StatCard';
-import { fmtMoney, fmtMoney0, fmtPct, agentDateStr, agentWeekStart } from '@/lib/util';
+import { fmtMoney, fmtMoney0, fmtPct, agentDateStr, agentWeekStart, agentHour } from '@/lib/util';
 import { getMoneyTiles, getActivityStats, getConversionRates, getLeadEconomics, getGoalProgress, Period } from '@/lib/metrics';
 import { DailyGoal, WeeklyGoal } from '@/lib/types';
+import { quoteOfTheDay } from '@/lib/quotes';
+import { getCurrentUser } from '@/lib/currentUser';
+import { redirect } from 'next/navigation';
 
 function GoalBar({ label, actual, target }: { label: string; actual: number; target: number | null; }) {
   if (!target || target <= 0) return null;
@@ -25,33 +28,47 @@ export const dynamic = 'force-dynamic';
 
 const PERIOD_LABEL: Record<Period, string> = { today: 'Today', week: 'Last 7 Days', month: 'Last 30 Days', all: 'All Time' };
 
-export default function DashboardPage({ searchParams }: { searchParams: { period?: string } }) {
+function greeting(hour: number): string {
+  if (hour < 12) return 'Good morning';
+  if (hour < 18) return 'Good afternoon';
+  return 'Good evening';
+}
+
+export default async function DashboardPage({ searchParams }: { searchParams: { period?: string } }) {
+  const user = await getCurrentUser();
+  if (!user) redirect('/login');
+
   const db = getDb();
   const period = (['today', 'week', 'month', 'all'].includes(searchParams.period || '') ? searchParams.period : 'today') as Period;
 
-  const money = getMoneyTiles(db);
-  const activity = getActivityStats(db, period);
+  const money = getMoneyTiles(db, user.id);
+  const activity = getActivityStats(db, period, user.id);
   const conversion = getConversionRates(activity);
-  const leadEcon = getLeadEconomics(db, activity, period);
+  const leadEcon = getLeadEconomics(db, activity, period, user.id);
 
-  const freshCount = (db.prepare(`SELECT COUNT(*) n FROM customers WHERE status = 'fresh' AND archived = 0`).get() as { n: number }).n;
-  const workingCount = (db.prepare(`SELECT COUNT(*) n FROM customers WHERE status IN ('working','aging_45_90') AND archived = 0`).get() as { n: number }).n;
+  const freshCount = (db.prepare(`SELECT COUNT(*) n FROM customers WHERE status = 'fresh' AND archived = 0 AND owner_id = ?`).get(user.id) as { n: number }).n;
+  const workingCount = (db.prepare(`SELECT COUNT(*) n FROM customers WHERE status IN ('working','aging_45_90') AND archived = 0 AND owner_id = ?`).get(user.id) as { n: number }).n;
 
   const today = agentDateStr();
   const weekStart = agentWeekStart();
-  const dailyGoal = db.prepare('SELECT * FROM daily_goals WHERE date = ?').get(today) as DailyGoal | undefined;
-  const weeklyGoal = db.prepare('SELECT * FROM weekly_goals WHERE week_start = ?').get(weekStart) as WeeklyGoal | undefined;
+  const dailyGoal = db.prepare('SELECT * FROM daily_goals WHERE date = ? AND user_id = ?').get(today, user.id) as DailyGoal | undefined;
+  const weeklyGoal = db.prepare('SELECT * FROM weekly_goals WHERE week_start = ? AND user_id = ?').get(weekStart, user.id) as WeeklyGoal | undefined;
 
-  const dailyProgress = getGoalProgress(db, 'daily', today);
-  const weeklyProgress = getGoalProgress(db, 'weekly', weekStart);
+  const dailyProgress = getGoalProgress(db, 'daily', today, user.id);
+  const weeklyProgress = getGoalProgress(db, 'weekly', weekStart, user.id);
   const hasAnyGoal = !!(dailyGoal?.target_dials || dailyGoal?.target_appointments || dailyGoal?.target_ap || weeklyGoal?.target_dials || weeklyGoal?.target_appointments || weeklyGoal?.target_ap);
+
+  const firstName = user.name.split(' ')[0];
+  const quote = quoteOfTheDay(today);
 
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
+          <p className="text-sm font-medium text-brand-400">{greeting(agentHour())}, {firstName} 👋</p>
           <h1 className="text-xl font-bold">Production Dashboard</h1>
           <p className="text-sm text-slate-500">{freshCount} fresh leads · {workingCount} in progress right now</p>
+          <p className="mt-1 text-xs italic text-slate-400">"{quote}"</p>
         </div>
         <div className="flex gap-2">
           <a href="/dial" className="btn-primary">⚡ Power Dial</a>

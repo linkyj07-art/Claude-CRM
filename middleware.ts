@@ -1,43 +1,38 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { SESSION_COOKIE, verifySessionToken } from '@/lib/session';
 
-// Simple shared-password gate for the whole app. Set BASIC_AUTH_USER and
-// BASIC_AUTH_PASSWORD as environment variables in production (Railway/Fly/
-// wherever this is hosted) — this CRM stores real lead/client PII (names,
-// phone, DOB, SSN, bank/routing) and has no other login system, so it
-// should not be reachable without this set once it's live.
+// Real per-user login. Each agent gets their own username/password (created
+// by an admin from Settings → Team) and only ever sees leads they own — this
+// CRM stores real client PII (names, phone, DOB, SSN, bank/routing), so
+// nothing renders without a verified session.
 //
-// If either env var is unset, the gate is skipped (so local `npm run dev`
-// keeps working with zero config). A console warning fires once per cold
-// start if that happens while NODE_ENV=production, to make it hard to miss.
+// Runs on the Edge runtime, so no Node built-ins / native addons here — the
+// session token is signed with the Web Crypto API (see lib/session.ts),
+// which works identically here and in Node route handlers.
 
-export function middleware(req: NextRequest) {
-  const user = process.env.BASIC_AUTH_USER;
-  const pass = process.env.BASIC_AUTH_PASSWORD;
+const PUBLIC_PATHS = ['/login', '/api/auth/login'];
 
-  if (!user || !pass) {
-    if (process.env.NODE_ENV === 'production') {
-      console.warn(
-        '[security] BASIC_AUTH_USER / BASIC_AUTH_PASSWORD are not set — this CRM is running in production with NO login gate. Set both env vars to protect it.'
-      );
-    }
+export async function middleware(req: NextRequest) {
+  const { pathname } = req.nextUrl;
+
+  if (PUBLIC_PATHS.some((p) => pathname === p)) {
     return NextResponse.next();
   }
 
-  const authHeader = req.headers.get('authorization');
-  if (authHeader?.startsWith('Basic ')) {
-    const decoded = atob(authHeader.slice(6));
-    const sep = decoded.indexOf(':');
-    const suppliedUser = decoded.slice(0, sep);
-    const suppliedPass = decoded.slice(sep + 1);
-    if (suppliedUser === user && suppliedPass === pass) {
-      return NextResponse.next();
-    }
+  const token = req.cookies.get(SESSION_COOKIE)?.value;
+  const uid = await verifySessionToken(token);
+
+  if (uid) {
+    return NextResponse.next();
   }
 
-  return new NextResponse('Authentication required', {
-    status: 401,
-    headers: { 'WWW-Authenticate': 'Basic realm="FEX CRM", charset="UTF-8"' }
-  });
+  if (pathname.startsWith('/api/')) {
+    return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+  }
+
+  const loginUrl = new URL('/login', req.url);
+  loginUrl.searchParams.set('next', pathname);
+  return NextResponse.redirect(loginUrl);
 }
 
 export const config = {

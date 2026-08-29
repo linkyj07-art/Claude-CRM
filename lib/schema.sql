@@ -6,6 +6,14 @@
 
 PRAGMA foreign_keys = ON;
 
+CREATE TABLE IF NOT EXISTS users (
+  id TEXT PRIMARY KEY,
+  username TEXT NOT NULL UNIQUE,
+  password_hash TEXT NOT NULL,
+  name TEXT NOT NULL,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
 CREATE TABLE IF NOT EXISTS lead_vendors (
   id TEXT PRIMARY KEY,
   name TEXT NOT NULL,
@@ -15,6 +23,7 @@ CREATE TABLE IF NOT EXISTS lead_vendors (
 
 CREATE TABLE IF NOT EXISTS customers (
   id TEXT PRIMARY KEY,
+  owner_id TEXT REFERENCES users(id),
   first_name TEXT NOT NULL,
   last_name TEXT NOT NULL,
   phone TEXT,
@@ -45,6 +54,7 @@ CREATE TABLE IF NOT EXISTS customers (
   updated_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
+CREATE INDEX IF NOT EXISTS idx_customers_owner ON customers(owner_id);
 CREATE INDEX IF NOT EXISTS idx_customers_status ON customers(status);
 CREATE INDEX IF NOT EXISTS idx_customers_state ON customers(state);
 CREATE INDEX IF NOT EXISTS idx_customers_vendor ON customers(lead_vendor_id);
@@ -285,20 +295,24 @@ CREATE TABLE IF NOT EXISTS duplicate_leads (
 
 CREATE INDEX IF NOT EXISTS idx_dupe_customer ON duplicate_leads(customer_id);
 
--- One row per day/week the agent has set goals for. Missing rows just mean
--- "never set a goal for that period" — there's no default target.
+-- One row per user per day/week they've set goals for. Missing rows just
+-- mean "never set a goal for that period" — there's no default target.
 CREATE TABLE IF NOT EXISTS daily_goals (
-  date TEXT PRIMARY KEY, -- YYYY-MM-DD, agent's local (Mountain) day
+  date TEXT NOT NULL, -- YYYY-MM-DD, agent's local (Mountain) day
+  user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   target_dials INTEGER,
   target_appointments INTEGER,
   target_ap REAL, -- target annual premium written
-  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  PRIMARY KEY (date, user_id)
 );
 
 CREATE TABLE IF NOT EXISTS weekly_goals (
-  week_start TEXT PRIMARY KEY, -- YYYY-MM-DD of that week's Monday, Mountain time
+  week_start TEXT NOT NULL, -- YYYY-MM-DD of that week's Monday, Mountain time
+  user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   target_dials INTEGER,
   target_appointments INTEGER,
   target_ap REAL,
-  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  PRIMARY KEY (week_start, user_id)
 );

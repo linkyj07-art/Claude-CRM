@@ -5,6 +5,8 @@ import { Customer, LeadVendor } from '@/lib/types';
 import NewLeadButton from '@/components/NewLeadButton';
 import ImportLeadsButton from '@/components/ImportLeadsButton';
 import LeadsTable from '@/components/LeadsTable';
+import { getCurrentUser } from '@/lib/currentUser';
+import { redirect } from 'next/navigation';
 
 export const dynamic = 'force-dynamic';
 
@@ -14,12 +16,15 @@ const STATUS_OPTIONS = [
   ['sold', 'Sold'], ['lost', 'Lost'], ['archived', 'Archived']
 ];
 
-export default function LeadsPage({ searchParams }: { searchParams: { status?: string; q?: string; state?: string; vendor?: string; empty?: string } }) {
+export default async function LeadsPage({ searchParams }: { searchParams: { status?: string; q?: string; state?: string; vendor?: string; empty?: string } }) {
+  const user = await getCurrentUser();
+  if (!user) redirect('/login');
+
   const db = getDb();
   const vendors = db.prepare('SELECT * FROM lead_vendors ORDER BY name').all() as LeadVendor[];
 
-  let sql = `SELECT c.*, v.name as vendor_name FROM customers c LEFT JOIN lead_vendors v ON v.id = c.lead_vendor_id WHERE c.archived = 0`;
-  const params: unknown[] = [];
+  let sql = `SELECT c.*, v.name as vendor_name FROM customers c LEFT JOIN lead_vendors v ON v.id = c.lead_vendor_id WHERE c.archived = 0 AND c.owner_id = ?`;
+  const params: unknown[] = [user.id];
   if (searchParams.status) { sql += ' AND c.status = ?'; params.push(searchParams.status); }
   if (searchParams.state) { sql += ' AND c.state = ?'; params.push(searchParams.state); }
   if (searchParams.vendor) { sql += ' AND c.lead_vendor_id = ?'; params.push(searchParams.vendor); }
@@ -31,7 +36,7 @@ export default function LeadsPage({ searchParams }: { searchParams: { status?: s
   sql += ' ORDER BY c.purchased_at DESC LIMIT 300';
   const leads = db.prepare(sql).all(...params) as (Customer & { vendor_name: string | null })[];
 
-  const counts = db.prepare(`SELECT status, COUNT(*) n FROM customers WHERE archived = 0 GROUP BY status`).all() as { status: string; n: number }[];
+  const counts = db.prepare(`SELECT status, COUNT(*) n FROM customers WHERE archived = 0 AND owner_id = ? GROUP BY status`).all(user.id) as { status: string; n: number }[];
   const countMap = Object.fromEntries(counts.map((c) => [c.status, c.n]));
 
   return (

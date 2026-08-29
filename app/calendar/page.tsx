@@ -1,6 +1,8 @@
 import Link from 'next/link';
 import { getDb } from '@/lib/db';
 import CalendarQuickAdd from '@/components/CalendarQuickAdd';
+import { getCurrentUser } from '@/lib/currentUser';
+import { redirect } from 'next/navigation';
 
 export const dynamic = 'force-dynamic';
 
@@ -17,17 +19,20 @@ function shiftMonth(month: string, delta: number): string {
   return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`;
 }
 
-export default function CalendarPage({ searchParams }: { searchParams: { month?: string } }) {
+export default async function CalendarPage({ searchParams }: { searchParams: { month?: string } }) {
+  const user = await getCurrentUser();
+  if (!user) redirect('/login');
+
   const month = /^\d{4}-\d{2}$/.test(searchParams.month || '') ? searchParams.month! : new Date().toISOString().slice(0, 7);
   const db = getDb();
   const appointments = db
     .prepare(
       `SELECT a.*, c.first_name, c.last_name, c.phone
        FROM appointments a JOIN customers c ON c.id = a.customer_id
-       WHERE a.scheduled_at LIKE ? AND a.status != 'cancelled'
+       WHERE c.owner_id = ? AND a.scheduled_at LIKE ? AND a.status != 'cancelled'
        ORDER BY a.scheduled_at ASC`
     )
-    .all(`${month}%`) as ApptRow[];
+    .all(user.id, `${month}%`) as ApptRow[];
 
   const byDay = new Map<number, ApptRow[]>();
   for (const a of appointments) {

@@ -2,10 +2,17 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
 import { newId } from '@/lib/util';
 import { logAudit, touchCustomer } from '@/lib/audit';
+import { getCurrentUser } from '@/lib/currentUser';
+import { ownsCustomer } from '@/lib/ownership';
 
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
-  const body = await req.json();
+  const user = await getCurrentUser();
+  if (!user) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+
   const db = getDb();
+  if (!ownsCustomer(db, params.id, user.id)) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+
+  const body = await req.json();
   const id = newId();
   db.prepare(
     `INSERT INTO appointments (id, customer_id, scheduled_at, type, status, notes)
@@ -18,8 +25,13 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 }
 
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
-  const body = await req.json();
+  const user = await getCurrentUser();
+  if (!user) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+
   const db = getDb();
+  if (!ownsCustomer(db, params.id, user.id)) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+
+  const body = await req.json();
   if (!body.appointment_id) return NextResponse.json({ error: 'appointment_id required' }, { status: 400 });
   db.prepare(`UPDATE appointments SET status = ? WHERE id = ? AND customer_id = ?`).run(body.status, body.appointment_id, params.id);
   logAudit(params.id, 'appointment', `Appointment marked ${body.status.replace('_', ' ')}`);

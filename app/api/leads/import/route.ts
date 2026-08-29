@@ -5,6 +5,7 @@ import { getDb } from '@/lib/db';
 import { newId, normalizeState, parseCoverageRange, stateFromAreaCode } from '@/lib/util';
 import { logAudit } from '@/lib/audit';
 import { CustomerStatus } from '@/lib/types';
+import { getCurrentUser } from '@/lib/currentUser';
 
 const MAX_ROWS = 5000;
 
@@ -133,6 +134,9 @@ async function rowsFromXlsx(buffer: Buffer): Promise<{ headers: string[]; rows: 
 }
 
 export async function POST(req: NextRequest) {
+  const user = await getCurrentUser();
+  if (!user) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+
   const formData = await req.formData();
   const file = formData.get('file');
   if (!file || !(file instanceof Blob)) {
@@ -205,7 +209,7 @@ export async function POST(req: NextRequest) {
   const batchPurchasedAt = parsePurchaseDate(batchPurchaseDate);
   const batchStatus = parseAgeRange(batchAgeRange);
 
-  const existingCustomers = db.prepare('SELECT id, first_name, last_name, phone, dob FROM customers').all() as
+  const existingCustomers = db.prepare('SELECT id, first_name, last_name, phone, dob FROM customers WHERE owner_id = ?').all(user.id) as
     { id: string; first_name: string; last_name: string; phone: string | null; dob: string | null }[];
   const dupeIndex = new Map<string, string>();
   for (const c of existingCustomers) {
@@ -214,10 +218,10 @@ export async function POST(req: NextRequest) {
   }
 
   const insertCustomer = db.prepare(
-    `INSERT INTO customers (id, first_name, last_name, phone, email, dob, gender, marital_status,
+    `INSERT INTO customers (id, owner_id, first_name, last_name, phone, email, dob, gender, marital_status,
       military, military_branch, coverage_wanted, address, city, state, postal_code, timezone,
       ad_type, platform, lead_vendor_id, best_time, lead_cost, trusted_form_url, status, purchased_at, created_at, updated_at)
-     VALUES (@id, @first_name, @last_name, @phone, @email, @dob, @gender, @marital_status,
+     VALUES (@id, @owner_id, @first_name, @last_name, @phone, @email, @dob, @gender, @marital_status,
       @military, @military_branch, @coverage_wanted, @address, @city, @state, @postal_code, NULL,
       @ad_type, @platform, @lead_vendor_id, @best_time, @lead_cost, @trusted_form_url, @status, @purchased_at, datetime('now'), datetime('now'))`
   );
@@ -292,7 +296,7 @@ export async function POST(req: NextRequest) {
       }
 
       const id = newId();
-      insertCustomer.run({ id, ...data });
+      insertCustomer.run({ id, owner_id: user.id, ...data });
       importedIds.push(id);
       if (dupeKey) dupeIndex.set(dupeKey, id);
     });

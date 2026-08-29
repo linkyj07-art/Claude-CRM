@@ -2,10 +2,15 @@ import Link from 'next/link';
 import { getDb } from '@/lib/db';
 import { fmtMoney } from '@/lib/util';
 import Badge from '@/components/Badge';
+import { getCurrentUser } from '@/lib/currentUser';
+import { redirect } from 'next/navigation';
 
 export const dynamic = 'force-dynamic';
 
-export default function CommissionsPage() {
+export default async function CommissionsPage() {
+  const user = await getCurrentUser();
+  if (!user) redirect('/login');
+
   const db = getDb();
   const rows = db
     .prepare(
@@ -13,9 +18,10 @@ export default function CommissionsPage() {
        FROM commissions cm
        JOIN customers c ON c.id = cm.customer_id
        LEFT JOIN policies p ON p.id = cm.policy_id
+       WHERE c.owner_id = ?
        ORDER BY cm.created_at DESC`
     )
-    .all() as any[];
+    .all(user.id) as any[];
 
   const gross = rows.reduce((s, r) => s + (r.expected_commission || 0), 0);
   const net = rows.reduce((s, r) => s + (r.net_commission || 0), 0);

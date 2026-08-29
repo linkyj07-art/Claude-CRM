@@ -3,24 +3,30 @@ import { getDb } from '@/lib/db';
 import { Customer, DuplicateLead } from '@/lib/types';
 import { leadAgeLabel } from '@/lib/util';
 import { DismissDuplicateButton, AddAnywayButton, ArchiveLeadButton } from '@/components/ReviewActions';
+import { getCurrentUser } from '@/lib/currentUser';
+import { redirect } from 'next/navigation';
 
 export const dynamic = 'force-dynamic';
 
-export default function ReviewQueuePage() {
+export default async function ReviewQueuePage() {
+  const user = await getCurrentUser();
+  if (!user) redirect('/login');
+
   const db = getDb();
 
   const duplicates = db.prepare(
     `SELECT d.*, c.first_name AS match_first_name, c.last_name AS match_last_name, c.phone AS match_phone
      FROM duplicate_leads d JOIN customers c ON c.id = d.customer_id
+     WHERE c.owner_id = ?
      ORDER BY d.created_at DESC`
-  ).all() as (DuplicateLead & { match_first_name: string; match_last_name: string; match_phone: string | null })[];
+  ).all(user.id) as (DuplicateLead & { match_first_name: string; match_last_name: string; match_phone: string | null })[];
 
   const agingLeads = db.prepare(
     `SELECT * FROM customers
-     WHERE archived = 0 AND status NOT IN ('sold', 'lost', 'dnc', 'invalid', 'archived')
+     WHERE archived = 0 AND owner_id = ? AND status NOT IN ('sold', 'lost', 'dnc', 'invalid', 'archived')
        AND purchased_at <= datetime('now', '-90 days')
      ORDER BY purchased_at ASC LIMIT 300`
-  ).all() as Customer[];
+  ).all(user.id) as Customer[];
 
   const settingsRow = db.prepare(`SELECT value FROM app_settings WHERE key = 'licensed_states'`).get() as { value: string } | undefined;
   const licensedStates: string[] = settingsRow ? JSON.parse(settingsRow.value) : [];
@@ -28,18 +34,18 @@ export default function ReviewQueuePage() {
   const unlicensedLeads = licensedStates.length === 0 ? [] : (db.prepare(
     `SELECT c.*, COUNT(ca.id) AS call_count, MAX(ca.occurred_at) AS last_call_at
      FROM customers c JOIN calls ca ON ca.customer_id = c.id
-     WHERE c.state IS NOT NULL AND c.state != '' AND c.state NOT IN (${licensedStates.map(() => '?').join(',')})
+     WHERE c.owner_id = ? AND c.state IS NOT NULL AND c.state != '' AND c.state NOT IN (${licensedStates.map(() => '?').join(',')})
      GROUP BY c.id
      ORDER BY last_call_at DESC LIMIT 300`
-  ).all(...licensedStates) as (Customer & { call_count: number; last_call_at: string })[]);
+  ).all(user.id, ...licensedStates) as (Customer & { call_count: number; last_call_at: string })[]);
 
   const disconnectedLeads = db.prepare(
     `SELECT c.*, COUNT(ca.id) AS wrong_number_count, MAX(ca.occurred_at) AS last_call_at
      FROM customers c JOIN calls ca ON ca.customer_id = c.id AND ca.outcome = 'wrong_number'
-     WHERE c.archived = 0
+     WHERE c.archived = 0 AND c.owner_id = ?
      GROUP BY c.id
      ORDER BY last_call_at DESC LIMIT 300`
-  ).all() as (Customer & { wrong_number_count: number; last_call_at: string })[];
+  ).all(user.id) as (Customer & { wrong_number_count: number; last_call_at: string })[];
 
   return (
     <div className="space-y-6">

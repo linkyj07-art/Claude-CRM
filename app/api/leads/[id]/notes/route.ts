@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
 import { newId } from '@/lib/util';
 import { logAudit, touchCustomer } from '@/lib/audit';
+import { getCurrentUser } from '@/lib/currentUser';
+import { ownsCustomer } from '@/lib/ownership';
 
 const FIELDS = [
   'label', 'name', 'note_date', 'phone', 'beneficiary', 'beneficiary_dob', 'budget', 'health', 'discount',
@@ -11,8 +13,13 @@ const FIELDS = [
 ];
 
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
-  const body = await req.json();
+  const user = await getCurrentUser();
+  if (!user) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+
   const db = getDb();
+  if (!ownsCustomer(db, params.id, user.id)) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+
+  const body = await req.json();
   const id = newId();
   const row: Record<string, unknown> = { id, customer_id: params.id, created_by: 'You' };
   for (const f of FIELDS) row[f] = body[f] ?? null;
