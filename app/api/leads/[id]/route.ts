@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
-import { logAudit } from '@/lib/audit';
+import { logAudit, openDispute } from '@/lib/audit';
 import { getCurrentUser } from '@/lib/currentUser';
 import { ownsCustomer } from '@/lib/ownership';
 
@@ -62,6 +62,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       working: 'Status set to working'
     };
     logAudit(params.id, 'status_change', labelMap[body.status] || `Status changed to ${body.status}`);
+    if (body.status === 'disputed') openDispute(params.id, 'Disputed with vendor');
   }
   return NextResponse.json({ ok: true });
 }

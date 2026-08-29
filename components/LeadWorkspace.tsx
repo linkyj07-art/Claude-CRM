@@ -49,6 +49,32 @@ function emptyNoteForm(customer: Customer): AnyRow {
   };
 }
 
+// Plain-text rendering of the note form for "Copy All" — a second place
+// (Google Docs, etc.) to keep this info, formatted as simple labeled lines
+// rather than the grid layout so it pastes cleanly outside the app.
+function buildNoteCopyText(noteForm: AnyRow, customer: Customer): string {
+  const lines: string[] = [`${customer.first_name} ${customer.last_name}`, ''];
+  for (const f of NOTE_FIELDS) {
+    const value = noteForm[f.key];
+    if (value) lines.push(`${f.label}: ${value}`);
+  }
+  const planLines = PLAN_TIERS
+    .filter(({ coverageKey, priceKey }) => noteForm[coverageKey] || noteForm[priceKey])
+    .map(({ tier, coverageKey, priceKey }) => `${tier}: ${noteForm[coverageKey] || '—'} coverage, ${noteForm[priceKey] || '—'}/mo`);
+  if (planLines.length) lines.push('', 'PLAN OPTIONS', ...planLines);
+
+  const bankLines: string[] = [];
+  if (noteForm.bank_name) bankLines.push(`Bank: ${noteForm.bank_name}`);
+  if (noteForm.bank_state) bankLines.push(`Bank State: ${noteForm.bank_state}`);
+  if (noteForm.routing_number) bankLines.push(`Routing #: ${noteForm.routing_number}`);
+  if (noteForm.account_number) bankLines.push(`Account #: ${noteForm.account_number}`);
+  if (noteForm.ssn) bankLines.push(`SSN: ${noteForm.ssn}`);
+  if (bankLines.length) lines.push('', 'BANK / SSN', ...bankLines);
+
+  if (noteForm.free_text) lines.push('', 'NOTES', noteForm.free_text);
+  return lines.join('\n');
+}
+
 const NOTE_FORM_KEYS = [
   'label', 'name', 'note_date', 'phone', 'beneficiary', 'beneficiary_dob', 'budget', 'health', 'discount',
   'bank_name', 'bank_state', 'routing_number', 'account_number', 'mailing_address', 'email',
@@ -85,6 +111,7 @@ export default function LeadWorkspace({
   const [quoBusy, setQuoBusy] = useState(false);
   const [noteForm, setNoteForm] = useState<AnyRow>(() => noteFormFromNote(notes[0], customer));
   const [editingNote, setEditingNote] = useState(() => !notes[0]);
+  const [copied, setCopied] = useState(false);
   const [showSell, setShowSell] = useState(false);
   const [showQuote, setShowQuote] = useState(false);
   const [showAppt, setShowAppt] = useState(false);
@@ -341,6 +368,16 @@ export default function LeadWorkspace({
     } finally { setBusy(false); }
   }
 
+  async function copyAllNotes() {
+    try {
+      await navigator.clipboard.writeText(buildNoteCopyText(noteForm, customer));
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      alert('Could not copy — your browser may be blocking clipboard access.');
+    }
+  }
+
   async function setStatus(status: string) {
     if (!confirm(`Set lead status to "${status}"?`)) return;
     setBusy(true);
@@ -451,6 +488,7 @@ export default function LeadWorkspace({
                   <button disabled={busy} onClick={() => logCall('google_voice')} className="btn-secondary text-xs px-2 py-1.5">Google Voice</button>
                   <button disabled={busy} onClick={() => logCall('busy')} className="btn-secondary text-xs px-2 py-1.5">Busy</button>
                   <button disabled={busy} onClick={() => logCall('wrong_number')} className="btn-secondary text-xs px-2 py-1.5">Wrong #</button>
+                  <button disabled={busy} onClick={() => logCall('disconnected')} className="btn-secondary text-xs px-2 py-1.5">📵 Disconnected</button>
                   <button disabled={busy} onClick={() => logCall('connected', 'interested')} className="btn-good text-xs px-2 py-1.5">Connected</button>
                   <button disabled={busy} onClick={() => logCall('connected', 'sold')} className="btn-good text-xs px-2 py-1.5">💰 Sold</button>
                   <button disabled={busy} onClick={() => logCall('connected', 'not_interested')} className="btn-secondary text-xs px-2 py-1.5">Not Interested</button>
@@ -569,6 +607,9 @@ export default function LeadWorkspace({
           <div className="mb-2 flex items-center justify-between">
             <div className="label">Notes {!editingNote && <span className="font-normal normal-case text-slate-400">(locked — click Edit to change)</span>}</div>
             <div className="flex items-center gap-3">
+              <button className="btn-secondary text-xs" type="button" onClick={copyAllNotes}>
+                {copied ? '✅ Copied' : '📋 Copy All'}
+              </button>
               {!editingNote && (
                 <button className="btn-secondary text-xs" type="button" onClick={() => setEditingNote(true)}>✏️ Edit</button>
               )}

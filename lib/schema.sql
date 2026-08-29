@@ -226,6 +226,23 @@ CREATE TABLE IF NOT EXISTS audit_history (
 
 CREATE INDEX IF NOT EXISTS idx_audit_customer ON audit_history(customer_id);
 
+-- A vendor dispute (bad lead — disconnected number, wrong number, invalid
+-- data, etc.) tracked from open through resolution, so it isn't just a
+-- status flag on the lead with no record of where it stands with the vendor.
+CREATE TABLE IF NOT EXISTS disputes (
+  id TEXT PRIMARY KEY,
+  customer_id TEXT NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
+  reason TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'open', -- open | submitted | resolved | denied
+  credit_amount REAL,
+  notes TEXT,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_disputes_customer ON disputes(customer_id);
+CREATE INDEX IF NOT EXISTS idx_disputes_status ON disputes(status);
+
 CREATE TABLE IF NOT EXISTS carriers (
   id TEXT PRIMARY KEY,
   name TEXT NOT NULL,

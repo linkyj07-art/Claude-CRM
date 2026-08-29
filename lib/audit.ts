@@ -21,8 +21,26 @@ const CALL_OUTCOME_LABEL: Record<string, string> = {
   connected: 'Connected',
   busy: 'Busy',
   wrong_number: 'Wrong Number',
+  disconnected: 'Disconnected Number',
   dnc: 'Requested DNC'
 };
+
+// Opens (or reuses, if one's already open) a vendor dispute for this lead —
+// called automatically off certain call outcomes (a disconnected number is
+// the vendor's fault, not a dead lead the agent should keep dialing) so it
+// shows up on the Dispute Log immediately instead of only living as a
+// status flag with no record of why or what's been done about it.
+export function openDispute(customerId: string, reason: string): void {
+  const db = getDb();
+  const existing = db
+    .prepare(`SELECT id FROM disputes WHERE customer_id = ? AND status IN ('open','submitted') LIMIT 1`)
+    .get(customerId);
+  if (existing) return;
+  db.prepare(
+    `INSERT INTO disputes (id, customer_id, reason, status, created_at, updated_at)
+     VALUES (?, ?, ?, 'open', datetime('now'), datetime('now'))`
+  ).run(newId(), customerId, reason);
+}
 
 // Shared between logging a fresh call and completing a pending one, so both
 // paths nudge status and write the audit trail the same way.
@@ -33,6 +51,9 @@ export function applyCallOutcome(customerId: string, outcome: string, dispositio
 
   if (outcome === 'dnc') {
     db.prepare(`UPDATE customers SET status = 'dnc' WHERE id = ?`).run(customerId);
+  } else if (outcome === 'disconnected') {
+    db.prepare(`UPDATE customers SET status = 'disputed' WHERE id = ?`).run(customerId);
+    openDispute(customerId, 'Disconnected number');
   } else if (outcome === 'wrong_number' && attempt >= 2) {
     db.prepare(`UPDATE customers SET status = 'invalid' WHERE id = ?`).run(customerId);
   } else if (outcome === 'connected' && disposition) {
