@@ -36,7 +36,10 @@ const FIELD_ALIASES: Record<string, string[]> = {
   lead_cost: ['lead cost', 'cost'],
   purchase_date: ['purchase date', 'date bought', 'date purchased', 'day bought', 'bought on', 'date time'],
   age_range: ['age range', 'lead age', 'age bucket'],
-  trusted_form_url: ['trusted form certificate', 'trustedform', 'trusted form', 'consent url', 'tcpa certificate']
+  trusted_form_url: ['trusted form certificate', 'trustedform', 'trusted form', 'consent url', 'tcpa certificate'],
+  // Not stored on the customer directly — kept only as a fallback source to
+  // recover a misplaced DOB (see fixMisalignedContactFields below).
+  age: ['age']
 };
 
 function normalize(h: string): string {
@@ -77,6 +80,51 @@ function parsePurchaseDate(value: string | Date): string | null {
   const d = new Date(t.length <= 10 && !t.includes('T') ? `${t}T12:00:00Z` : t);
   if (isNaN(d.getTime())) return null;
   return d.toISOString().slice(0, 19).replace('T', ' ');
+}
+
+function looksLikePhone(s: string): boolean {
+  const digits = (s || '').replace(/\D/g, '');
+  return digits.length === 10 || digits.length === 11;
+}
+
+function looksLikeEmail(s: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test((s || '').trim());
+}
+
+function looksLikeDob(s: string): boolean {
+  const t = (s || '').trim();
+  if (!t) return false;
+  const d = new Date(t);
+  if (isNaN(d.getTime())) return false;
+  const year = d.getFullYear();
+  return year >= 1900 && year <= new Date().getFullYear();
+}
+
+function looksLikeGender(s: string): boolean {
+  return ['male', 'female', 'm', 'f'].includes((s || '').trim().toLowerCase());
+}
+
+// Some vendor batches ship with a block of columns (Phone/DOB/Age/State/
+// Email/Gender) shuffled out of alignment with the header for a subset of
+// rows — seen in practice as: Phone slot holding an email, DOB slot holding
+// a phone number, Age slot holding the real DOB, Email slot holding the
+// gender, and Gender slot holding the state name. Rather than trust column
+// position, this checks the *shape* of each value (a date, a phone number,
+// an email, Male/Female, a recognized state) and reconstructs the real
+// fields from whichever slot actually matches that shape. Only engages when
+// the telltale sign is present — a phone number sitting in the DOB slot —
+// so normal, correctly-aligned rows are never touched.
+function fixShiftedContactBlock(fields: { phone: string; dob: string; age: string; email: string; gender: string; state: string }) {
+  const { phone, dob, age, email, gender, state } = fields;
+  if (!(dob && !looksLikeDob(dob) && looksLikePhone(dob))) return fields;
+
+  return {
+    phone: dob,
+    dob: looksLikeDob(age) ? age : '',
+    email: looksLikeEmail(phone) ? phone : (looksLikeEmail(email) ? email : ''),
+    gender: looksLikeGender(email) ? email : (looksLikeGender(gender) ? gender : ''),
+    state: normalizeState(gender) ? gender : (normalizeState(state) ? state : '')
+  };
 }
 
 function normalizeDupeKey(first: string, last: string, phone: string, dob: string): string | null {
@@ -246,12 +294,16 @@ export async function POST(req: NextRequest) {
 
       const first_name = get('first_name');
       const last_name = get('last_name');
-      const phone = get('phone');
-      const dob = get('dob');
-      if (!first_name && !last_name && !phone) {
+      const rawPhone = get('phone');
+      const rawDob = get('dob');
+      if (!first_name && !last_name && !rawPhone) {
         skipped.push({ row: i + 2, reason: 'No name or phone found on this row' });
         return;
       }
+
+      const { phone, dob, email, gender, state: fixedState } = fixShiftedContactBlock({
+        phone: rawPhone, dob: rawDob, age: get('age'), email: get('email'), gender: get('gender'), state: get('state')
+      });
 
       const rowPurchasedAt = parsePurchaseDate(get('purchase_date'));
       const rowStatus = parseAgeRange(get('age_range'));
@@ -265,16 +317,16 @@ export async function POST(req: NextRequest) {
         first_name: first_name || 'New',
         last_name: last_name || 'Lead',
         phone: phone || null,
-        email: get('email') || null,
+        email: email || null,
         dob: dob || null,
-        gender: get('gender') || null,
+        gender: gender || null,
         marital_status: get('marital_status') || null,
         military: militaryBranch || militaryStatus ? 1 : 0,
         military_branch: militaryBranch || null,
         coverage_wanted: parseCoverageRange(get('coverage_wanted')),
         address: get('address') || null,
         city: get('city') || null,
-        state: normalizeState(get('state')) || stateFromAreaCode(phone),
+        state: normalizeState(fixedState) || stateFromAreaCode(phone),
         postal_code: get('postal_code') || null,
         ad_type: get('ad_type') || 'Final Expense',
         platform: get('platform') || null,
@@ -290,7 +342,7 @@ export async function POST(req: NextRequest) {
       const matchId = dupeKey ? dupeIndex.get(dupeKey) : undefined;
       if (matchId) {
         const dupeId = newId();
-        insertDupe.run(dupeId, matchId, first_name || null, last_name || null, phone || null, get('email') || null, dob || null, data.state, JSON.stringify(data), fileName);
+        insertDupe.run(dupeId, matchId, first_name || null, last_name || null, phone || null, email || null, dob || null, data.state, JSON.stringify(data), fileName);
         duplicateCount++;
         return;
       }
