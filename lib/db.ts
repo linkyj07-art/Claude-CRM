@@ -1,8 +1,11 @@
 import Database from 'better-sqlite3';
 import fs from 'fs';
 import path from 'path';
+import Papa from 'papaparse';
 import { newId } from './util';
 import { hashPassword } from './auth';
+
+const ROUTING_SEED_PATH = path.join(process.cwd(), 'seed', 'routing_numbers.csv');
 
 // DATA_DIR can be pointed at a mounted persistent volume in production
 // (e.g. Railway/Fly.io) via the DATA_DIR env var. Defaults to ./data for
@@ -65,6 +68,52 @@ function migrate(db: Database.Database) {
 
   seedStarterUnderwriting(db);
   ensureRecoveryAccount(db);
+  seedRoutingNumbers(db);
+}
+
+// User-supplied bank routing-number directory (FDIC bank name matched
+// against the Federal Reserve's FedACH routing directory, by state) — a real
+// sourced dataset the user provided, not fabricated. Rows the source
+// couldn't confidently match ("NOT FOUND") are skipped; everything else is
+// shown in the app as a suggestion to confirm with the client, never
+// auto-filled blindly, same "verify before use" posture as the rest of
+// routing_lookup. Guarded by the same one-time atomic claim pattern used
+// elsewhere in this file so re-deploys don't re-import or duplicate rows.
+function seedRoutingNumbers(db: Database.Database) {
+  if (!fs.existsSync(ROUTING_SEED_PATH)) return;
+
+  const claimed = db.prepare(`INSERT INTO app_settings (key, value) VALUES ('routing_numbers_seeded_v1', '1') ON CONFLICT(key) DO NOTHING`).run();
+  if (claimed.changes === 0) return;
+
+  const text = fs.readFileSync(ROUTING_SEED_PATH, 'utf-8');
+  const parsed = Papa.parse<Record<string, string>>(text, { header: true, skipEmptyLines: true });
+
+  const insert = db.prepare(
+    `INSERT INTO routing_lookup (id, bank_name, state, routing_number, institution_type, source_note) VALUES (?, ?, ?, ?, ?, ?)`
+  );
+
+  const isCreditUnion = (name: string) => /credit union|\bfcu\b/i.test(name);
+
+  const runSeed = db.transaction((rows: Record<string, string>[]) => {
+    for (const row of rows) {
+      const bankName = (row['Bank Name (FDIC)'] || '').trim();
+      const state = (row['State Code'] || '').trim().toUpperCase();
+      const routingNumber = (row['Routing Number'] || '').trim();
+      if (!bankName || !state || !/^\d{9}$/.test(routingNumber)) continue;
+
+      const matchType = (row['Match Type'] || '').trim();
+      const fedOffice = (row['Routing Office City/State'] || '').trim();
+      const note = (row['Note'] || '').trim();
+      const sourceNote = [
+        fedOffice ? `Fed directory match: ${fedOffice}${matchType ? ` (${matchType})` : ''}` : null,
+        note || null
+      ].filter(Boolean).join(' — ');
+
+      insert.run(newId(), bankName, state, routingNumber, isCreditUnion(bankName) ? 'credit_union' : 'bank', sourceNote || null);
+    }
+  });
+
+  runSeed(parsed.data);
 }
 
 // One-time password/username reset for the account that owns all
