@@ -284,3 +284,21 @@ CREATE TABLE IF NOT EXISTS duplicate_leads (
 );
 
 CREATE INDEX IF NOT EXISTS idx_dupe_customer ON duplicate_leads(customer_id);
+
+-- One row per day/week the agent has set goals for. Missing rows just mean
+-- "never set a goal for that period" — there's no default target.
+CREATE TABLE IF NOT EXISTS daily_goals (
+  date TEXT PRIMARY KEY, -- YYYY-MM-DD, agent's local (Mountain) day
+  target_dials INTEGER,
+  target_appointments INTEGER,
+  target_ap REAL, -- target annual premium written
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS weekly_goals (
+  week_start TEXT PRIMARY KEY, -- YYYY-MM-DD of that week's Monday, Mountain time
+  target_dials INTEGER,
+  target_appointments INTEGER,
+  target_ap REAL,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);

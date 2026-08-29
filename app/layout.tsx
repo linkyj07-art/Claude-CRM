@@ -3,6 +3,7 @@ import { Inter } from 'next/font/google';
 import './globals.css';
 import TopNav from '@/components/TopNav';
 import AppointmentReminder from '@/components/AppointmentReminder';
+import GoalsManager from '@/components/GoalsManager';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
 
@@ -18,6 +19,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <TopNav />
         <main className="mx-auto max-w-[1400px] px-4 py-5 md:px-6">{children}</main>
         <AppointmentReminder />
+        <GoalsManager />
       </body>
     </html>
   );

@@ -249,6 +249,44 @@ export function isSameAgentDay(dateStr: string, reference: Date = new Date()): b
   return agentDayFmt.format(then) === agentDayFmt.format(reference);
 }
 
+function agentDateParts(reference: Date): { y: number; m: number; d: number } {
+  const parts = agentDayFmt.formatToParts(reference);
+  return {
+    y: Number(parts.find((p) => p.type === 'year')!.value),
+    m: Number(parts.find((p) => p.type === 'month')!.value),
+    d: Number(parts.find((p) => p.type === 'day')!.value)
+  };
+}
+
+// Today's calendar date in the agent's timezone, as YYYY-MM-DD.
+export function agentDateStr(reference: Date = new Date()): string {
+  const { y, m, d } = agentDateParts(reference);
+  return `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+}
+
+// The Monday (in the agent's timezone) of the week containing `reference`.
+export function agentWeekStart(reference: Date = new Date()): string {
+  const { y, m, d } = agentDateParts(reference);
+  const asUTC = new Date(Date.UTC(y, m - 1, d));
+  const weekday = asUTC.getUTCDay(); // 0 = Sunday .. 6 = Saturday
+  const diffToMonday = weekday === 0 ? 6 : weekday - 1;
+  asUTC.setUTCDate(asUTC.getUTCDate() - diffToMonday);
+  return asUTC.toISOString().slice(0, 10);
+}
+
+// 0 (midnight) - 23, in the agent's timezone.
+export function agentHour(reference: Date = new Date()): number {
+  const hourStr = new Intl.DateTimeFormat('en-US', { hour: 'numeric', hour12: false, timeZone: AGENT_TIMEZONE }).format(reference);
+  const hour = Number(hourStr);
+  return hour === 24 ? 0 : hour;
+}
+
+// 0 (Sunday) - 6 (Saturday), in the agent's timezone.
+export function agentWeekday(reference: Date = new Date()): number {
+  const { y, m, d } = agentDateParts(reference);
+  return new Date(Date.UTC(y, m - 1, d)).getUTCDay();
+}
+
 export const MAX_CALLS_PER_DAY = 4;
 
 export function callsToday(calls: { occurred_at: string }[]): number {

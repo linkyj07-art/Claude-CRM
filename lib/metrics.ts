@@ -1,6 +1,45 @@
 import Database from 'better-sqlite3';
+import { agentDateStr, agentWeekStart } from './util';
 
 export type Period = 'today' | 'week' | 'month' | 'all';
+
+export interface GoalProgress {
+  dials: number;
+  appointments: number;
+  ap: number;
+}
+
+// calls/policies.created_at are UTC timestamps; appointments.scheduled_at is a
+// naive local-wall-clock string typed straight from a datetime-local input.
+// Both need to be bucketed by the agent's own calendar day/week, not a naive
+// UTC or string-range comparison, or activity near midnight lands on the
+// wrong side of the boundary.
+export function getGoalProgress(db: Database.Database, kind: 'daily' | 'weekly', key: string): GoalProgress {
+  const matchesPeriod = (dateStr: string) => (kind === 'daily' ? agentDateStr(new Date(dateStr)) === key : agentWeekStart(new Date(dateStr)) === key);
+  const windowDays = kind === 'daily' ? 2 : 9;
+
+  const calls = db
+    .prepare(`SELECT occurred_at FROM calls WHERE occurred_at >= datetime(?, '-2 days') AND occurred_at <= datetime(?, ?)`)
+    .all(key, key, `+${windowDays} days`) as { occurred_at: string }[];
+  const dials = calls.filter((c) => matchesPeriod(c.occurred_at.replace(' ', 'T') + 'Z')).length;
+
+  let appointments: number;
+  if (kind === 'daily') {
+    appointments = (db.prepare('SELECT COUNT(*) n FROM appointments WHERE scheduled_at LIKE ?').get(`${key}%`) as { n: number }).n;
+  } else {
+    const weekEnd = new Date(new Date(key + 'T00:00:00Z').getTime() + 7 * 86400000).toISOString().slice(0, 10);
+    appointments = (db.prepare('SELECT COUNT(*) n FROM appointments WHERE scheduled_at >= ? AND scheduled_at < ?').get(key, weekEnd) as { n: number }).n;
+  }
+
+  const policies = db
+    .prepare(`SELECT annual_premium, created_at FROM policies WHERE created_at >= datetime(?, '-2 days') AND created_at <= datetime(?, ?)`)
+    .all(key, key, `+${windowDays} days`) as { annual_premium: number | null; created_at: string }[];
+  const ap = policies
+    .filter((p) => matchesPeriod(p.created_at.replace(' ', 'T') + 'Z'))
+    .reduce((sum, p) => sum + (p.annual_premium || 0), 0);
+
+  return { dials, appointments, ap };
+}
 
 export function periodStartISO(period: Period): string | null {
   const now = new Date();

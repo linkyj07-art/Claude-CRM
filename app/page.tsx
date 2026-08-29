@@ -1,8 +1,25 @@
 import Link from 'next/link';
 import { getDb } from '@/lib/db';
 import StatCard from '@/components/StatCard';
-import { fmtMoney, fmtMoney0, fmtPct } from '@/lib/util';
-import { getMoneyTiles, getActivityStats, getConversionRates, getLeadEconomics, Period } from '@/lib/metrics';
+import { fmtMoney, fmtMoney0, fmtPct, agentDateStr, agentWeekStart } from '@/lib/util';
+import { getMoneyTiles, getActivityStats, getConversionRates, getLeadEconomics, getGoalProgress, Period } from '@/lib/metrics';
+import { DailyGoal, WeeklyGoal } from '@/lib/types';
+
+function GoalBar({ label, actual, target }: { label: string; actual: number; target: number | null; }) {
+  if (!target || target <= 0) return null;
+  const pct = Math.min(100, Math.round((actual / target) * 100));
+  return (
+    <div>
+      <div className="mb-1 flex items-center justify-between text-xs">
+        <span className="font-medium text-slate-500">{label}</span>
+        <span className="text-slate-400">{actual} / {target}</span>
+      </div>
+      <div className="h-2 overflow-hidden rounded-full bg-slate-100">
+        <div className={`h-full rounded-full ${pct >= 100 ? 'bg-emerald-500' : 'bg-brand-500'}`} style={{ width: `${pct}%` }} />
+      </div>
+    </div>
+  );
+}
 
 export const dynamic = 'force-dynamic';
 
@@ -20,6 +37,15 @@ export default function DashboardPage({ searchParams }: { searchParams: { period
   const freshCount = (db.prepare(`SELECT COUNT(*) n FROM customers WHERE status = 'fresh' AND archived = 0`).get() as { n: number }).n;
   const workingCount = (db.prepare(`SELECT COUNT(*) n FROM customers WHERE status IN ('working','aging_45_90') AND archived = 0`).get() as { n: number }).n;
 
+  const today = agentDateStr();
+  const weekStart = agentWeekStart();
+  const dailyGoal = db.prepare('SELECT * FROM daily_goals WHERE date = ?').get(today) as DailyGoal | undefined;
+  const weeklyGoal = db.prepare('SELECT * FROM weekly_goals WHERE week_start = ?').get(weekStart) as WeeklyGoal | undefined;
+
+  const dailyProgress = getGoalProgress(db, 'daily', today);
+  const weeklyProgress = getGoalProgress(db, 'weekly', weekStart);
+  const hasAnyGoal = !!(dailyGoal?.target_dials || dailyGoal?.target_appointments || dailyGoal?.target_ap || weeklyGoal?.target_dials || weeklyGoal?.target_appointments || weeklyGoal?.target_ap);
+
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -32,6 +58,27 @@ export default function DashboardPage({ searchParams }: { searchParams: { period
           <Link href="/leads" className="btn-secondary">View Leads</Link>
         </div>
       </div>
+
+      {hasAnyGoal && (
+        <section className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          {(weeklyGoal?.target_dials || weeklyGoal?.target_appointments || weeklyGoal?.target_ap) && (
+            <div className="card space-y-2 p-4">
+              <div className="label">🗓️ This Week&apos;s Goals</div>
+              <GoalBar label="Dials" actual={weeklyProgress.dials} target={weeklyGoal?.target_dials ?? null} />
+              <GoalBar label="Appointments" actual={weeklyProgress.appointments} target={weeklyGoal?.target_appointments ?? null} />
+              <GoalBar label="AP" actual={weeklyProgress.ap} target={weeklyGoal?.target_ap ?? null} />
+            </div>
+          )}
+          {(dailyGoal?.target_dials || dailyGoal?.target_appointments || dailyGoal?.target_ap) && (
+            <div className="card space-y-2 p-4">
+              <div className="label">☀️ Today&apos;s Goals</div>
+              <GoalBar label="Dials" actual={dailyProgress.dials} target={dailyGoal?.target_dials ?? null} />
+              <GoalBar label="Appointments" actual={dailyProgress.appointments} target={dailyGoal?.target_appointments ?? null} />
+              <GoalBar label="AP" actual={dailyProgress.ap} target={dailyGoal?.target_ap ?? null} />
+            </div>
+          )}
+        </section>
+      )}
 
       {/* MONEY */}
       <section>

@@ -168,6 +168,22 @@ export interface DuplicateLead {
   created_at: string;
 }
 
+export interface DailyGoal {
+  date: string;
+  target_dials: number | null;
+  target_appointments: number | null;
+  target_ap: number | null;
+  created_at: string;
+}
+
+export interface WeeklyGoal {
+  week_start: string;
+  target_dials: number | null;
+  target_appointments: number | null;
+  target_ap: number | null;
+  created_at: string;
+}
+
 export interface RoutingEntry {
   id: string;
   bank_name: string;
