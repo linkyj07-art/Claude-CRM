@@ -3,6 +3,7 @@ import { Inter } from 'next/font/google';
 import './globals.css';
 import TopNav from '@/components/TopNav';
 import AppointmentReminder from '@/components/AppointmentReminder';
+import IncomingCallPopup from '@/components/IncomingCallPopup';
 import GoalsManager from '@/components/GoalsManager';
 import { getCurrentUser } from '@/lib/currentUser';
 
@@ -21,6 +22,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <TopNav user={user} />
         <main className="mx-auto max-w-[1400px] px-4 py-5 md:px-6">{children}</main>
         {user && <AppointmentReminder />}
+        {user && <IncomingCallPopup />}
         {user && <GoalsManager />}
       </body>
     </html>
