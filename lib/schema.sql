@@ -300,6 +300,20 @@ CREATE TABLE IF NOT EXISTS duplicate_leads (
 
 CREATE INDEX IF NOT EXISTS idx_dupe_customer ON duplicate_leads(customer_id);
 
+-- Fed by the /api/webhooks/incoming-call endpoint (Zapier/Make -> Quo's
+-- "new incoming call" event), one row per call that matched an existing
+-- lead by phone number. Only matched calls are recorded — an unknown number
+-- has no customer_id to attach to, so there's nothing useful to pop up.
+CREATE TABLE IF NOT EXISTS incoming_calls (
+  id TEXT PRIMARY KEY,
+  customer_id TEXT NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
+  phone TEXT NOT NULL,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_incoming_calls_customer ON incoming_calls(customer_id);
+CREATE INDEX IF NOT EXISTS idx_incoming_calls_created ON incoming_calls(created_at);
+
 -- One row per user per day/week they've set goals for. Missing rows just
 -- mean "never set a goal for that period" — there's no default target.
 CREATE TABLE IF NOT EXISTS daily_goals (

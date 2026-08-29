@@ -10,7 +10,7 @@ import { SESSION_COOKIE, verifySessionToken } from '@/lib/session';
 // session token is signed with the Web Crypto API (see lib/session.ts),
 // which works identically here and in Node route handlers.
 
-const PUBLIC_PATHS = ['/login', '/api/auth/login'];
+const PUBLIC_PATHS = ['/login', '/api/auth/login', '/api/webhooks/incoming-call'];
 
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
