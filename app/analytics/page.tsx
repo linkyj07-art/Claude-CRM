@@ -1,7 +1,7 @@
 import { getDb } from '@/lib/db';
 import { fmtMoney, fmtMoney0, fmtPct } from '@/lib/util';
 import {
-  getFunnel, getRoiByVendor, getRoiByAge, getRoiByState, getRoiBySource, getTopLifetimeValue, getDailyTrend, getStatusBreakdown
+  getFunnel, getRoiByVendor, getRoiByAge, getRoiByState, getRoiBySource, getTopLifetimeValue, getDailyTrend, getStatusBreakdown, getCallOutcomeBreakdown
 } from '@/lib/metrics';
 import { getCurrentUser } from '@/lib/currentUser';
 import { redirect } from 'next/navigation';
@@ -14,6 +14,10 @@ export const dynamic = 'force-dynamic';
 const STATUS_COLORS: Record<string, string> = {
   fresh: '#8b5cf6', working: '#22d3ee', aging_45_90: '#fbbf24', aging_90_plus: '#fb7185',
   sold: '#4ade80', lost: '#64748b', dnc: '#f87171', invalid: '#a78bfa', disputed: '#f59e0b', archived: '#475569'
+};
+
+const OUTCOME_COLORS: Record<string, string> = {
+  connected: '#4ade80', no_answer: '#64748b', voicemail: '#22d3ee', busy: '#fbbf24', wrong_number: '#fb7185', dnc: '#f87171'
 };
 
 export default async function AnalyticsPage() {
@@ -30,6 +34,8 @@ export default async function AnalyticsPage() {
   const trend = getDailyTrend(db, user.id, 30);
   const statusBreakdown = getStatusBreakdown(db, user.id);
   const totalActiveLeads = statusBreakdown.reduce((s, x) => s + x.count, 0);
+  const outcomeBreakdown = getCallOutcomeBreakdown(db, user.id);
+  const totalOutcomes = outcomeBreakdown.reduce((s, x) => s + x.count, 0);
 
   const leadSpendTotal = (db.prepare(`SELECT COALESCE(SUM(lead_cost),0) s FROM customers WHERE owner_id = ?`).get(user.id) as { s: number }).s;
   const netCommissionTotal = (
@@ -81,8 +87,8 @@ export default async function AnalyticsPage() {
         </div>
       </div>
 
-      {/* Status breakdown + Funnel */}
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+      {/* Status breakdown + call outcomes + Funnel */}
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         <div className="card p-4">
           <div className="label mb-3">🧭 Lead Status Breakdown</div>
           {statusBreakdown.length > 0 ? (
@@ -93,6 +99,18 @@ export default async function AnalyticsPage() {
             />
           ) : (
             <div className="text-sm text-slate-400">No leads yet.</div>
+          )}
+        </div>
+        <div className="card p-4">
+          <div className="label mb-3">☎️ Call Outcomes (All-Time)</div>
+          {outcomeBreakdown.length > 0 ? (
+            <DonutChart
+              slices={outcomeBreakdown.map((s) => ({ label: s.label, value: s.count, color: OUTCOME_COLORS[s.outcome] || '#8b5cf6' }))}
+              centerLabel="Total Calls"
+              centerValue={String(totalOutcomes)}
+            />
+          ) : (
+            <div className="text-sm text-slate-400">No calls logged yet.</div>
           )}
         </div>
         <div className="card p-4">
@@ -188,6 +206,11 @@ export default async function AnalyticsPage() {
       {/* ROI by state */}
       <div className="card overflow-x-auto p-4">
         <div className="label mb-3">ROI by State</div>
+        {stateRoi.length > 0 && (
+          <div className="mb-4 border-b border-line pb-4">
+            <BarChart bars={stateRoi.slice(0, 8).map((v) => ({ label: v.state, value: v.leads }))} color="#22d3ee" formatValue={(v) => String(v)} />
+          </div>
+        )}
         <table className="w-full min-w-[620px] text-sm">
           <thead>
             <tr className="border-b border-line text-left text-xs uppercase text-slate-400">

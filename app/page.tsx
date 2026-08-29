@@ -71,7 +71,12 @@ export default async function DashboardPage({ searchParams }: { searchParams: { 
         <div>
           <p className="text-sm font-medium text-brand-400">{greeting(agentHour())}, {firstName} 👋</p>
           <h1 className="text-xl font-bold">Production Dashboard</h1>
-          <p className="text-sm text-slate-500">{freshCount} fresh leads · {workingCount} in progress right now</p>
+          <p className="text-sm text-slate-500">
+            <Link href="/leads?status=fresh" className="hover:text-brand-500 hover:underline">{freshCount} fresh leads</Link>
+            {' · '}
+            <Link href="/leads?status=working" className="hover:text-brand-500 hover:underline">{workingCount} in progress</Link>
+            {' right now'}
+          </p>
           <p className="mt-1 text-xs italic text-slate-400">"{quote}"</p>
         </div>
         <div className="flex gap-2">
@@ -144,9 +149,9 @@ export default async function DashboardPage({ searchParams }: { searchParams: { 
           <StatCard label="Calls" value={String(activity.calls)} />
           <StatCard label="Contacts" value={String(activity.contacts)} />
           <StatCard label="Conversations" value={String(activity.conversations)} />
-          <StatCard label="Appointments" value={String(activity.appointments)} />
+          <StatCard label="Appointments" value={String(activity.appointments)} href="/calendar" />
           <StatCard label="Applications" value={String(activity.applications)} />
-          <StatCard label="Issued" value={String(activity.issued)} tone="good" />
+          <StatCard label="Issued" value={String(activity.issued)} tone="good" href="/leads?status=sold" />
         </div>
       </section>
 
@@ -168,8 +173,8 @@ export default async function DashboardPage({ searchParams }: { searchParams: { 
           <StatCard label="Lead Spend" value={fmtMoney0(leadEcon.leadSpend)} />
           <StatCard label="Cost / Lead" value={leadEcon.costPerLead !== null ? fmtMoney(leadEcon.costPerLead) : '—'} />
           <StatCard label="Cost / Issued" value={leadEcon.costPerIssued !== null ? fmtMoney0(leadEcon.costPerIssued) : '—'} />
-          <StatCard label="Net Commission" value={fmtMoney0(leadEcon.netCommission)} tone="good" />
-          <StatCard label="ROI" value={leadEcon.roi !== null ? `${leadEcon.roi.toFixed(0)}%` : '—'} tone={leadEcon.roi !== null && leadEcon.roi >= 0 ? 'good' : 'bad'} />
+          <StatCard label="Net Commission" value={fmtMoney0(leadEcon.netCommission)} tone="good" href="/commissions" />
+          <StatCard label="ROI" value={leadEcon.roi !== null ? `${leadEcon.roi.toFixed(0)}%` : '—'} tone={leadEcon.roi !== null && leadEcon.roi >= 0 ? 'good' : 'bad'} href="/analytics" />
         </div>
       </section>
 

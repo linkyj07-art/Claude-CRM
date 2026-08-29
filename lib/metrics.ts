@@ -529,3 +529,29 @@ export function getStatusBreakdown(db: Database.Database, ownerId: string): Stat
     .map((r) => ({ status: r.status, label: STATUS_LABELS[r.status] || r.status, count: r.n }))
     .sort((a, b) => b.count - a.count);
 }
+
+export interface OutcomeSlice {
+  outcome: string;
+  label: string;
+  count: number;
+}
+
+const OUTCOME_LABELS: Record<string, string> = {
+  no_answer: 'No Answer', voicemail: 'Voicemail', busy: 'Busy', wrong_number: 'Wrong #',
+  connected: 'Connected', dnc: 'DNC', pending: 'In Progress'
+};
+
+// What's actually happening when the agent dials, all-time — pending rows
+// (a call started but not yet dispositioned) are excluded since they're not
+// a real outcome yet.
+export function getCallOutcomeBreakdown(db: Database.Database, ownerId: string): OutcomeSlice[] {
+  const rows = db
+    .prepare(
+      `SELECT ca.outcome, COUNT(*) n FROM calls ca JOIN customers c ON c.id = ca.customer_id
+       WHERE c.owner_id = ? AND ca.outcome != 'pending' GROUP BY ca.outcome`
+    )
+    .all(ownerId) as { outcome: string; n: number }[];
+  return rows
+    .map((r) => ({ outcome: r.outcome, label: OUTCOME_LABELS[r.outcome] || r.outcome, count: r.n }))
+    .sort((a, b) => b.count - a.count);
+}
