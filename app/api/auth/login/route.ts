@@ -14,7 +14,7 @@ export async function POST(req: NextRequest) {
   }
 
   const db = getDb();
-  const user = db.prepare('SELECT id, username, name, password_hash FROM users WHERE username = ?').get(username) as
+  const user = db.prepare('SELECT id, username, name, password_hash FROM users WHERE username = ? COLLATE NOCASE').get(username) as
     | { id: string; username: string; name: string; password_hash: string }
     | undefined;
 

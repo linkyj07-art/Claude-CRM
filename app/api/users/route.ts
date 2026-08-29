@@ -25,7 +25,7 @@ export async function POST(req: NextRequest) {
   }
 
   const db = getDb();
-  const existing = db.prepare('SELECT id FROM users WHERE username = ?').get(username);
+  const existing = db.prepare('SELECT id FROM users WHERE username = ? COLLATE NOCASE').get(username);
   if (existing) {
     return NextResponse.json({ error: 'That username is already taken.' }, { status: 409 });
   }

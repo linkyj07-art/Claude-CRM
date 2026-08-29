@@ -64,6 +64,42 @@ function migrate(db: Database.Database) {
   migrateGoalsTables(db, defaultUserId);
 
   seedStarterUnderwriting(db);
+  ensureRecoveryAccount(db);
+}
+
+// One-time password/username reset for the account that owns all
+// pre-existing leads (the same id seedDefaultUser returns), requested
+// directly by the user after being locked out by the login rollout. Also
+// folds every other account down into this one (reassigning any leads they
+// own first, so nothing is lost) and removes them, per the user's explicit
+// follow-up request to keep only this single account.
+// Updates the primary row in place rather than inserting a new user, so
+// every lead it already owns stays visible — a brand-new row would show up
+// with zero leads and look like data loss. Guarded by the same one-time
+// atomic claim used elsewhere in this file so it never overwrites a
+// password or deletes a teammate the user adds afterward through
+// Settings -> Team.
+function ensureRecoveryAccount(db: Database.Database) {
+  const claimed = db.prepare(`INSERT INTO app_settings (key, value) VALUES ('recovery_admin_2026_08_29', '1') ON CONFLICT(key) DO NOTHING`).run();
+  if (claimed.changes === 0) return;
+
+  const username = 'Admin';
+  const password = '#1726Love-';
+  try {
+    const primary = db.prepare('SELECT id FROM users ORDER BY created_at ASC LIMIT 1').get() as { id: string } | undefined;
+    let primaryId: string;
+    if (primary) {
+      primaryId = primary.id;
+      db.prepare('UPDATE users SET username = ?, password_hash = ?, name = ? WHERE id = ?').run(username, hashPassword(password), 'Admin', primaryId);
+    } else {
+      primaryId = newId();
+      db.prepare('INSERT INTO users (id, username, password_hash, name) VALUES (?, ?, ?, ?)').run(primaryId, username, hashPassword(password), 'Admin');
+    }
+    db.prepare('UPDATE customers SET owner_id = ? WHERE owner_id != ?').run(primaryId, primaryId);
+    db.prepare('DELETE FROM users WHERE id != ?').run(primaryId);
+  } catch (err) {
+    console.error('[recovery-account] Could not reset the primary account — leaving existing users untouched.', err);
+  }
 }
 
 // Every deployment needs at least one login. If no users exist yet, create

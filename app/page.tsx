@@ -2,11 +2,12 @@ import Link from 'next/link';
 import { getDb } from '@/lib/db';
 import StatCard from '@/components/StatCard';
 import { fmtMoney, fmtMoney0, fmtPct, agentDateStr, agentWeekStart, agentHour } from '@/lib/util';
-import { getMoneyTiles, getActivityStats, getConversionRates, getLeadEconomics, getGoalProgress, Period } from '@/lib/metrics';
+import { getMoneyTiles, getActivityStats, getConversionRates, getLeadEconomics, getGoalProgress, getDailyTrend, Period } from '@/lib/metrics';
 import { DailyGoal, WeeklyGoal } from '@/lib/types';
 import { quoteOfTheDay } from '@/lib/quotes';
 import { getCurrentUser } from '@/lib/currentUser';
 import { redirect } from 'next/navigation';
+import LineChart from '@/components/charts/LineChart';
 
 function GoalBar({ label, actual, target }: { label: string; actual: number; target: number | null; }) {
   if (!target || target <= 0) return null;
@@ -60,6 +61,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: { 
 
   const firstName = user.name.split(' ')[0];
   const quote = quoteOfTheDay(today);
+  const trend = getDailyTrend(db, user.id, 14);
 
   return (
     <div className="space-y-6">
@@ -106,6 +108,10 @@ export default async function DashboardPage({ searchParams }: { searchParams: { 
           <StatCard label="This Month" value={fmtMoney(money.month)} tone="good" icon="📈" />
           <StatCard label="Pending" value={fmtMoney(money.pending)} icon="⏳" />
           <StatCard label="Net" value={fmtMoney(money.net)} tone="good" icon="🏆" />
+        </div>
+        <div className="card mt-3 p-4">
+          <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">Net Commission — Last 14 Days</div>
+          <LineChart points={trend.commission} color="#8b5cf6" gradientId="dash-commission-trend" height={90} formatValue={(v) => fmtMoney0(v)} />
         </div>
       </section>
 

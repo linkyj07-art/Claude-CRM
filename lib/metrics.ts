@@ -456,3 +456,74 @@ export function getTopLifetimeValue(db: Database.Database, ownerId: string, limi
 
   return results.sort((a, b) => b.ltv - a.ltv).slice(0, limit);
 }
+
+export interface TrendPoint {
+  label: string;
+  value: number;
+}
+
+// Day-by-day series for the last `days` calendar days (agent-local), always
+// including days with zero activity so a chart doesn't silently skip gaps.
+export function getDailyTrend(db: Database.Database, ownerId: string, days = 30): { commission: TrendPoint[]; dials: TrendPoint[] } {
+  const since = new Date();
+  since.setDate(since.getDate() - (days - 1));
+  const sinceStr = agentDateStr(since);
+
+  const commissionRows = db
+    .prepare(
+      `SELECT cm.created_at, cm.net_commission FROM commissions cm
+       JOIN customers c ON c.id = cm.customer_id
+       WHERE c.owner_id = ? AND cm.created_at >= datetime(?, '-1 days')`
+    )
+    .all(ownerId, sinceStr) as { created_at: string; net_commission: number | null }[];
+  const callRows = db
+    .prepare(
+      `SELECT ca.occurred_at FROM calls ca
+       JOIN customers c ON c.id = ca.customer_id
+       WHERE c.owner_id = ? AND ca.occurred_at >= datetime(?, '-1 days')`
+    )
+    .all(ownerId, sinceStr) as { occurred_at: string }[];
+
+  const commissionByDay = new Map<string, number>();
+  for (const r of commissionRows) {
+    const day = agentDateStr(new Date(r.created_at.replace(' ', 'T') + 'Z'));
+    commissionByDay.set(day, (commissionByDay.get(day) || 0) + (r.net_commission || 0));
+  }
+  const dialsByDay = new Map<string, number>();
+  for (const r of callRows) {
+    const day = agentDateStr(new Date(r.occurred_at.replace(' ', 'T') + 'Z'));
+    dialsByDay.set(day, (dialsByDay.get(day) || 0) + 1);
+  }
+
+  const commission: TrendPoint[] = [];
+  const dials: TrendPoint[] = [];
+  for (let i = 0; i < days; i++) {
+    const d = new Date(since);
+    d.setDate(since.getDate() + i);
+    const key = agentDateStr(d);
+    const label = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    commission.push({ label, value: commissionByDay.get(key) || 0 });
+    dials.push({ label, value: dialsByDay.get(key) || 0 });
+  }
+  return { commission, dials };
+}
+
+export interface StatusSlice {
+  status: string;
+  label: string;
+  count: number;
+}
+
+const STATUS_LABELS: Record<string, string> = {
+  fresh: 'Fresh', working: 'Working', aging_45_90: '45-90 Day', aging_90_plus: '90+ Day',
+  invalid: 'Invalid', disputed: 'Disputed', dnc: 'DNC', sold: 'Sold', lost: 'Lost', archived: 'Archived'
+};
+
+export function getStatusBreakdown(db: Database.Database, ownerId: string): StatusSlice[] {
+  const rows = db
+    .prepare(`SELECT status, COUNT(*) n FROM customers WHERE owner_id = ? AND archived = 0 GROUP BY status`)
+    .all(ownerId) as { status: string; n: number }[];
+  return rows
+    .map((r) => ({ status: r.status, label: STATUS_LABELS[r.status] || r.status, count: r.n }))
+    .sort((a, b) => b.count - a.count);
+}
