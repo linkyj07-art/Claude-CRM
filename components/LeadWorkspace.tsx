@@ -7,7 +7,7 @@ import Badge from './Badge';
 import {
   Customer, NoteVersion, CallRecord, Policy, Commission, Carrier, CarrierRule, LeadVendor
 } from '@/lib/types';
-import { fmtMoney, fmtMoney0, leadAgeLabel, localTimeForState, agentLocalTime, statusBadge, maskSSN, maskAccount, isValidRoutingNumber } from '@/lib/util';
+import { fmtMoney, fmtMoney0, leadAgeLabel, localTimeForState, agentLocalTime, statusBadge, isValidRoutingNumber, callsToday, MAX_CALLS_PER_DAY } from '@/lib/util';
 import { suggestCarriers } from '@/lib/underwriting';
 import RoutingLookup from './RoutingLookup';
 import SellModal from './SellModal';
@@ -25,11 +25,14 @@ const NOTE_FIELDS: { key: keyof NoteVersion; label: string; type?: 'text' | 'tex
   { key: 'mailing_address', label: 'MAILING ADDRESS' },
   { key: 'email', label: 'EMAIL' },
   { key: 'born_in', label: 'BORN IN' },
-  { key: 'plan_bronze', label: 'BRONZE' },
-  { key: 'plan_silver', label: 'SILVER' },
-  { key: 'plan_gold', label: 'GOLD' },
   { key: 'draft_date', label: 'DRAFT DATE' },
   { key: 'code_word', label: 'CODE WORD' }
+];
+
+const PLAN_TIERS: { tier: string; coverageKey: keyof NoteVersion; priceKey: keyof NoteVersion }[] = [
+  { tier: 'BRONZE', coverageKey: 'plan_bronze_coverage', priceKey: 'plan_bronze_price' },
+  { tier: 'SILVER', coverageKey: 'plan_silver_coverage', priceKey: 'plan_silver_price' },
+  { tier: 'GOLD', coverageKey: 'plan_gold_coverage', priceKey: 'plan_gold_price' }
 ];
 
 function emptyNoteForm(customer: Customer): AnyRow {
@@ -41,36 +44,63 @@ function emptyNoteForm(customer: Customer): AnyRow {
     beneficiary: '', budget: '', health: '', discount: '',
     bank_name: '', bank_state: customer.state || '', routing_number: '', account_number: '',
     mailing_address: '', email: customer.email || '', born_in: '', ssn: '',
-    plan_bronze: '', plan_silver: '', plan_gold: '', draft_date: '', code_word: '', free_text: ''
+    plan_bronze_coverage: '', plan_bronze_price: '', plan_silver_coverage: '', plan_silver_price: '',
+    plan_gold_coverage: '', plan_gold_price: '', draft_date: '', code_word: '', free_text: ''
   };
 }
 
+const NOTE_FORM_KEYS = [
+  'label', 'name', 'note_date', 'phone', 'beneficiary', 'budget', 'health', 'discount',
+  'bank_name', 'bank_state', 'routing_number', 'account_number', 'mailing_address', 'email',
+  'born_in', 'ssn', 'plan_bronze_coverage', 'plan_bronze_price', 'plan_silver_coverage', 'plan_silver_price',
+  'plan_gold_coverage', 'plan_gold_price', 'draft_date', 'code_word', 'free_text'
+] as const;
+
+function noteFormFromNote(note: NoteVersion | undefined, customer: Customer): AnyRow {
+  if (!note) return emptyNoteForm(customer);
+  const form: AnyRow = {};
+  for (const key of NOTE_FORM_KEYS) form[key] = (note as AnyRow)[key] ?? '';
+  return form;
+}
+
 export default function LeadWorkspace({
-  customer, notes, calls, quotes, appointments, applications, policies, commissions, payments, audit, vendors, carriers, rules
+  customer, notes, calls, quotes, appointments, applications, policies, commissions, payments, vendors, carriers, rules, quoteToken
 }: {
   customer: Customer; notes: NoteVersion[]; calls: CallRecord[]; quotes: AnyRow[]; appointments: AnyRow[];
-  applications: AnyRow[]; policies: Policy[]; commissions: Commission[]; payments: AnyRow[]; audit: AnyRow[];
-  vendors: LeadVendor[]; carriers: Carrier[]; rules: CarrierRule[];
+  applications: AnyRow[]; policies: Policy[]; commissions: Commission[]; payments: AnyRow[];
+  vendors: LeadVendor[]; carriers: Carrier[]; rules: CarrierRule[]; quoteToken: string;
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const queue = (searchParams.get('queue') || '').split(',').filter(Boolean);
   const isDialing = searchParams.get('dialing') === '1';
   const [busy, setBusy] = useState(false);
-  const [noteForm, setNoteForm] = useState<AnyRow>(() => emptyNoteForm(customer));
+  const [noteForm, setNoteForm] = useState<AnyRow>(() => noteFormFromNote(notes[0], customer));
+  const [editingNote, setEditingNote] = useState(() => !notes[0]);
   const [showSell, setShowSell] = useState(false);
   const [showQuote, setShowQuote] = useState(false);
   const [showAppt, setShowAppt] = useState(false);
   const [showSensitive, setShowSensitive] = useState(false);
-  const [activeTab, setActiveTab] = useState<'timeline' | 'calls' | 'notes' | 'policy'>('timeline');
+  const [activeTab, setActiveTab] = useState<'calls' | 'notes'>('calls');
 
   const badge = statusBadge(customer.status, customer.purchased_at);
-  const suggestions = useMemo(() => suggestCarriers(noteForm.health || '', carriers, rules), [noteForm.health, carriers, rules]);
+  // Health conditions are often disclosed across several calls/notes rather than
+  // all at once, so carrier suggestions need the full history, not just whatever
+  // is in the note currently being typed — otherwise an earlier "cancer" note and
+  // a later "smoker" note never get weighed against each other together.
+  const combinedHealthText = useMemo(
+    () => [...notes.map((n) => n.health), noteForm.health].filter(Boolean).join('. '),
+    [notes, noteForm.health]
+  );
+  const suggestions = useMemo(() => suggestCarriers(combinedHealthText, carriers, rules), [combinedHealthText, carriers, rules]);
   const top3 = suggestions.filter((s) => !s.knockout).slice(0, 3);
   const knockouts = suggestions.filter((s) => s.knockout);
 
   const attemptCount = calls.length;
+  const todayCount = callsToday(calls);
+  const dailyLimitReached = todayCount >= MAX_CALLS_PER_DAY;
   const lastNote = notes[0];
+  const [callError, setCallError] = useState('');
 
   async function refresh() {
     router.refresh();
@@ -78,11 +108,22 @@ export default function LeadWorkspace({
 
   async function logCall(outcome: string, disposition?: string) {
     setBusy(true);
+    setCallError('');
     try {
-      await fetch(`/api/leads/${customer.id}/calls`, {
+      const res = await fetch(`/api/leads/${customer.id}/calls`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ outcome, disposition, duration_seconds: outcome === 'connected' ? 60 : 0 })
       });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setCallError(data.error || 'Could not log that call.');
+        return;
+      }
+      if (outcome === 'dnc' && confirm('Marked Do Not Call. Delete this lead entirely too?')) {
+        await fetch(`/api/leads/${customer.id}`, { method: 'DELETE' });
+        router.push('/leads');
+        return;
+      }
       await refresh();
     } finally { setBusy(false); }
   }
@@ -90,9 +131,16 @@ export default function LeadWorkspace({
   async function saveNote() {
     setBusy(true);
     try {
-      await fetch(`/api/leads/${customer.id}/notes`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(noteForm)
-      });
+      if (lastNote) {
+        await fetch(`/api/leads/${customer.id}/notes/${lastNote.id}`, {
+          method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(noteForm)
+        });
+      } else {
+        await fetch(`/api/leads/${customer.id}/notes`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(noteForm)
+        });
+      }
+      setEditingNote(false);
       await refresh();
     } finally { setBusy(false); }
   }
@@ -143,7 +191,7 @@ export default function LeadWorkspace({
         </div>
         <div className="flex flex-wrap gap-2">
           {customer.phone && (
-            <a href={`tel:${customer.phone.replace(/[^\d+]/g, '')}`} className="btn-good" onClick={() => logCall('connected')}>
+            <a href={`tel:${customer.phone.replace(/[^\d+]/g, '')}`} className="btn-good">
               📞 Call {customer.phone}
             </a>
           )}
@@ -177,14 +225,21 @@ export default function LeadWorkspace({
 
           <div className="border-t border-line pt-3">
             <div className="label mb-2">Call Attempts</div>
-            <div className="text-2xl font-bold tabular-nums">{attemptCount}</div>
+            <div className="flex items-baseline gap-2">
+              <div className="text-2xl font-bold tabular-nums">{attemptCount}</div>
+              <div className="text-xs text-slate-500">total · {todayCount}/{MAX_CALLS_PER_DAY} today</div>
+            </div>
+            {dailyLimitReached && (
+              <div className="mt-2 rounded bg-amber-50 p-2 text-xs text-amber-800">Daily call limit reached for this lead — try again tomorrow.</div>
+            )}
+            {callError && <div className="mt-2 rounded bg-red-50 p-2 text-xs text-red-700">{callError}</div>}
             <div className="mt-2 grid grid-cols-3 gap-1.5">
-              <button disabled={busy} onClick={() => logCall('no_answer')} className="btn-secondary text-xs px-2 py-1.5">No Answer</button>
-              <button disabled={busy} onClick={() => logCall('voicemail')} className="btn-secondary text-xs px-2 py-1.5">Voicemail</button>
-              <button disabled={busy} onClick={() => logCall('busy')} className="btn-secondary text-xs px-2 py-1.5">Busy</button>
-              <button disabled={busy} onClick={() => logCall('wrong_number')} className="btn-secondary text-xs px-2 py-1.5">Wrong #</button>
+              <button disabled={busy || dailyLimitReached} onClick={() => logCall('no_answer')} className="btn-secondary text-xs px-2 py-1.5">No Answer</button>
+              <button disabled={busy || dailyLimitReached} onClick={() => logCall('voicemail')} className="btn-secondary text-xs px-2 py-1.5">Voicemail</button>
+              <button disabled={busy || dailyLimitReached} onClick={() => logCall('busy')} className="btn-secondary text-xs px-2 py-1.5">Busy</button>
+              <button disabled={busy || dailyLimitReached} onClick={() => logCall('wrong_number')} className="btn-secondary text-xs px-2 py-1.5">Wrong #</button>
               <button disabled={busy} onClick={() => logCall('dnc')} className="btn-danger text-xs px-2 py-1.5">DNC</button>
-              <button disabled={busy} onClick={() => logCall('connected', 'interested')} className="btn-good text-xs px-2 py-1.5">Connected</button>
+              <button disabled={busy || dailyLimitReached} onClick={() => logCall('connected', 'interested')} className="btn-good text-xs px-2 py-1.5">Connected</button>
             </div>
           </div>
 
@@ -228,14 +283,19 @@ export default function LeadWorkspace({
         {/* Notes panel */}
         <div className="card p-4">
           <div className="mb-2 flex items-center justify-between">
-            <div className="label">Notes</div>
-            <button
-              className="text-xs font-medium text-brand-600 hover:underline"
-              onClick={() => setShowSensitive((v) => !v)}
-              type="button"
-            >
-              {showSensitive ? 'Hide' : 'Show'} bank / SSN fields
-            </button>
+            <div className="label">Notes {!editingNote && <span className="font-normal normal-case text-slate-400">(locked — click Edit to change)</span>}</div>
+            <div className="flex items-center gap-3">
+              <button
+                className="text-xs font-medium text-brand-600 hover:underline"
+                onClick={() => setShowSensitive((v) => !v)}
+                type="button"
+              >
+                {showSensitive ? 'Hide' : 'Show'} bank / SSN fields
+              </button>
+              {!editingNote && (
+                <button className="btn-secondary text-xs" type="button" onClick={() => setEditingNote(true)}>✏️ Edit</button>
+              )}
+            </div>
           </div>
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
             {NOTE_FIELDS.map((f) => (
@@ -243,14 +303,16 @@ export default function LeadWorkspace({
                 <label className="label mb-1 block">{f.label}</label>
                 {f.type === 'textarea' ? (
                   <textarea
-                    className="input min-h-[70px]"
+                    className="input min-h-[70px] disabled:bg-slate-50 disabled:text-slate-500"
+                    disabled={!editingNote}
                     value={noteForm[f.key] || ''}
                     onChange={(e) => setNoteForm((s) => ({ ...s, [f.key]: e.target.value }))}
                     placeholder="e.g. controlled diabetes, non-smoker, high blood pressure..."
                   />
                 ) : (
                   <input
-                    className="input"
+                    className="input disabled:bg-slate-50 disabled:text-slate-500"
+                    disabled={!editingNote}
                     type={f.type === 'date' ? 'date' : 'text'}
                     value={noteForm[f.key] || ''}
                     onChange={(e) => setNoteForm((s) => ({ ...s, [f.key]: e.target.value }))}
@@ -258,6 +320,33 @@ export default function LeadWorkspace({
                 )}
               </div>
             ))}
+          </div>
+
+          <div className="mt-3">
+            <label className="label mb-1 block">Plan Options</label>
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+              {PLAN_TIERS.map(({ tier, coverageKey, priceKey }) => (
+                <div key={tier} className="rounded-lg border border-line p-2.5">
+                  <div className="mb-1.5 text-xs font-semibold text-slate-500">{tier}</div>
+                  <div className="space-y-1.5">
+                    <input
+                      className="input disabled:bg-slate-50 disabled:text-slate-500"
+                      disabled={!editingNote}
+                      placeholder="Coverage amount"
+                      value={noteForm[coverageKey] || ''}
+                      onChange={(e) => setNoteForm((s) => ({ ...s, [coverageKey]: e.target.value }))}
+                    />
+                    <input
+                      className="input disabled:bg-slate-50 disabled:text-slate-500"
+                      disabled={!editingNote}
+                      placeholder="Price / month"
+                      value={noteForm[priceKey] || ''}
+                      onChange={(e) => setNoteForm((s) => ({ ...s, [priceKey]: e.target.value }))}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
 
           {showSensitive && (
@@ -270,23 +359,35 @@ export default function LeadWorkspace({
                 onBankChange={(v) => setNoteForm((s) => ({ ...s, bank_name: v }))}
                 onStateChange={(v) => setNoteForm((s) => ({ ...s, bank_state: v }))}
                 onRoutingChange={(v) => setNoteForm((s) => ({ ...s, routing_number: v }))}
+                disabled={!editingNote}
               />
               <div className="mt-2 grid grid-cols-2 gap-2">
                 <div>
                   <label className="label mb-1 block">ACCOUNT #</label>
-                  <input className="input" value={noteForm.account_number || ''} onChange={(e) => setNoteForm((s) => ({ ...s, account_number: e.target.value }))} />
+                  <input className="input disabled:bg-slate-50 disabled:text-slate-500" disabled={!editingNote} value={noteForm.account_number || ''} onChange={(e) => setNoteForm((s) => ({ ...s, account_number: e.target.value }))} />
                 </div>
                 <div>
                   <label className="label mb-1 block">SSN</label>
-                  <input className="input" value={noteForm.ssn || ''} onChange={(e) => setNoteForm((s) => ({ ...s, ssn: e.target.value }))} placeholder="XXX-XX-XXXX" />
+                  <input className="input disabled:bg-slate-50 disabled:text-slate-500" disabled={!editingNote} value={noteForm.ssn || ''} onChange={(e) => setNoteForm((s) => ({ ...s, ssn: e.target.value }))} placeholder="XXX-XX-XXXX" />
                 </div>
               </div>
             </div>
           )}
 
           <div className="mt-3 flex items-center justify-between">
-            <span className="text-xs text-slate-400">{notes.length} saved version{notes.length === 1 ? '' : 's'}</span>
-            <button className="btn-primary" disabled={busy} onClick={saveNote}>💾 Save Note</button>
+            {editingNote ? (
+              <>
+                <button
+                  className="btn-secondary"
+                  onClick={() => { setNoteForm(noteFormFromNote(lastNote, customer)); setEditingNote(false); }}
+                >
+                  Cancel
+                </button>
+                <button className="btn-primary" disabled={busy} onClick={saveNote}>💾 Save Note</button>
+              </>
+            ) : (
+              <span className="text-xs text-slate-400">{lastNote ? `Last saved ${lastNote.created_at}` : 'No note saved yet'}</span>
+            )}
           </div>
         </div>
 
@@ -331,31 +432,19 @@ export default function LeadWorkspace({
         </div>
       </div>
 
-      {/* Tabs: timeline / calls / notes history / policy */}
+      {/* Tabs: calls / notes history */}
       <div className="card p-4">
         <div className="mb-3 flex gap-1 border-b border-line">
-          {(['timeline', 'calls', 'notes'] as const).map((t) => (
+          {(['calls', 'notes'] as const).map((t) => (
             <button
               key={t}
               onClick={() => setActiveTab(t)}
               className={`px-3 py-2 text-sm font-medium capitalize border-b-2 -mb-px ${activeTab === t ? 'border-brand-500 text-brand-600' : 'border-transparent text-slate-500 hover:text-ink'}`}
             >
-              {t === 'timeline' ? 'Full Timeline' : t === 'calls' ? 'Call History' : 'Notes History'}
+              {t === 'calls' ? 'Call History' : 'Notes History'}
             </button>
           ))}
         </div>
-
-        {activeTab === 'timeline' && (
-          <ol className="space-y-2">
-            {audit.map((a) => (
-              <li key={a.id} className="flex gap-3 text-sm">
-                <span className="w-40 shrink-0 text-xs text-slate-400 tabular-nums">{a.occurred_at}</span>
-                <span className="text-ink">{a.summary}</span>
-              </li>
-            ))}
-            {audit.length === 0 && <div className="text-sm text-slate-400">No activity yet.</div>}
-          </ol>
-        )}
 
         {activeTab === 'calls' && (
           <div className="space-y-2">
@@ -384,8 +473,13 @@ export default function LeadWorkspace({
                   ))}
                   {n.bank_name && <div><span className="text-slate-400">BANK:</span> {n.bank_name}</div>}
                   {n.routing_number && <div><span className="text-slate-400">ROUTING:</span> {n.routing_number}</div>}
-                  {n.account_number && <div><span className="text-slate-400">ACCT:</span> {maskAccount(n.account_number)}</div>}
-                  {n.ssn && <div><span className="text-slate-400">SSN:</span> {maskSSN(n.ssn)}</div>}
+                  {n.account_number && <div><span className="text-slate-400">ACCT:</span> {n.account_number}</div>}
+                  {n.ssn && <div><span className="text-slate-400">SSN:</span> {n.ssn}</div>}
+                  {PLAN_TIERS.filter(({ coverageKey, priceKey }) => n[coverageKey] || n[priceKey]).map(({ tier, coverageKey, priceKey }) => (
+                    <div key={tier}>
+                      <span className="text-slate-400">{tier}:</span> {[n[coverageKey], n[priceKey]].filter(Boolean).join(' — ')}
+                    </div>
+                  ))}
                 </div>
               </details>
             ))}
@@ -394,7 +488,7 @@ export default function LeadWorkspace({
         )}
       </div>
 
-      {showQuote && <QuoteModal customer={customer} onClose={() => setShowQuote(false)} onSaved={refresh} />}
+      {showQuote && <QuoteModal customer={customer} quoteToken={quoteToken} onClose={() => setShowQuote(false)} onSaved={refresh} />}
       {showAppt && <ApptModal customer={customer} onClose={() => setShowAppt(false)} onSaved={refresh} />}
       {showSell && (
         <SellModal
@@ -440,9 +534,51 @@ function Modal({ title, onClose, children }: { title: string; onClose: () => voi
   );
 }
 
-function QuoteModal({ customer, onClose, onSaved }: { customer: Customer; onClose: () => void; onSaved: () => void }) {
+function calcAge(dob: string | null): number | null {
+  if (!dob) return null;
+  const d = new Date(dob);
+  if (isNaN(d.getTime())) return null;
+  const now = new Date();
+  let age = now.getFullYear() - d.getFullYear();
+  const m = now.getMonth() - d.getMonth();
+  if (m < 0 || (m === 0 && now.getDate() < d.getDate())) age--;
+  return age >= 0 && age < 130 ? age : null;
+}
+
+function genderToSex(gender: string | null): string {
+  const g = (gender || '').trim().toLowerCase();
+  if (g === 'm' || g === 'male') return 'Male';
+  if (g === 'f' || g === 'female') return 'Female';
+  return '';
+}
+
+function QuoteModal({ customer, quoteToken, onClose, onSaved }: { customer: Customer; quoteToken: string; onClose: () => void; onSaved: () => void }) {
   const [form, setForm] = useState<AnyRow>({ carrier: '', product: '', face_amount: customer.coverage_wanted || '', monthly_premium: '', notes: '' });
   const [busy, setBusy] = useState(false);
+  const [quoteParams, setQuoteParams] = useState<AnyRow>({
+    age: calcAge(customer.dob) ?? '',
+    sex: genderToSex(customer.gender),
+    state: customer.state || '',
+    tobacco: 'None',
+    paymentType: 'Bank Draft/EFT',
+    coverageType: 'Level',
+    faceAmount: customer.coverage_wanted || ''
+  });
+
+  function openQuoter() {
+    const url = new URL('https://app.insurancetoolkits.com/fex/lite');
+    url.searchParams.set('age', String(quoteParams.age || ''));
+    url.searchParams.set('sex', quoteParams.sex || '');
+    url.searchParams.set('state', quoteParams.state || '');
+    url.searchParams.set('tobacco', quoteParams.tobacco || '');
+    url.searchParams.set('paymentType', quoteParams.paymentType || '');
+    url.searchParams.set('coverageType', quoteParams.coverageType || '');
+    url.searchParams.set('faceAmount', String(quoteParams.faceAmount || ''));
+    url.searchParams.set('runQuote', 'true');
+    if (quoteToken) url.searchParams.set('token', quoteToken);
+    window.open(url.toString(), '_blank', 'noopener,noreferrer');
+  }
+
   async function save() {
     setBusy(true);
     try {
@@ -452,13 +588,63 @@ function QuoteModal({ customer, onClose, onSaved }: { customer: Customer; onClos
   }
   return (
     <Modal title="🧮 Run Quote" onClose={onClose}>
-      <div className="space-y-2">
-        <Field label="Carrier"><input className="input" value={form.carrier} onChange={(e) => setForm({ ...form, carrier: e.target.value })} /></Field>
-        <Field label="Product"><input className="input" value={form.product} onChange={(e) => setForm({ ...form, product: e.target.value })} /></Field>
-        <Field label="Face Amount"><input className="input" type="number" value={form.face_amount} onChange={(e) => setForm({ ...form, face_amount: e.target.value })} /></Field>
-        <Field label="Monthly Premium"><input className="input" type="number" value={form.monthly_premium} onChange={(e) => setForm({ ...form, monthly_premium: e.target.value })} /></Field>
-        <Field label="Notes"><textarea className="input" value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} /></Field>
-        <button className="btn-primary w-full" disabled={busy} onClick={save}>Save Quote</button>
+      <div className="space-y-3">
+        <div className="rounded-lg border border-line bg-slate-50 p-3">
+          <div className="mb-2 text-xs font-semibold text-slate-500">FEX Lite Quoter — check the details below, then open it</div>
+          {!quoteToken && (
+            <div className="mb-2 text-xs text-amber-700">
+              No quoter account token configured — set INSURANCE_TOOLKIT_TOKEN in your environment to skip logging in each time.
+            </div>
+          )}
+          <div className="grid grid-cols-2 gap-2">
+            <Field label="Age"><input className="input" type="number" value={quoteParams.age} onChange={(e) => setQuoteParams({ ...quoteParams, age: e.target.value })} /></Field>
+            <Field label="Sex">
+              <select className="input" value={quoteParams.sex} onChange={(e) => setQuoteParams({ ...quoteParams, sex: e.target.value })}>
+                <option value="">Select…</option>
+                <option value="Male">Male</option>
+                <option value="Female">Female</option>
+              </select>
+            </Field>
+            <Field label="State"><input className="input" value={quoteParams.state} onChange={(e) => setQuoteParams({ ...quoteParams, state: e.target.value.toUpperCase() })} /></Field>
+            <Field label="Tobacco">
+              <select className="input" value={quoteParams.tobacco} onChange={(e) => setQuoteParams({ ...quoteParams, tobacco: e.target.value })}>
+                <option value="None">None</option>
+                <option value="Cigarettes">Cigarettes</option>
+                <option value="Other">Other</option>
+              </select>
+            </Field>
+            <Field label="Payment Type">
+              <select className="input" value={quoteParams.paymentType} onChange={(e) => setQuoteParams({ ...quoteParams, paymentType: e.target.value })}>
+                <option value="Bank Draft/EFT">Bank Draft/EFT</option>
+                <option value="Credit Card">Credit Card</option>
+                <option value="Direct Bill">Direct Bill</option>
+              </select>
+            </Field>
+            <Field label="Coverage Type">
+              <select className="input" value={quoteParams.coverageType} onChange={(e) => setQuoteParams({ ...quoteParams, coverageType: e.target.value })}>
+                <option value="Level">Level</option>
+                <option value="Graded">Graded</option>
+                <option value="Guaranteed">Guaranteed</option>
+              </select>
+            </Field>
+            <Field label="Face Amount">
+              <input className="input" type="number" value={quoteParams.faceAmount} onChange={(e) => setQuoteParams({ ...quoteParams, faceAmount: e.target.value })} />
+            </Field>
+          </div>
+          <button type="button" className="btn-primary mt-3 w-full" onClick={openQuoter}>Open FEX Lite Quoter →</button>
+        </div>
+
+        <div className="border-t border-line pt-3">
+          <div className="mb-2 text-xs font-semibold text-slate-500">Save the resulting quote to this lead</div>
+          <div className="space-y-2">
+            <Field label="Carrier"><input className="input" value={form.carrier} onChange={(e) => setForm({ ...form, carrier: e.target.value })} /></Field>
+            <Field label="Product"><input className="input" value={form.product} onChange={(e) => setForm({ ...form, product: e.target.value })} /></Field>
+            <Field label="Face Amount"><input className="input" type="number" value={form.face_amount} onChange={(e) => setForm({ ...form, face_amount: e.target.value })} /></Field>
+            <Field label="Monthly Premium"><input className="input" type="number" value={form.monthly_premium} onChange={(e) => setForm({ ...form, monthly_premium: e.target.value })} /></Field>
+            <Field label="Notes"><textarea className="input" value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} /></Field>
+            <button className="btn-primary w-full" disabled={busy} onClick={save}>Save Quote</button>
+          </div>
+        </div>
       </div>
     </Modal>
   );

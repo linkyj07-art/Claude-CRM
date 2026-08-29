@@ -55,3 +55,9 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   }
   return NextResponse.json({ ok: true });
 }
+
+export async function DELETE(_req: NextRequest, { params }: { params: { id: string } }) {
+  const db = getDb();
+  db.prepare('DELETE FROM customers WHERE id = ?').run(params.id);
+  return NextResponse.json({ ok: true });
+}

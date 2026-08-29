@@ -170,10 +170,12 @@ const insCustomer = db.prepare(`
 const insNote = db.prepare(`
   INSERT INTO note_versions (id, customer_id, label, name, note_date, phone, beneficiary, budget,
     health, discount, bank_name, bank_state, routing_number, account_number, mailing_address, email,
-    born_in, ssn, plan_bronze, plan_silver, plan_gold, draft_date, code_word, free_text, created_at, created_by)
+    born_in, ssn, plan_bronze_coverage, plan_bronze_price, plan_silver_coverage, plan_silver_price,
+    plan_gold_coverage, plan_gold_price, draft_date, code_word, free_text, created_at, created_by)
   VALUES (@id, @customer_id, @label, @name, @note_date, @phone, @beneficiary, @budget,
     @health, @discount, @bank_name, @bank_state, @routing_number, @account_number, @mailing_address, @email,
-    @born_in, @ssn, @plan_bronze, @plan_silver, @plan_gold, @draft_date, @code_word, @free_text, @created_at, @created_by)
+    @born_in, @ssn, @plan_bronze_coverage, @plan_bronze_price, @plan_silver_coverage, @plan_silver_price,
+    @plan_gold_coverage, @plan_gold_price, @draft_date, @code_word, @free_text, @created_at, @created_by)
 `);
 const insCall = db.prepare(`
   INSERT INTO calls (id, customer_id, direction, attempt_number, outcome, disposition, duration_seconds, notes, occurred_at)
@@ -311,7 +313,8 @@ customers.forEach((cust, idx) => {
     phone: cust.phone, beneficiary: null, budget: null, health: null, discount: null,
     bank_name: null, bank_state: null, routing_number: null, account_number: null,
     mailing_address: `${cust.address}, ${cust.city}, ${cust.state} ${cust.postal_code}`,
-    email: cust.email, born_in: null, ssn: null, plan_bronze: null, plan_silver: null, plan_gold: null,
+    email: cust.email, born_in: null, ssn: null, plan_bronze_coverage: null, plan_bronze_price: null,
+    plan_silver_coverage: null, plan_silver_price: null, plan_gold_coverage: null, plan_gold_price: null,
     draft_date: null, code_word: null, free_text: `Lead purchased from ${vendors.find(v => v.id === cust.lead_vendor_id).name}. Wants $${cust.coverage_wanted.toLocaleString()} coverage.`,
     created_at: cust.purchased_at, created_by: 'System'
   });
@@ -404,7 +407,9 @@ customers.forEach((cust, idx) => {
             account_number: `${randInt(100000000, 999999999)}`, mailing_address: `${cust.address}, ${cust.city}, ${cust.state} ${cust.postal_code}`,
             email: cust.email, born_in: pick(['Texas', 'Ohio', 'Georgia', 'Colorado', 'Florida']),
             ssn: `${randInt(100, 899)}-${randInt(10, 99)}-${randInt(1000, 9999)}`,
-            plan_bronze: null, plan_silver: `$${monthlyPremium.toFixed(0)}/mo`, plan_gold: null,
+            plan_bronze_coverage: null, plan_bronze_price: null,
+            plan_silver_coverage: `$${cust.coverage_wanted.toLocaleString()}`, plan_silver_price: `$${monthlyPremium.toFixed(0)}/mo`,
+            plan_gold_coverage: null, plan_gold_price: null,
             draft_date: String(randInt(1, 28)), code_word: pick(['Sunshine', 'Blue Sky', 'River', 'Maple', 'Compass']),
             free_text: `Sold ${carrier.name} policy. Draft date the ${randInt(1, 28)}th of each month.`,
             created_at: issuedAt, created_by: 'You'

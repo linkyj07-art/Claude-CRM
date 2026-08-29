@@ -43,7 +43,8 @@ export default function LeadsPage({ searchParams }: { searchParams: { status?: s
         </div>
         <div className="flex gap-2">
           <NewLeadButton vendors={vendors} />
-          <ImportLeadsButton />
+          <ImportLeadsButton vendors={vendors} />
+          <Link href="/leads/review" className="btn-secondary">🔎 Review Queue</Link>
           <a href="/dial" className="btn-primary">☎️ Dial For The Day</a>
         </div>
       </div>

@@ -10,7 +10,7 @@ const PERIOD_LABEL: Record<Period, string> = { today: 'Today', week: 'Last 7 Day
 
 export default function DashboardPage({ searchParams }: { searchParams: { period?: string } }) {
   const db = getDb();
-  const period = (['today', 'week', 'month', 'all'].includes(searchParams.period || '') ? searchParams.period : 'month') as Period;
+  const period = (['today', 'week', 'month', 'all'].includes(searchParams.period || '') ? searchParams.period : 'today') as Period;
 
   const money = getMoneyTiles(db);
   const activity = getActivityStats(db, period);

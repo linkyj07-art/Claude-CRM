@@ -114,6 +114,19 @@ export function agentLocalTime(): string {
   }).format(new Date());
 }
 
+const agentDayFmt = new Intl.DateTimeFormat('en-CA', { timeZone: AGENT_TIMEZONE, year: 'numeric', month: '2-digit', day: '2-digit' });
+
+export function isSameAgentDay(dateStr: string, reference: Date = new Date()): boolean {
+  const then = new Date(dateStr.replace(' ', 'T') + (dateStr.includes('Z') ? '' : 'Z'));
+  return agentDayFmt.format(then) === agentDayFmt.format(reference);
+}
+
+export const MAX_CALLS_PER_DAY = 4;
+
+export function callsToday(calls: { occurred_at: string }[]): number {
+  return calls.filter((c) => isSameAgentDay(c.occurred_at)).length;
+}
+
 export function maskSSN(ssn: string | null | undefined): string {
   if (!ssn) return '';
   const digits = ssn.replace(/\D/g, '');

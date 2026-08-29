@@ -69,9 +69,12 @@ CREATE TABLE IF NOT EXISTS note_versions (
   email TEXT,
   born_in TEXT,
   ssn TEXT,
-  plan_bronze TEXT,
-  plan_silver TEXT,
-  plan_gold TEXT,
+  plan_bronze_coverage TEXT,
+  plan_bronze_price TEXT,
+  plan_silver_coverage TEXT,
+  plan_silver_price TEXT,
+  plan_gold_coverage TEXT,
+  plan_gold_price TEXT,
   draft_date TEXT,
   code_word TEXT,
   free_text TEXT,
@@ -253,3 +256,29 @@ CREATE TABLE IF NOT EXISTS routing_lookup (
 
 CREATE INDEX IF NOT EXISTS idx_routing_bank ON routing_lookup(bank_name);
 CREATE INDEX IF NOT EXISTS idx_routing_state ON routing_lookup(state);
+
+-- Small generic key/value store for app-wide settings (e.g. licensed_states)
+-- that don't warrant their own table.
+CREATE TABLE IF NOT EXISTS app_settings (
+  key TEXT PRIMARY KEY,
+  value TEXT
+);
+
+-- Leads caught by import-time duplicate detection (same name + phone + dob
+-- as an existing customer) are held here for manual review instead of being
+-- silently dropped or double-inserted into customers.
+CREATE TABLE IF NOT EXISTS duplicate_leads (
+  id TEXT PRIMARY KEY,
+  customer_id TEXT NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
+  first_name TEXT,
+  last_name TEXT,
+  phone TEXT,
+  email TEXT,
+  dob TEXT,
+  state TEXT,
+  raw_data TEXT NOT NULL, -- JSON snapshot of the imported row, for "add anyway"
+  source TEXT,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_dupe_customer ON duplicate_leads(customer_id);

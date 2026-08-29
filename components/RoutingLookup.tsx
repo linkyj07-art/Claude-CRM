@@ -5,10 +5,11 @@ import { US_STATES, isValidRoutingNumber } from '@/lib/util';
 import { RoutingEntry } from '@/lib/types';
 
 export default function RoutingLookup({
-  bankName, state, routingNumber, onBankChange, onStateChange, onRoutingChange
+  bankName, state, routingNumber, onBankChange, onStateChange, onRoutingChange, disabled
 }: {
   bankName: string; state: string; routingNumber: string;
   onBankChange: (v: string) => void; onStateChange: (v: string) => void; onRoutingChange: (v: string) => void;
+  disabled?: boolean;
 }) {
   const [results, setResults] = useState<RoutingEntry[]>([]);
   const [searched, setSearched] = useState(false);
@@ -35,17 +36,17 @@ export default function RoutingLookup({
       <div className="grid grid-cols-2 gap-2">
         <div>
           <label className="label mb-1 block">BANK</label>
-          <input className="input" placeholder="Type bank or credit union..." value={bankName || ''} onChange={(e) => onBankChange(e.target.value)} />
+          <input className="input disabled:bg-slate-50 disabled:text-slate-500" disabled={disabled} placeholder="Type bank or credit union..." value={bankName || ''} onChange={(e) => onBankChange(e.target.value)} />
         </div>
         <div>
           <label className="label mb-1 block">STATE</label>
-          <select className="input" value={state || ''} onChange={(e) => onStateChange(e.target.value)}>
+          <select className="input disabled:bg-slate-50 disabled:text-slate-500" disabled={disabled} value={state || ''} onChange={(e) => onStateChange(e.target.value)}>
             <option value="">Select state</option>
             {US_STATES.map((s) => <option key={s} value={s}>{s}</option>)}
           </select>
         </div>
       </div>
-      <button type="button" className="btn-secondary mt-2 w-full text-sm" onClick={search} disabled={loading}>
+      <button type="button" className="btn-secondary mt-2 w-full text-sm" onClick={search} disabled={loading || disabled}>
         🔎 {loading ? 'Looking up…' : 'Find Routing Number'}
       </button>
 
@@ -71,9 +72,10 @@ export default function RoutingLookup({
       )}
 
       <div className="mt-2">
-        <label className="label mb-1 block">ROUTING (always editable)</label>
+        <label className="label mb-1 block">ROUTING</label>
         <input
-          className="input font-mono"
+          className="input font-mono disabled:bg-slate-50 disabled:text-slate-500"
+          disabled={disabled}
           value={routingNumber || ''}
           onChange={(e) => onRoutingChange(e.target.value)}
           placeholder="9-digit routing number"

@@ -3,29 +3,30 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Carrier, CarrierRule, QuickLink } from '@/lib/types';
+import { US_STATES } from '@/lib/util';
 
 type AnyRow = Record<string, any>;
 
 export default function SettingsManager({
-  carriers, rules, quickLinks
+  carriers, rules, quickLinks, licensedStates
 }: {
-  carriers: Carrier[]; rules: CarrierRule[]; quickLinks: QuickLink[];
+  carriers: Carrier[]; rules: CarrierRule[]; quickLinks: QuickLink[]; licensedStates: string[];
 }) {
   const router = useRouter();
-  const [tab, setTab] = useState<'carriers' | 'rules' | 'links'>('carriers');
+  const [tab, setTab] = useState<'carriers' | 'rules' | 'links' | 'licensing'>('carriers');
 
   async function refresh() { router.refresh(); }
 
   return (
     <div className="space-y-4">
       <div className="flex gap-1 border-b border-line">
-        {(['carriers', 'rules', 'links'] as const).map((t) => (
+        {(['carriers', 'rules', 'links', 'licensing'] as const).map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
             className={`px-3 py-2 text-sm font-medium border-b-2 -mb-px ${tab === t ? 'border-brand-500 text-brand-600' : 'border-transparent text-slate-500 hover:text-ink'}`}
           >
-            {t === 'carriers' ? '🏢 Carriers & Logins' : t === 'rules' ? '💡 Underwriting Rules' : '🔗 Quick Links'}
+            {t === 'carriers' ? '🏢 Carriers & Logins' : t === 'rules' ? '💡 Underwriting Rules' : t === 'links' ? '🔗 Quick Links' : '🪪 Licensed States'}
           </button>
         ))}
       </div>
@@ -33,6 +34,55 @@ export default function SettingsManager({
       {tab === 'carriers' && <CarriersTab carriers={carriers} onChanged={refresh} />}
       {tab === 'rules' && <RulesTab carriers={carriers} rules={rules} onChanged={refresh} />}
       {tab === 'links' && <LinksTab quickLinks={quickLinks} onChanged={refresh} />}
+      {tab === 'licensing' && <LicensingTab licensedStates={licensedStates} onChanged={refresh} />}
+    </div>
+  );
+}
+
+function LicensingTab({ licensedStates, onChanged }: { licensedStates: string[]; onChanged: () => void }) {
+  const [selected, setSelected] = useState<Set<string>>(new Set(licensedStates));
+  const [busy, setBusy] = useState(false);
+  const [saved, setSaved] = useState(false);
+
+  function toggle(state: string) {
+    setSaved(false);
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(state)) next.delete(state); else next.add(state);
+      return next;
+    });
+  }
+
+  async function save() {
+    setBusy(true);
+    try {
+      await fetch('/api/settings/licensed-states', {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ states: Array.from(selected) })
+      });
+      setSaved(true);
+      onChanged();
+    } finally { setBusy(false); }
+  }
+
+  return (
+    <div className="card p-4">
+      <div className="mb-3 text-sm text-slate-600">
+        Check every state you're licensed to sell in. When you log a call on a lead outside these states,
+        it gets flagged on the <strong>Review Queue</strong> instead of getting worked as a normal lead.
+      </div>
+      <div className="mb-3 grid grid-cols-4 gap-1.5 sm:grid-cols-8">
+        {US_STATES.map((s) => (
+          <label key={s} className={`flex cursor-pointer items-center justify-center rounded-lg border p-2 text-sm font-medium ${selected.has(s) ? 'border-brand-500 bg-brand-50 text-brand-700' : 'border-line text-slate-500 hover:bg-slate-50'}`}>
+            <input type="checkbox" className="sr-only" checked={selected.has(s)} onChange={() => toggle(s)} />
+            {s}
+          </label>
+        ))}
+      </div>
+      <div className="flex items-center gap-3">
+        <button className="btn-primary" disabled={busy} onClick={save}>{busy ? 'Saving…' : 'Save Licensed States'}</button>
+        {saved && <span className="text-sm text-emerald-600">Saved.</span>}
+      </div>
     </div>
   );
 }

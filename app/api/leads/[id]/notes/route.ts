@@ -6,7 +6,8 @@ import { logAudit, touchCustomer } from '@/lib/audit';
 const FIELDS = [
   'label', 'name', 'note_date', 'phone', 'beneficiary', 'budget', 'health', 'discount',
   'bank_name', 'bank_state', 'routing_number', 'account_number', 'mailing_address', 'email',
-  'born_in', 'ssn', 'plan_bronze', 'plan_silver', 'plan_gold', 'draft_date', 'code_word', 'free_text'
+  'born_in', 'ssn', 'plan_bronze_coverage', 'plan_bronze_price', 'plan_silver_coverage', 'plan_silver_price',
+  'plan_gold_coverage', 'plan_gold_price', 'draft_date', 'code_word', 'free_text'
 ];
 
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
@@ -20,10 +21,12 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   db.prepare(
     `INSERT INTO note_versions (id, customer_id, label, name, note_date, phone, beneficiary, budget,
       health, discount, bank_name, bank_state, routing_number, account_number, mailing_address, email,
-      born_in, ssn, plan_bronze, plan_silver, plan_gold, draft_date, code_word, free_text, created_by)
+      born_in, ssn, plan_bronze_coverage, plan_bronze_price, plan_silver_coverage, plan_silver_price,
+      plan_gold_coverage, plan_gold_price, draft_date, code_word, free_text, created_by)
      VALUES (@id, @customer_id, @label, @name, @note_date, @phone, @beneficiary, @budget,
       @health, @discount, @bank_name, @bank_state, @routing_number, @account_number, @mailing_address, @email,
-      @born_in, @ssn, @plan_bronze, @plan_silver, @plan_gold, @draft_date, @code_word, @free_text, @created_by)`
+      @born_in, @ssn, @plan_bronze_coverage, @plan_bronze_price, @plan_silver_coverage, @plan_silver_price,
+      @plan_gold_coverage, @plan_gold_price, @draft_date, @code_word, @free_text, @created_by)`
   ).run(row);
 
   logAudit(params.id, 'note', `Note saved — ${row.label}`);
