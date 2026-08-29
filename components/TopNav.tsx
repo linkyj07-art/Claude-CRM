@@ -18,7 +18,7 @@ export default function TopNav() {
   const quickLinks = db.prepare('SELECT * FROM quick_links ORDER BY category, sort_order').all() as QuickLink[];
 
   return (
-    <header className="sticky top-0 z-40 border-b border-line bg-white/90 backdrop-blur">
+    <header className="sticky top-0 z-40 border-b border-line bg-paper/90 backdrop-blur">
       <div className="mx-auto flex max-w-[1400px] items-center gap-1 px-4 py-2.5 md:px-6">
         <Link href="/" className="mr-3 flex items-center gap-2 text-[15px] font-bold text-ink">
           <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-brand-500 text-white">📋</span>

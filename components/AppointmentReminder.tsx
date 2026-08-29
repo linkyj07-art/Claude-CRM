@@ -76,7 +76,7 @@ export default function AppointmentReminder() {
   return (
     <div className="fixed bottom-4 right-4 z-50 space-y-2">
       {due.map((a) => (
-        <div key={a.id} className="flex w-72 items-start gap-2 rounded-lg border border-line bg-white p-3 shadow-2xl">
+        <div key={a.id} className="flex w-72 items-start gap-2 rounded-lg border border-line bg-panel p-3 shadow-2xl">
           <div className="flex-1 text-sm">
             <div className="font-semibold text-ink">📅 {a.first_name} {a.last_name}</div>
             <div className="text-xs text-slate-500">{a.type} appointment — {new Date(a.scheduled_at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}</div>

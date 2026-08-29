@@ -76,7 +76,7 @@ export default function ImportLeadsButton({ vendors }: { vendors: LeadVendor[] }
       <button className="btn-secondary" onClick={() => setOpen(true)}>⇪ Import Leads</button>
       {open && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={close}>
-          <div className="w-full max-w-md rounded-xl bg-white p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+          <div className="w-full max-w-md rounded-xl bg-panel p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
             <h2 className="mb-1 text-lg font-bold">Import Leads</h2>
 
             {!result && (

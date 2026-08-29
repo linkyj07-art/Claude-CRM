@@ -37,12 +37,12 @@ export default function DashboardPage({ searchParams }: { searchParams: { period
       <section>
         <div className="mb-2 label">💰 Money</div>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-          <StatCard label="Today's Commission" value={fmtMoney(money.today)} tone="good" />
-          <StatCard label="This Week" value={fmtMoney(money.week)} tone="good" />
-          <StatCard label="This Month" value={fmtMoney(money.month)} tone="good" />
-          <StatCard label="Pending" value={fmtMoney(money.pending)} />
-          <StatCard label="Chargebacks (30d)" value={fmtMoney(-money.chargebacks)} tone="bad" />
-          <StatCard label="Net" value={fmtMoney(money.net)} tone="good" />
+          <StatCard label="Today's Commission" value={fmtMoney(money.today)} tone="good" icon="💵" />
+          <StatCard label="This Week" value={fmtMoney(money.week)} tone="good" icon="📆" />
+          <StatCard label="This Month" value={fmtMoney(money.month)} tone="good" icon="📈" />
+          <StatCard label="Pending" value={fmtMoney(money.pending)} icon="⏳" />
+          <StatCard label="Chargebacks (30d)" value={fmtMoney(-money.chargebacks)} tone="bad" icon="⚠️" />
+          <StatCard label="Net" value={fmtMoney(money.net)} tone="good" icon="🏆" />
         </div>
       </section>
 
@@ -51,7 +51,7 @@ export default function DashboardPage({ searchParams }: { searchParams: { period
           <a
             key={p}
             href={`/?period=${p}`}
-            className={`rounded-lg px-3 py-1.5 text-sm font-medium ${period === p ? 'bg-brand-500 text-white' : 'bg-white border border-line text-slate-600 hover:bg-slate-50'}`}
+            className={`rounded-lg px-3 py-1.5 text-sm font-medium ${period === p ? 'bg-brand-500 text-white' : 'bg-panel2 border border-line text-slate-600 hover:bg-slate-100'}`}
           >
             {PERIOD_LABEL[p]}
           </a>

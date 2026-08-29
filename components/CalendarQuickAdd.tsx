@@ -48,7 +48,7 @@ export default function CalendarQuickAdd({ defaultDate }: { defaultDate: string 
       <button className="btn-primary" onClick={() => setOpen(true)}>+ New Appointment</button>
       {open && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={close}>
-          <div className="w-full max-w-md rounded-xl bg-white p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+          <div className="w-full max-w-md rounded-xl bg-panel p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
             <div className="mb-3 flex items-center justify-between">
               <h2 className="text-lg font-bold">📅 New Appointment</h2>
               <button onClick={close} className="text-slate-400 hover:text-ink">✕</button>
