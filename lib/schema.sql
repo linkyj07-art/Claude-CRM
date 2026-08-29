@@ -1,0 +1,255 @@
+-- CRM Insurance schema
+-- Core principle: ONE customer row = one permanent ID. Everything else
+-- (calls, notes, quotes, appointments, applications, policies, commissions,
+-- payments, referrals, audit history) references customers.id and is never
+-- duplicated into a second "client" record when a lead sells.
+
+PRAGMA foreign_keys = ON;
+
+CREATE TABLE IF NOT EXISTS lead_vendors (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  notes TEXT,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS customers (
+  id TEXT PRIMARY KEY,
+  first_name TEXT NOT NULL,
+  last_name TEXT NOT NULL,
+  phone TEXT,
+  email TEXT,
+  dob TEXT,
+  gender TEXT,
+  marital_status TEXT,
+  military INTEGER DEFAULT 0,
+  military_branch TEXT,
+  coverage_wanted REAL,
+  address TEXT,
+  city TEXT,
+  state TEXT,
+  postal_code TEXT,
+  timezone TEXT,
+  ad_type TEXT,
+  platform TEXT,
+  lead_vendor_id TEXT REFERENCES lead_vendors(id),
+  best_time TEXT,
+  lead_cost REAL DEFAULT 0,
+  status TEXT NOT NULL DEFAULT 'fresh',
+    -- fresh | working | aging_45_90 | aging_90_plus | invalid | disputed | dnc | sold | lost | archived
+  purchased_at TEXT NOT NULL DEFAULT (datetime('now')),
+  sold_at TEXT,
+  archived INTEGER DEFAULT 0,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_customers_status ON customers(status);
+CREATE INDEX IF NOT EXISTS idx_customers_state ON customers(state);
+CREATE INDEX IF NOT EXISTS idx_customers_vendor ON customers(lead_vendor_id);
+
+-- Notes are append-only "versions" so the full history (original -> call 1
+-- -> call 2 -> appointment -> sale) is always retrievable, never overwritten.
+CREATE TABLE IF NOT EXISTS note_versions (
+  id TEXT PRIMARY KEY,
+  customer_id TEXT NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
+  label TEXT NOT NULL DEFAULT 'Note',
+  name TEXT,
+  note_date TEXT,
+  phone TEXT,
+  beneficiary TEXT,
+  budget TEXT,
+  health TEXT,
+  discount TEXT,
+  bank_name TEXT,
+  bank_state TEXT,
+  routing_number TEXT,
+  account_number TEXT,
+  mailing_address TEXT,
+  email TEXT,
+  born_in TEXT,
+  ssn TEXT,
+  plan_bronze TEXT,
+  plan_silver TEXT,
+  plan_gold TEXT,
+  draft_date TEXT,
+  code_word TEXT,
+  free_text TEXT,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  created_by TEXT DEFAULT 'You'
+);
+
+CREATE INDEX IF NOT EXISTS idx_notes_customer ON note_versions(customer_id);
+
+CREATE TABLE IF NOT EXISTS calls (
+  id TEXT PRIMARY KEY,
+  customer_id TEXT NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
+  direction TEXT NOT NULL DEFAULT 'outbound',
+  attempt_number INTEGER NOT NULL DEFAULT 1,
+  outcome TEXT NOT NULL,
+    -- no_answer | voicemail | connected | busy | wrong_number | dnc
+  disposition TEXT,
+    -- interested | not_interested | callback | qualified | unqualified | sold
+  duration_seconds INTEGER DEFAULT 0,
+  notes TEXT,
+  occurred_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_calls_customer ON calls(customer_id);
+CREATE INDEX IF NOT EXISTS idx_calls_occurred ON calls(occurred_at);
+
+CREATE TABLE IF NOT EXISTS quotes (
+  id TEXT PRIMARY KEY,
+  customer_id TEXT NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
+  carrier TEXT,
+  product TEXT,
+  face_amount REAL,
+  monthly_premium REAL,
+  notes TEXT,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS appointments (
+  id TEXT PRIMARY KEY,
+  customer_id TEXT NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
+  scheduled_at TEXT NOT NULL,
+  type TEXT DEFAULT 'phone',
+  status TEXT NOT NULL DEFAULT 'scheduled',
+    -- scheduled | sat | no_show | cancelled
+  notes TEXT,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_appt_customer ON appointments(customer_id);
+
+CREATE TABLE IF NOT EXISTS applications (
+  id TEXT PRIMARY KEY,
+  customer_id TEXT NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
+  carrier TEXT,
+  product TEXT,
+  face_amount REAL,
+  monthly_premium REAL,
+  status TEXT NOT NULL DEFAULT 'submitted',
+    -- submitted | pending | approved | declined | issued
+  submitted_at TEXT NOT NULL DEFAULT (datetime('now')),
+  decided_at TEXT,
+  notes TEXT
+);
+
+CREATE INDEX IF NOT EXISTS idx_apps_customer ON applications(customer_id);
+
+CREATE TABLE IF NOT EXISTS policies (
+  id TEXT PRIMARY KEY,
+  customer_id TEXT NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
+  application_id TEXT REFERENCES applications(id),
+  carrier TEXT NOT NULL,
+  product TEXT,
+  policy_type TEXT,
+  face_amount REAL,
+  monthly_premium REAL,
+  annual_premium REAL,
+  effective_date TEXT,
+  policy_number TEXT,
+  agent TEXT,
+  status TEXT NOT NULL DEFAULT 'issued',
+    -- pending | issued | active | lapsed | cancelled
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_policies_customer ON policies(customer_id);
+
+CREATE TABLE IF NOT EXISTS commissions (
+  id TEXT PRIMARY KEY,
+  policy_id TEXT NOT NULL REFERENCES policies(id) ON DELETE CASCADE,
+  customer_id TEXT NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
+  commission_pct REAL,
+  expected_commission REAL,
+  commission_type TEXT DEFAULT 'advance', -- advance | as_earned
+  expected_pay_date TEXT,
+  actual_pay_date TEXT,
+  chargeback REAL DEFAULT 0,
+  net_commission REAL,
+  status TEXT NOT NULL DEFAULT 'pending', -- pending | paid | charged_back
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_comm_customer ON commissions(customer_id);
+CREATE INDEX IF NOT EXISTS idx_comm_policy ON commissions(policy_id);
+
+CREATE TABLE IF NOT EXISTS payments (
+  id TEXT PRIMARY KEY,
+  customer_id TEXT NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
+  policy_id TEXT REFERENCES policies(id),
+  amount REAL NOT NULL,
+  type TEXT DEFAULT 'renewal', -- initial | renewal | bonus
+  paid_at TEXT NOT NULL DEFAULT (datetime('now')),
+  notes TEXT
+);
+
+CREATE TABLE IF NOT EXISTS referrals (
+  id TEXT PRIMARY KEY,
+  referrer_customer_id TEXT NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
+  referred_customer_id TEXT REFERENCES customers(id) ON DELETE SET NULL,
+  referred_name TEXT,
+  value REAL DEFAULT 0,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS audit_history (
+  id TEXT PRIMARY KEY,
+  customer_id TEXT NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
+  event_type TEXT NOT NULL,
+  summary TEXT NOT NULL,
+  meta TEXT,
+  occurred_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_audit_customer ON audit_history(customer_id);
+
+CREATE TABLE IF NOT EXISTS carriers (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  agent_portal_url TEXT,
+  application_url TEXT,
+  claims_url TEXT,
+  support_phone TEXT,
+  notes TEXT,
+  sort_order INTEGER DEFAULT 0
+);
+
+-- User-editable health-keyword rules that drive the "which carrier should I
+-- run this through first" suggestion on the lead's HEALTH note field.
+CREATE TABLE IF NOT EXISTS carrier_underwriting_rules (
+  id TEXT PRIMARY KEY,
+  carrier_id TEXT NOT NULL REFERENCES carriers(id) ON DELETE CASCADE,
+  keywords TEXT NOT NULL,       -- comma-separated match terms, e.g. "diabetes, insulin, a1c"
+  tier_note TEXT,               -- e.g. "Level Benefit / Graded - up to $15k"
+  priority INTEGER DEFAULT 0,   -- higher = preferred when scores tie
+  is_knockout INTEGER DEFAULT 0,-- 1 = flag as "avoid" instead of ranking it up
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_rules_carrier ON carrier_underwriting_rules(carrier_id);
+
+CREATE TABLE IF NOT EXISTS quick_links (
+  id TEXT PRIMARY KEY,
+  category TEXT NOT NULL DEFAULT 'general', -- quoter | resource | general
+  label TEXT NOT NULL,
+  url TEXT NOT NULL,
+  sort_order INTEGER DEFAULT 0
+);
+
+-- Sample routing-number reference set only (NOT the Federal Reserve's full
+-- directory, which may not be redistributed commercially). Always shown
+-- with a "verify before use" flag and a manual-override field alongside it.
+CREATE TABLE IF NOT EXISTS routing_lookup (
+  id TEXT PRIMARY KEY,
+  bank_name TEXT NOT NULL,
+  state TEXT NOT NULL,
+  routing_number TEXT NOT NULL,
+  institution_type TEXT DEFAULT 'bank', -- bank | credit_union
+  source_note TEXT
+);
+
+CREATE INDEX IF NOT EXISTS idx_routing_bank ON routing_lookup(bank_name);
+CREATE INDEX IF NOT EXISTS idx_routing_state ON routing_lookup(state);

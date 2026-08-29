@@ -1,0 +1,187 @@
+# FEX CRM — Lead to Lifetime Value
+
+A single-agent CRM for final-expense (and similar) insurance sales: one
+permanent customer ID carries the lead all the way from first dial through
+notes, quotes, appointments, applications, policy, commission, and lifetime
+value. Built with Next.js (App Router) + TypeScript + SQLite, so it runs
+entirely on your own machine with no external services required.
+
+## Quick start
+
+```bash
+npm install
+npm run seed     # creates data/crm.sqlite3 with realistic demo data
+npm run dev      # http://localhost:3000
+```
+
+For a production-style run: `npm run build && npm start`.
+
+Re-running `npm run seed` at any time wipes the database and rebuilds it
+with fresh demo data — useful when you want to start clean. Your real data
+lives in `data/crm.sqlite3`; back that file up like you would any other
+database.
+
+## Going live (Railway)
+
+This app is a normal Node/Next.js server plus a SQLite file, so it needs a
+host that keeps a real process running with a persistent disk — not a
+serverless platform like plain Vercel (see the note at the bottom if you
+want that route instead). [Railway](https://railway.app) is the easiest fit
+and has a free trial.
+
+1. **Get the code onto Railway.** Easiest path with no GitHub needed:
+   ```bash
+   npm install -g @railway/cli
+   railway login          # opens a browser to sign in / sign up
+   cd crm-insurance
+   railway init            # creates a new Railway project
+   railway up               # uploads this folder and deploys it
+   ```
+   (Prefer GitHub? Push this folder to a new repo, then in the Railway
+   dashboard choose **New Project → Deploy from GitHub repo** instead of
+   `railway init`/`railway up`.)
+
+2. **Add a persistent volume**, so the database survives redeploys — in
+   the Railway dashboard: your service → **Volumes → New Volume**, mount
+   path `/data`. Then add a variable **DATA_DIR = /data** (service →
+   **Variables**).
+
+3. **Set a login.** This CRM has no other auth, and it stores real
+   names/phone/DOB and (masked-by-default) SSN/bank info — add these two
+   variables before sharing the URL with anyone:
+   - `BASIC_AUTH_USER` — pick a username
+   - `BASIC_AUTH_PASSWORD` — pick a strong password
+   Every page will then prompt for these before loading anything.
+
+4. **Seed or don't.** By default the volume starts empty (no `data/`
+   folder exists yet). If you want the demo data to poke around with
+   first, run `railway run npm run seed` once — otherwise skip it and the
+   CRM just starts with zero leads, ready for your real ones.
+   ⚠️ `npm run seed` **wipes and rebuilds the database** — never run it
+   again once you have real leads in there.
+
+5. **Get your URL.** Service → **Settings → Networking → Generate
+   Domain** gives you a `*.up.railway.app` URL immediately; you can attach
+   your own domain from the same screen.
+
+From then on, `railway up` (or just pushing to GitHub, if you went that
+route) redeploys your changes — the volume-backed database is untouched
+across deploys.
+
+**Prefer Vercel or another serverless host instead?** That's a bigger
+change: serverless functions don't keep a writable disk between requests,
+so `better-sqlite3` won't work as-is. You'd swap the database layer in
+`lib/db.ts` for a hosted Postgres (Neon, Supabase, or Vercel Postgres all
+have a free tier) and rewrite the queries in `lib/*.ts` and the API routes
+to use it instead of `better-sqlite3`. Worth doing if you specifically want
+Vercel's platform — just a larger lift than the Railway/Fly.io path above.
+
+## What's in here
+
+- **Dashboard (`/`)** — money (today/week/month/pending/chargebacks/net),
+  activity, conversion rates, and lead economics, with a period switcher.
+- **Dial For The Day (`/dial`)** — queues fresh → working → aging leads and
+  drops you straight into the first one's workspace, with a "skip / next"
+  control to move through the queue.
+- **Leads (`/leads`)** — searchable/filterable list, quick "+ Add Lead".
+- **Lead Workspace (`/leads/[id]`)** — the core screen: lead info, live
+  local time for the lead's state vs. your Mountain time, call-attempt
+  buttons that log to a permanent call history, the exact structured Notes
+  template (every save is a new version — nothing is ever overwritten), a
+  bank routing-number lookup with manual override, a health-keyword based
+  Suggested Carrier Order with one-click Agent Login links, and Quote /
+  Appointment / Sold / Dispute / Archive actions. Once sold, the same
+  record becomes the policy/commission workspace — nothing is duplicated
+  into a second "client" record.
+- **Policies (`/policies`)** and **Commissions (`/commissions`)** — flat,
+  sortable views across every sale.
+- **Analytics (`/analytics`)** — sales funnel with stage conversion %,
+  cost-per-stage, ROI by lead vendor / lead age / state / ad+platform+vendor
+  combination, and top client lifetime value.
+- **⚡ Quick Access** (top-right, every page) — FEX quoter link, carrier
+  agent-login list with eApp/claims/phone shortcuts, and resource links.
+- **Manage Quick Links (`/quick-links`)** — edit carriers & their logins,
+  the health-keyword underwriting rules that drive carrier suggestions, and
+  the quoter/resource links — all from the browser, no code changes.
+
+## The data model
+
+One rule drives the whole schema: **a customer is a single permanent row.**
+Everything else references `customers.id` — it's never copied into a second
+"client" or "sale" record when a lead converts:
+
+```
+customers
+ ├── note_versions   (append-only — full history, nothing overwritten)
+ ├── calls           (every dial, with attempt #, outcome, disposition)
+ ├── quotes
+ ├── appointments
+ ├── applications
+ ├── policies
+ ├── commissions
+ ├── payments        (renewals feed lifetime value)
+ ├── referrals
+ └── audit_history    (the full timeline shown on each lead)
+```
+
+Reference tables: `lead_vendors`, `carriers`, `carrier_underwriting_rules`,
+`quick_links`, `routing_lookup`.
+
+The SQLite file lives at `data/crm.sqlite3`. Schema lives in
+`lib/schema.sql` and is applied automatically on first run.
+
+## Bank routing-number lookup
+
+`routing_lookup` ships with a small sample set of major banks/credit unions
+(their routing numbers as the institutions themselves publish them) —
+intentionally **not** a copy of the Federal Reserve's full directory, which
+restricts commercial redistribution. The lookup always shows candidates to
+pick from (not an auto-fill), and the routing field stays manually editable
+no matter what — the client's own check or online banking is the
+definitive source. Add more entries any time via
+`INSERT INTO routing_lookup ...` or a small admin screen if you want one
+built out further.
+
+## Carrier health-suggestion engine
+
+`carrier_underwriting_rules` holds comma-separated keywords per carrier
+(e.g. `diabetes, insulin, a1c`) plus a tier note and an optional
+"knockout" flag. When you type in a lead's HEALTH note field, the workspace
+matches your text against those keywords and ranks carriers #1/#2/#3, each
+with a one-click **Agent Login →** link. This is a keyword heuristic to
+help you decide who to run first — not real underwriting — so it always
+carries a reminder to verify against the carrier's actual field guide.
+Manage the rules (and your real carrier list) from **⚡ Quick Access →
+Manage Quick Links → Underwriting Rules**.
+
+## Protected fields & login
+
+SSN, bank name/state, routing number, and account number live in
+`note_versions` but are hidden behind a "Show bank / SSN fields" toggle in
+the workspace, masked (`•••-••-1234`) everywhere else they might surface,
+and excluded from the leads list/search.
+
+The app itself has one shared login (not per-agent accounts): set
+`BASIC_AUTH_USER` and `BASIC_AUTH_PASSWORD` as environment variables (see
+`.env.example`) and `middleware.ts` will prompt for them on every page. This
+is **off by default** for local dev — set both before putting a live URL
+anywhere someone else could find it. See "Going live" above.
+
+## Project layout
+
+```
+app/                 Next.js App Router pages + API routes
+components/          Client components (workspace, modals, nav, settings)
+lib/                 db access, schema.sql, metrics, underwriting engine, utils
+scripts/seed.js      Wipes + repopulates data/crm.sqlite3 with demo data
+data/                SQLite database lives here (gitignored)
+```
+
+## Notes on scope
+
+This is a working, single-user CRM you can run today and keep extending —
+not a hosted multi-tenant product. There's no login/auth, no SMS/dialer
+integration (the Call button opens your phone's own dialer via `tel:`), and
+renewal/referral payments are entered manually rather than pulled from a
+carrier feed. All of those are natural next steps once the core workflow
+feels right.

@@ -1,0 +1,44 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html, body { height: 100%; }
+  body {
+    @apply bg-paper text-ink antialiased;
+  }
+}
+
+@layer components {
+  .card {
+    @apply bg-panel border border-line rounded-xl shadow-card;
+  }
+  .btn {
+    @apply inline-flex items-center justify-center gap-1.5 rounded-lg px-3.5 py-2 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+  .btn-primary {
+    @apply btn bg-brand-500 text-white hover:bg-brand-600;
+  }
+  .btn-secondary {
+    @apply btn bg-white text-ink border border-line hover:bg-slate-50;
+  }
+  .btn-danger {
+    @apply btn bg-red-50 text-red-700 border border-red-200 hover:bg-red-100;
+  }
+  .btn-good {
+    @apply btn bg-emerald-500 text-white hover:bg-emerald-600;
+  }
+  .input {
+    @apply w-full rounded-lg border border-line bg-white px-3 py-1.5 text-sm text-ink placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-400 focus:border-transparent;
+  }
+  .label {
+    @apply text-[11px] font-semibold uppercase tracking-wide text-slate-500;
+  }
+  .badge {
+    @apply inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold;
+  }
+  .badge-good { @apply badge bg-emerald-100 text-emerald-700; }
+  .badge-warn { @apply badge bg-amber-100 text-amber-700; }
+  .badge-bad { @apply badge bg-red-100 text-red-700; }
+  .badge-brand { @apply badge bg-brand-100 text-brand-700; }
+}
