@@ -10,7 +10,7 @@ const TEMPLATE_HEADERS = [
   'Lead Vendor', 'Best Time', 'Lead Cost', 'Purchase Date', 'Age Range'
 ];
 
-type ImportResult = { imported: number; duplicates: number; total: number; skipped: { row: number; reason: string }[] };
+type ImportResult = { imported: number; duplicates: number; backfilled: number; total: number; skipped: { row: number; reason: string }[] };
 
 export default function ImportLeadsButton({ vendors }: { vendors: LeadVendor[] }) {
   const router = useRouter();
@@ -132,6 +132,7 @@ export default function ImportLeadsButton({ vendors }: { vendors: LeadVendor[] }
                 <div className="rounded bg-green-50 p-3 text-sm text-green-800">
                   Imported {result.imported} of {result.total} rows.
                   {result.duplicates > 0 && ` ${result.duplicates} matched an existing lead and were sent to the Review Queue instead.`}
+                  {result.backfilled > 0 && ` ${result.backfilled} matched an existing lead by phone and filled in missing info (DOB/email/gender/state) on it.`}
                 </div>
                 {result.skipped.length > 0 && (
                   <div className="max-h-40 overflow-y-auto rounded bg-amber-50 p-2 text-xs text-amber-800">

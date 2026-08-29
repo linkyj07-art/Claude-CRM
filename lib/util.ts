@@ -210,12 +210,15 @@ export function looksLikeEmail(s: string | null | undefined): boolean {
 export function looksLikeDob(s: string | null | undefined): boolean {
   const t = (s || '').trim();
   if (!t) return false;
-  // Require an actual date shape (separators or a month name) before even
-  // trying Date parsing — JS treats a bare 1-2 digit number as a two-digit
-  // year ("62" -> 1962), which would otherwise make every "age" column
-  // value look like a valid DOB.
+  // Require an actual date shape (separators or a month name, in either
+  // Month-Day-Year or Day-Month-Year order — "12-Apr-1957" is a common
+  // Excel export format) before even trying Date parsing — JS treats a bare
+  // 1-2 digit number as a two-digit year ("62" -> 1962), which would
+  // otherwise make every "age" column value look like a valid DOB.
   const hasDateShape =
-    /\d{1,4}[\/\-.]\d{1,2}[\/\-.]\d{1,4}/.test(t) || /[A-Za-z]{3,9}\.?\s+\d{1,2},?\s+\d{4}/.test(t);
+    /\d{1,4}[\/\-.]\d{1,2}[\/\-.]\d{1,4}/.test(t) ||
+    /[A-Za-z]{3,9}\.?\s+\d{1,2},?\s+\d{4}/.test(t) ||
+    /\d{1,2}[\s\-\/.]+[A-Za-z]{3,9}\.?[\s\-\/.]+\d{2,4}/.test(t);
   if (!hasDateShape) return false;
   const d = new Date(t);
   if (isNaN(d.getTime())) return false;

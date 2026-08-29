@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
 import { getCurrentUser } from '@/lib/currentUser';
-import { isWithinCallingHours } from '@/lib/util';
+import { isWithinCallingHours, MAX_CALLS_PER_DAY } from '@/lib/util';
 
 export async function GET(req: NextRequest) {
   const user = await getCurrentUser();
@@ -36,6 +36,11 @@ export async function GET(req: NextRequest) {
     .prepare(
       `SELECT id, status, state FROM customers
        WHERE archived = 0 AND owner_id = ? AND status IN ('fresh','working','aging_45_90','aging_90_plus')
+         AND phone IS NOT NULL AND TRIM(phone) != ''
+         AND id NOT IN (
+           SELECT customer_id FROM calls WHERE date(occurred_at) = date('now')
+           GROUP BY customer_id HAVING COUNT(*) >= ${MAX_CALLS_PER_DAY}
+         )
        ORDER BY CASE status WHEN 'fresh' THEN 0 WHEN 'working' THEN 1 WHEN 'aging_45_90' THEN 2 ELSE 3 END, purchased_at ASC`
     )
     .all(user.id) as { id: string; status: string; state: string | null }[];

@@ -353,22 +353,33 @@ export default function LeadWorkspace({
     router.push('/leads');
   }
 
-  // A lead can still land here outside its state's calling window — the
-  // window closed after /dial built the queue, or this is a recycled lead
-  // being retried later. Skip it immediately rather than let the agent dial
-  // someone it isn't legal/appropriate to call right now; it stays eligible
-  // for a future Power Dial run once its window reopens.
+  // A lead can still land here even though it's not actually dialable right
+  // now — its state's calling window closed after /dial built the queue (or
+  // this is a recycled lead being retried later), it has no phone number to
+  // call at all, or it already hit today's 4-dial cap. Skip it immediately
+  // in all three cases rather than stranding the agent on a lead with no
+  // Call button to press; it stays eligible for a future Power Dial run
+  // once whichever condition cleared it out reverses (window reopens, a
+  // phone number gets added, or the day rolls over).
+  const skipReason = !withinCallingHours
+    ? `outside calling hours right now (${customer.state || 'unknown state'})`
+    : !customer.phone
+      ? 'has no phone number on file'
+      : dailyLimitReached
+        ? `already dialed ${MAX_CALLS_PER_DAY}x today`
+        : null;
+
   useEffect(() => {
-    if (isDialing && !withinCallingHours) {
+    if (isDialing && skipReason) {
       advanceQueue();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [customer.id, isDialing, withinCallingHours]);
+  }, [customer.id, isDialing, skipReason]);
 
-  if (isDialing && !withinCallingHours) {
+  if (isDialing && skipReason) {
     return (
       <div className="card p-8 text-center text-sm text-slate-500">
-        ⏰ {customer.first_name} {customer.last_name} ({customer.state || 'unknown state'}) is outside calling hours right now — skipping…
+        ⏭️ {customer.first_name} {customer.last_name} — {skipReason} — skipping…
       </div>
     );
   }

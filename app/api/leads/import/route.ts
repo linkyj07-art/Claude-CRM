@@ -15,32 +15,44 @@ const MAX_ROWS = 5000;
 // columns (a product-interest field and a separate ad/creative name field)
 // prefers the more specific one.
 const FIELD_ALIASES: Record<string, string[]> = {
-  first_name: ['first name', 'first', 'fname', 'firstname'],
-  last_name: ['last name', 'last', 'lname', 'lastname'],
-  phone: ['phone', 'phone number', 'cell', 'cell phone', 'mobile', 'mobile phone'],
-  email: ['email', 'email address'],
-  dob: ['dob', 'date of birth', 'birthdate', 'birth date'],
-  gender: ['gender', 'sex'],
+  first_name: ['first name', 'first', 'fname', 'firstname', 'given name'],
+  last_name: ['last name', 'last', 'lname', 'lastname', 'surname', 'family name'],
+  // A single combined name column (common on Meta/Google lead-ad exports) —
+  // only used when there's no separate first/last match, split on the first
+  // space (see splitFullName below).
+  full_name: ['full name', 'name', 'contact name', 'lead name', 'customer name'],
+  phone: ['phone', 'phone number', 'phone#', 'telephone', 'tel', 'cell', 'cell phone', 'cell number', 'mobile', 'mobile phone', 'mobile number', 'contact number', 'primary phone'],
+  email: ['email', 'email address', 'e mail', 'email id'],
+  dob: ['dob', 'date of birth', 'birthdate', 'birth date', 'birthday', 'd o b'],
+  gender: ['gender', 'sex', 'm f'],
   marital_status: ['marital status', 'marital'],
   military_branch: ['military branch', 'branch'],
   military_status: ['military status', 'veteran status'],
-  coverage_wanted: ['how much coverage do you need', 'coverage wanted', 'coverage', 'coverage amount', 'face amount'],
-  address: ['address', 'street address', 'street'],
-  city: ['city'],
-  state: ['state', 'st'],
-  postal_code: ['postal code', 'zip', 'zip code', 'zipcode'],
-  ad_type: ['interested in', 'ad type', 'lead type', 'ad'],
-  platform: ['platform', 'source', 'lead source'],
-  lead_vendor: ['lead vendor', 'vendor'],
+  coverage_wanted: ['how much coverage do you need', 'coverage wanted', 'coverage', 'coverage amount', 'face amount', 'desired coverage', 'coverage requested'],
+  address: ['address', 'street address', 'street', 'mailing address', 'home address'],
+  city: ['city', 'town'],
+  state: ['state', 'st', 'state province', 'province'],
+  postal_code: ['postal code', 'zip', 'zip code', 'zipcode', 'postcode'],
+  ad_type: ['interested in', 'ad type', 'lead type', 'ad', 'ad name'],
+  platform: ['platform', 'source', 'lead source', 'traffic source'],
+  lead_vendor: ['lead vendor', 'vendor', 'provider'],
   best_time: ['best time of day to contact you', 'best time', 'best time to call'],
-  lead_cost: ['lead cost', 'cost'],
-  purchase_date: ['purchase date', 'date bought', 'date purchased', 'day bought', 'bought on', 'date time'],
+  lead_cost: ['lead cost', 'cost', 'cost per lead', 'price'],
+  purchase_date: ['purchase date', 'date bought', 'date purchased', 'day bought', 'bought on', 'date time', 'lead date', 'submitted', 'submitted at', 'created', 'created at', 'created date'],
   age_range: ['age range', 'lead age', 'age bucket'],
   trusted_form_url: ['trusted form certificate', 'trustedform', 'trusted form', 'consent url', 'tcpa certificate'],
   // Not stored on the customer directly — kept only as a fallback source to
   // recover a misplaced DOB (see fixMisalignedContactFields below).
   age: ['age']
 };
+
+// "Jane Q Doe" -> { first: "Jane", last: "Q Doe" }; a single-word name has
+// nothing to split so it's treated as a first name only.
+function splitFullName(name: string): { first: string; last: string } {
+  const parts = name.trim().split(/\s+/);
+  if (parts.length <= 1) return { first: parts[0] || '', last: '' };
+  return { first: parts[0], last: parts.slice(1).join(' ') };
+}
 
 function normalize(h: string): string {
   return h.trim().toLowerCase().replace(/[^a-z0-9]+/g, ' ').replace(/\s+/g, ' ').trim();
@@ -212,13 +224,27 @@ export async function POST(req: NextRequest) {
   const batchPurchasedAt = parsePurchaseDate(batchPurchaseDate);
   const batchStatus = parseAgeRange(batchAgeRange);
 
-  const existingCustomers = db.prepare('SELECT id, first_name, last_name, phone, dob FROM customers WHERE owner_id = ?').all(user.id) as
-    { id: string; first_name: string; last_name: string; phone: string | null; dob: string | null }[];
+  const existingCustomers = db.prepare(
+    'SELECT id, first_name, last_name, phone, dob, email, gender, state FROM customers WHERE owner_id = ?'
+  ).all(user.id) as
+    { id: string; first_name: string; last_name: string; phone: string | null; dob: string | null; email: string | null; gender: string | null; state: string | null }[];
   const dupeIndex = new Map<string, string>();
+  // Phone-only index, separate from the full dupe key above (which also
+  // requires a matching DOB): lets a re-upload of the same sheet backfill a
+  // lead whose DOB/email/gender/state got nulled out by some earlier import
+  // bug, instead of failing to match on DOB and creating a duplicate lead.
+  const existingByPhone = new Map<string, typeof existingCustomers[number]>();
   for (const c of existingCustomers) {
     const key = normalizeDupeKey(c.first_name || '', c.last_name || '', c.phone || '', c.dob || '');
     if (key) dupeIndex.set(key, c.id);
+    const digits = (c.phone || '').replace(/\D/g, '');
+    if (digits.length >= 10) existingByPhone.set(digits.slice(-10), c);
   }
+  const updateBackfill = db.prepare(
+    `UPDATE customers SET dob = COALESCE(dob, @dob), email = COALESCE(email, @email),
+       gender = COALESCE(gender, @gender), state = COALESCE(state, @state), updated_at = datetime('now')
+     WHERE id = @id`
+  );
 
   const insertCustomer = db.prepare(
     `INSERT INTO customers (id, owner_id, first_name, last_name, phone, email, dob, gender, marital_status,
@@ -236,6 +262,7 @@ export async function POST(req: NextRequest) {
   const skipped: { row: number; reason: string }[] = [];
   const importedIds: string[] = [];
   let duplicateCount = 0;
+  let backfilledCount = 0;
   const nowStr = new Date().toISOString().slice(0, 19).replace('T', ' ');
 
   const runImport = db.transaction((rows: Record<string, string>[]) => {
@@ -247,8 +274,16 @@ export async function POST(req: NextRequest) {
         return v === undefined || v === null ? '' : String(v).trim();
       };
 
-      const first_name = get('first_name');
-      const last_name = get('last_name');
+      let first_name = get('first_name');
+      let last_name = get('last_name');
+      if (!first_name && !last_name) {
+        const fullName = get('full_name');
+        if (fullName) {
+          const split = splitFullName(fullName);
+          first_name = split.first;
+          last_name = split.last;
+        }
+      }
       const rawPhone = get('phone');
       const rawDob = get('dob');
       if (!first_name && !last_name && !rawPhone) {
@@ -302,10 +337,34 @@ export async function POST(req: NextRequest) {
         return;
       }
 
+      // No exact (name+phone+DOB) match, but the same phone number already
+      // belongs to a lead here — most likely this exact lead, re-uploaded,
+      // with a DOB/email/gender/state this sheet actually has correctly.
+      // Fill in whatever that existing lead is missing rather than either
+      // silently dropping the row or creating a second copy of the same
+      // person.
+      const phoneDigits = phone.replace(/\D/g, '');
+      const existingByPhoneMatch = phoneDigits.length >= 10 ? existingByPhone.get(phoneDigits.slice(-10)) : undefined;
+      if (existingByPhoneMatch) {
+        const missingSomething =
+          (!existingByPhoneMatch.dob && dob) ||
+          (!existingByPhoneMatch.email && email) ||
+          (!existingByPhoneMatch.gender && gender) ||
+          (!existingByPhoneMatch.state && data.state);
+        if (missingSomething) {
+          updateBackfill.run({ id: existingByPhoneMatch.id, dob: dob || null, email: email || null, gender: gender || null, state: data.state || null });
+          backfilledCount++;
+        } else {
+          duplicateCount++;
+        }
+        return;
+      }
+
       const id = newId();
       insertCustomer.run({ id, owner_id: user.id, ...data });
       importedIds.push(id);
       if (dupeKey) dupeIndex.set(dupeKey, id);
+      if (phoneDigits.length >= 10) existingByPhone.set(phoneDigits.slice(-10), { id, first_name, last_name, phone, dob, email, gender, state: data.state });
     });
   });
 
@@ -315,5 +374,5 @@ export async function POST(req: NextRequest) {
     logAudit(id, 'lead_purchased', `Lead added — bulk import (${fileName})`);
   }
 
-  return NextResponse.json({ imported: importedIds.length, duplicates: duplicateCount, skipped, total: rows.length });
+  return NextResponse.json({ imported: importedIds.length, duplicates: duplicateCount, backfilled: backfilledCount, skipped, total: rows.length });
 }
