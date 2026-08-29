@@ -45,10 +45,6 @@ export async function POST(req: NextRequest) {
     // parse — the request fails silently from the user's point of view
     // ("nothing happens" on Sign In) instead of showing a real error.
     console.error('[auth/login] Unexpected error', err);
-    // TEMPORARY: surfacing the real error message to diagnose a live
-    // production lockout with no other way to see server logs. Remove
-    // this detail once the underlying cause is fixed.
-    const detail = err instanceof Error ? `${err.name}: ${err.message}` : String(err);
-    return NextResponse.json({ error: `Something went wrong: ${detail}` }, { status: 500 });
+    return NextResponse.json({ error: 'Something went wrong on our end. Please try again.' }, { status: 500 });
   }
 }

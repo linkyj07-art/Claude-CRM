@@ -54,7 +54,12 @@ CREATE TABLE IF NOT EXISTS customers (
   updated_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
-CREATE INDEX IF NOT EXISTS idx_customers_owner ON customers(owner_id);
+-- idx_customers_owner is created in db.ts's migrate(), not here: on a
+-- pre-existing database (customers table already present without owner_id),
+-- this CREATE INDEX would run as part of the initial schema.sql exec, before
+-- the ALTER TABLE that actually adds the column ever gets a chance to run —
+-- "no such column: owner_id", failing the entire schema exec and preventing
+-- migrate() (and the fix) from running at all.
 CREATE INDEX IF NOT EXISTS idx_customers_status ON customers(status);
 CREATE INDEX IF NOT EXISTS idx_customers_state ON customers(state);
 CREATE INDEX IF NOT EXISTS idx_customers_vendor ON customers(lead_vendor_id);
