@@ -25,6 +25,15 @@ function GoalBar({ label, actual, target }: { label: string; actual: number; tar
   );
 }
 
+function MiniStat({ label, value, tone = 'default' }: { label: string; value: string; tone?: 'default' | 'good' }) {
+  return (
+    <div>
+      <div className="text-[11px] font-medium uppercase tracking-wide text-slate-500">{label}</div>
+      <div className={`mt-0.5 text-lg font-bold tabular-nums ${tone === 'good' ? 'text-emerald-500' : 'text-ink'}`}>{value}</div>
+    </div>
+  );
+}
+
 export const dynamic = 'force-dynamic';
 
 const PERIOD_LABEL: Record<Period, string> = { today: 'Today', week: 'Last 7 Days', month: 'Last 30 Days', all: 'All Time' };
@@ -64,24 +73,30 @@ export default async function DashboardPage({ searchParams }: { searchParams: { 
   const firstName = user.name.split(' ')[0];
   const quote = quoteOfTheDay(today);
   const trend = getDailyTrend(db, user.id, 14);
+  const vendorLabel = vendorId ? vendors.find((v) => v.id === vendorId)?.name || 'Vendor' : null;
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <p className="text-sm font-medium text-brand-400">{greeting(agentHour())}, {firstName} 👋</p>
-          <h1 className="text-xl font-bold">Production Dashboard</h1>
-          <p className="text-sm text-slate-500">
-            <Link href="/leads?status=fresh" className="hover:text-brand-500 hover:underline">{freshCount} fresh leads</Link>
-            {' · '}
-            <Link href="/leads?status=working" className="hover:text-brand-500 hover:underline">{workingCount} in progress</Link>
-            {' right now'}
-          </p>
-          <p className="mt-1 text-xs italic text-slate-400">"{quote}"</p>
-        </div>
-        <div className="flex gap-2">
-          <a href="/dial" className="btn-primary">⚡ Power Dial</a>
-          <Link href="/leads" className="btn-secondary">View Leads</Link>
+      {/* HERO */}
+      <div className="card relative overflow-hidden p-5">
+        <div className="pointer-events-none absolute -left-16 -top-24 h-64 w-64 rounded-full bg-brand-500/20 blur-3xl" />
+        <div className="pointer-events-none absolute -bottom-24 -right-10 h-56 w-56 rounded-full bg-brand-400/10 blur-3xl" />
+        <div className="relative flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <p className="text-sm font-medium text-brand-400">{greeting(agentHour())}, {firstName} 👋</p>
+            <h1 className="text-2xl font-bold tracking-tight">Production Dashboard</h1>
+            <p className="text-sm text-slate-500">
+              <Link href="/leads?status=fresh" className="hover:text-brand-500 hover:underline">{freshCount} fresh leads</Link>
+              {' · '}
+              <Link href="/leads?status=working" className="hover:text-brand-500 hover:underline">{workingCount} in progress</Link>
+              {' right now'}
+            </p>
+            <p className="mt-1.5 text-xs italic text-slate-400">&ldquo;{quote}&rdquo;</p>
+          </div>
+          <div className="flex gap-2">
+            <a href="/dial" className="btn-primary">⚡ Power Dial</a>
+            <Link href="/leads" className="btn-secondary">View Leads</Link>
+          </div>
         </div>
       </div>
 
@@ -104,32 +119,39 @@ export default async function DashboardPage({ searchParams }: { searchParams: { 
         </section>
       )}
 
-      {/* MONEY */}
-      <section>
-        <div className="mb-2 label">💰 Money</div>
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-          <StatCard label="Today's Commission" value={fmtMoney(money.today)} tone="good" icon="💵" />
-          <StatCard label="This Week" value={fmtMoney(money.week)} tone="good" icon="📆" />
-          <StatCard label="This Month" value={fmtMoney(money.month)} tone="good" icon="📈" />
-          <StatCard label="Pending" value={fmtMoney(money.pending)} icon="⏳" />
-          <StatCard label="Net" value={fmtMoney(money.net)} tone="good" icon="🏆" />
+      {/* MONEY — hero figure + trend, secondary stats as a light row instead of five boxes */}
+      <section className="card relative overflow-hidden p-5">
+        <div className="pointer-events-none absolute -right-24 -top-24 h-64 w-64 rounded-full bg-emerald-500/10 blur-3xl" />
+        <div className="relative flex flex-wrap items-end justify-between gap-6">
+          <div>
+            <div className="label mb-1">💰 This Month</div>
+            <div className="text-4xl font-bold leading-none tracking-tight text-ink">{fmtMoney(money.month)}</div>
+            <div className="mt-1.5 text-xs text-slate-500">Net commission booked this month</div>
+          </div>
+          <div className="flex flex-wrap gap-x-6 gap-y-3">
+            <MiniStat label="Today" value={fmtMoney(money.today)} tone="good" />
+            <MiniStat label="This Week" value={fmtMoney(money.week)} tone="good" />
+            <MiniStat label="Pending" value={fmtMoney(money.pending)} />
+            <MiniStat label="Net (Lifetime)" value={fmtMoney(money.net)} tone="good" />
+          </div>
         </div>
-        <div className="card mt-3 p-4">
-          <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">Net Commission — Last 14 Days</div>
+        <div className="relative mt-5">
           <LineChart points={trend.commission} color="#8b5cf6" gradientId="dash-commission-trend" height={90} formatValue={(v) => fmtMoney0(v)} />
         </div>
       </section>
 
-      <div className="flex flex-wrap items-center gap-2">
+      {/* FILTER BAR */}
+      <div className="flex flex-wrap items-center gap-2 rounded-xl border border-line bg-panel2/60 p-1.5">
         {(['today', 'week', 'month', 'all'] as Period[]).map((p) => (
           <a
             key={p}
             href={`/?period=${p}${vendorId ? `&vendor=${vendorId}` : ''}`}
-            className={`rounded-lg px-3 py-1.5 text-sm font-medium ${period === p ? 'bg-brand-500 text-white' : 'bg-panel2 border border-line text-slate-600 hover:bg-slate-100'}`}
+            className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${period === p ? 'bg-brand-500 text-white' : 'text-slate-500 hover:bg-slate-100 hover:text-ink'}`}
           >
             {PERIOD_LABEL[p]}
           </a>
         ))}
+        <div className="mx-1 hidden h-5 w-px bg-line sm:block" />
         <form action="/" method="get" className="flex items-center gap-1.5">
           <input type="hidden" name="period" value={period} />
           <select name="vendor" defaultValue={vendorId || ''} className="input h-[34px] w-44 py-1 text-sm">
@@ -139,12 +161,14 @@ export default async function DashboardPage({ searchParams }: { searchParams: { 
           <button type="submit" className="btn-secondary text-sm">Filter</button>
           {vendorId && <a href={`/?period=${period}`} className="text-xs text-slate-400 hover:underline">Reset</a>}
         </form>
-        <span className="text-xs text-slate-400">— activity, conversion &amp; lead economics below</span>
+        <span className="ml-auto hidden text-xs text-slate-400 lg:inline">activity, conversion &amp; lead economics below</span>
       </div>
 
-      {/* ACTIVITY */}
-      <section>
-        <div className="mb-2 label">📞 Activity ({PERIOD_LABEL[period]}{vendorId ? ` · ${vendors.find((v) => v.id === vendorId)?.name || 'Vendor'}` : ''})</div>
+      {/* ACTIVITY + CONVERSION — one surface, two rows */}
+      <section className="card p-5">
+        <div className="mb-3 flex items-center justify-between">
+          <div className="label">📞 Activity &amp; Conversion — {PERIOD_LABEL[period]}{vendorLabel ? ` · ${vendorLabel}` : ''}</div>
+        </div>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
           <StatCard label="Calls" value={String(activity.calls)} />
           <StatCard label="Contacts" value={String(activity.contacts)} />
@@ -153,11 +177,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: { 
           <StatCard label="Applications" value={String(activity.applications)} />
           <StatCard label="Issued" value={String(activity.issued)} tone="good" href="/leads?status=sold" />
         </div>
-      </section>
-
-      {/* CONVERSION */}
-      <section>
-        <div className="mb-2 label">📈 Conversion{vendorId ? ` · ${vendors.find((v) => v.id === vendorId)?.name || 'Vendor'}` : ''}</div>
+        <div className="my-4 border-t border-line" />
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           <StatCard label="Contact Rate" value={fmtPct(conversion.contactRate)} />
           <StatCard label="Appointment Rate" value={fmtPct(conversion.appointmentRate)} />
