@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import './globals.css';
 import TopNav from '@/components/TopNav';
+import AppointmentReminder from '@/components/AppointmentReminder';
 
 export const metadata: Metadata = {
   title: 'FEX CRM — Lead to Lifetime Value',
@@ -13,6 +14,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body>
         <TopNav />
         <main className="mx-auto max-w-[1400px] px-4 py-5 md:px-6">{children}</main>
+        <AppointmentReminder />
       </body>
     </html>
   );

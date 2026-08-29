@@ -6,6 +6,7 @@ import QuickAccessMenu from './QuickAccessMenu';
 const NAV_ITEMS = [
   { href: '/', label: 'Dashboard' },
   { href: '/leads', label: 'Leads' },
+  { href: '/calendar', label: 'Calendar' },
   { href: '/policies', label: 'Policies' },
   { href: '/commissions', label: 'Commissions' },
   { href: '/analytics', label: 'Analytics' }
