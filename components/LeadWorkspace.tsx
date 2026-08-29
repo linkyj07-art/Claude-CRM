@@ -178,9 +178,17 @@ export default function LeadWorkspace({
       // the next one instead of making the agent click Skip / Next Lead too —
       // relying on the just-cleared pendingCallId here rather than the
       // (still-stale-until-re-render) pendingDisposition flag. No Answer and
-      // Voicemail are the exception: those often deserve an immediate second
-      // attempt on the same lead rather than moving on.
-      if (isDialing && outcome !== 'no_answer' && outcome !== 'voicemail') {
+      // Voicemail are the exception, but only once: after the FIRST such
+      // outcome on this lead, stay put for an immediate redial; once a
+      // SECOND one lands (this lead has now gone unanswered twice), move on
+      // like any other outcome instead of dialing it forever.
+      const isRedialOutcome = outcome === 'no_answer' || outcome === 'voicemail';
+      const priorRedialAttempts = calls.filter(
+        (c) => c.id !== pendingCallId && (c.outcome === 'no_answer' || c.outcome === 'voicemail')
+      ).length;
+      const redialAttemptsSoFar = priorRedialAttempts + (isRedialOutcome ? 1 : 0);
+      const shouldRedial = isRedialOutcome && redialAttemptsSoFar < 2;
+      if (isDialing && !shouldRedial) {
         if (queue.length === 0) { router.push('/leads'); return; }
         const [next, ...rest] = queue;
         router.push(`/leads/${next}?dialing=1${rest.length ? `&queue=${rest.join(',')}` : ''}`);
@@ -271,6 +279,7 @@ export default function LeadWorkspace({
                 <div className="grid grid-cols-2 gap-1.5">
                   <button disabled={busy} onClick={() => logCall('no_answer')} className="btn-secondary text-xs px-2 py-1.5">No Answer</button>
                   <button disabled={busy} onClick={() => logCall('voicemail')} className="btn-secondary text-xs px-2 py-1.5">Voicemail</button>
+                  <button disabled={busy} onClick={() => logCall('google_voice')} className="btn-secondary text-xs px-2 py-1.5">Google Voice</button>
                   <button disabled={busy} onClick={() => logCall('busy')} className="btn-secondary text-xs px-2 py-1.5">Busy</button>
                   <button disabled={busy} onClick={() => logCall('wrong_number')} className="btn-secondary text-xs px-2 py-1.5">Wrong #</button>
                   <button disabled={busy} onClick={() => logCall('connected', 'interested')} className="btn-good text-xs px-2 py-1.5">Connected</button>

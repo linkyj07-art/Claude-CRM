@@ -17,6 +17,7 @@ const CALL_OUTCOME_LABEL: Record<string, string> = {
   pending: 'Dial started',
   no_answer: 'No Answer',
   voicemail: 'Voicemail',
+  google_voice: 'Google Voice',
   connected: 'Connected',
   busy: 'Busy',
   wrong_number: 'Wrong Number',

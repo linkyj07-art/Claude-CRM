@@ -537,7 +537,7 @@ export interface OutcomeSlice {
 }
 
 const OUTCOME_LABELS: Record<string, string> = {
-  no_answer: 'No Answer', voicemail: 'Voicemail', busy: 'Busy', wrong_number: 'Wrong #',
+  no_answer: 'No Answer', voicemail: 'Voicemail', google_voice: 'Google Voice', busy: 'Busy', wrong_number: 'Wrong #',
   connected: 'Connected', dnc: 'DNC', pending: 'In Progress'
 };
 

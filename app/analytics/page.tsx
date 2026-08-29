@@ -17,7 +17,8 @@ const STATUS_COLORS: Record<string, string> = {
 };
 
 const OUTCOME_COLORS: Record<string, string> = {
-  connected: '#4ade80', no_answer: '#64748b', voicemail: '#22d3ee', busy: '#fbbf24', wrong_number: '#fb7185', dnc: '#f87171'
+  connected: '#4ade80', no_answer: '#64748b', voicemail: '#22d3ee', google_voice: '#818cf8',
+  busy: '#fbbf24', wrong_number: '#fb7185', dnc: '#f87171'
 };
 
 export default async function AnalyticsPage() {

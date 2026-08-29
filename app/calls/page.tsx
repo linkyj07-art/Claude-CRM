@@ -12,7 +12,7 @@ type CallRow = {
 };
 
 const OUTCOME_COLOR: Record<string, string> = {
-  connected: 'good', dnc: 'bad', pending: 'warn'
+  connected: 'good', dnc: 'bad', pending: 'warn', google_voice: 'brand'
 };
 
 export default async function CallsPage({ searchParams }: { searchParams: { outcome?: string } }) {
@@ -38,7 +38,7 @@ export default async function CallsPage({ searchParams }: { searchParams: { outc
 
   const OUTCOME_OPTIONS = [
     ['', 'All outcomes'], ['connected', 'Connected'], ['no_answer', 'No Answer'], ['voicemail', 'Voicemail'],
-    ['busy', 'Busy'], ['wrong_number', 'Wrong #'], ['dnc', 'DNC'], ['pending', 'In Progress']
+    ['google_voice', 'Google Voice'], ['busy', 'Busy'], ['wrong_number', 'Wrong #'], ['dnc', 'DNC'], ['pending', 'In Progress']
   ];
 
   return (
