@@ -16,29 +16,45 @@ declare global {
   var __crmDbShutdownRegistered: boolean | undefined;
 }
 
+function tableColumns(db: Database.Database, table: string): string[] {
+  return (db.pragma(`table_info(${table})`) as { name: string }[]).map((c) => c.name);
+}
+
+// Next.js's build spawns several worker processes that each open their own
+// connection to the same on-disk database and run this migration concurrently,
+// so a plain "check then ALTER" can race: two workers both see the column
+// missing and both try to add it, and the loser gets "duplicate column name".
+// Swallowing that specific error makes the add idempotent across processes.
+function addColumnIfMissing(db: Database.Database, table: string, column: string, ddl: string) {
+  if (tableColumns(db, table).includes(column)) return;
+  try {
+    db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${ddl};`);
+  } catch (err) {
+    if (!(err instanceof Error) || !/duplicate column name/i.test(err.message)) throw err;
+  }
+}
+
 // schema.sql only uses CREATE TABLE/INDEX IF NOT EXISTS, so it never alters a
 // table that already exists on a live database. Column additions to existing
 // tables have to be migrated by hand here, guarded by checking the table's
 // current columns first since SQLite has no "ADD COLUMN IF NOT EXISTS".
 function migrate(db: Database.Database) {
-  const noteColumns = (db.pragma('table_info(note_versions)') as { name: string }[]).map((c) => c.name);
+  const noteColumns = tableColumns(db, 'note_versions');
   if (noteColumns.includes('plan_bronze') && !noteColumns.includes('plan_bronze_coverage')) {
-    db.exec(`
-      ALTER TABLE note_versions ADD COLUMN plan_bronze_coverage TEXT;
-      ALTER TABLE note_versions ADD COLUMN plan_bronze_price TEXT;
-      ALTER TABLE note_versions ADD COLUMN plan_silver_coverage TEXT;
-      ALTER TABLE note_versions ADD COLUMN plan_silver_price TEXT;
-      ALTER TABLE note_versions ADD COLUMN plan_gold_coverage TEXT;
-      ALTER TABLE note_versions ADD COLUMN plan_gold_price TEXT;
-    `);
+    for (const col of ['plan_bronze_coverage', 'plan_bronze_price', 'plan_silver_coverage', 'plan_silver_price', 'plan_gold_coverage', 'plan_gold_price']) {
+      addColumnIfMissing(db, 'note_versions', col, 'TEXT');
+    }
     // Best-effort carry-over: the old fields were free text like "$50/mo",
     // which reads naturally as the price half of the new pair.
     db.exec(`
-      UPDATE note_versions SET plan_bronze_price = plan_bronze WHERE plan_bronze IS NOT NULL;
-      UPDATE note_versions SET plan_silver_price = plan_silver WHERE plan_silver IS NOT NULL;
-      UPDATE note_versions SET plan_gold_price = plan_gold WHERE plan_gold IS NOT NULL;
+      UPDATE note_versions SET plan_bronze_price = plan_bronze WHERE plan_bronze IS NOT NULL AND plan_bronze_price IS NULL;
+      UPDATE note_versions SET plan_silver_price = plan_silver WHERE plan_silver IS NOT NULL AND plan_silver_price IS NULL;
+      UPDATE note_versions SET plan_gold_price = plan_gold WHERE plan_gold IS NOT NULL AND plan_gold_price IS NULL;
     `);
   }
+
+  addColumnIfMissing(db, 'customers', 'trusted_form_url', 'TEXT');
+  addColumnIfMissing(db, 'note_versions', 'beneficiary_dob', 'TEXT');
 }
 
 function createConnection(): Database.Database {

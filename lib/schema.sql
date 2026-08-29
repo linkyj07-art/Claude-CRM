@@ -35,6 +35,7 @@ CREATE TABLE IF NOT EXISTS customers (
   lead_vendor_id TEXT REFERENCES lead_vendors(id),
   best_time TEXT,
   lead_cost REAL DEFAULT 0,
+  trusted_form_url TEXT,
   status TEXT NOT NULL DEFAULT 'fresh',
     -- fresh | working | aging_45_90 | aging_90_plus | invalid | disputed | dnc | sold | lost | archived
   purchased_at TEXT NOT NULL DEFAULT (datetime('now')),
@@ -58,6 +59,7 @@ CREATE TABLE IF NOT EXISTS note_versions (
   note_date TEXT,
   phone TEXT,
   beneficiary TEXT,
+  beneficiary_dob TEXT,
   budget TEXT,
   health TEXT,
   discount TEXT,

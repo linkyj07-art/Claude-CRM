@@ -82,10 +82,11 @@ export default function ImportLeadsButton({ vendors }: { vendors: LeadVendor[] }
             {!result && (
               <>
                 <p className="mb-3 text-sm text-slate-500">
-                  Upload a .csv export of your lead sheet. Column headers like &quot;First Name&quot;,
-                  &quot;Phone&quot;, &quot;Email&quot; are matched automatically. In Google Sheets: File → Download → Comma Separated Values.
+                  Upload a .csv or .xlsx lead sheet. Column headers like &quot;First Name&quot;, &quot;Phone&quot;,
+                  &quot;State&quot;, &quot;How Much Coverage Do You Need?&quot; are matched automatically — including
+                  full state names and coverage ranges like &quot;$10k - $25k&quot;.
                 </p>
-                <input ref={fileRef} type="file" accept=".csv,text/csv" className="input mb-3 w-full" />
+                <input ref={fileRef} type="file" accept=".csv,.xlsx,text/csv" className="input mb-3 w-full" />
 
                 <div className="mb-3 grid grid-cols-2 gap-2 rounded-lg border border-line bg-slate-50 p-3">
                   <div className="col-span-2 text-xs font-semibold text-slate-500">

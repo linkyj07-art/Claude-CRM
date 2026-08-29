@@ -28,7 +28,7 @@ export default function DashboardPage({ searchParams }: { searchParams: { period
           <p className="text-sm text-slate-500">{freshCount} fresh leads · {workingCount} in progress right now</p>
         </div>
         <div className="flex gap-2">
-          <a href="/dial" className="btn-primary">☎️ Dial For The Day</a>
+          <a href="/dial" className="btn-primary">⚡ Power Dial</a>
           <Link href="/leads" className="btn-secondary">View Leads</Link>
         </div>
       </div>

@@ -89,6 +89,50 @@ export const STATE_TIMEZONES: Record<string, string> = {
 
 export const US_STATES = Object.keys(STATE_TIMEZONES).sort();
 
+const STATE_NAME_TO_ABBR: Record<string, string> = {
+  alabama: 'AL', alaska: 'AK', arizona: 'AZ', arkansas: 'AR', california: 'CA',
+  colorado: 'CO', connecticut: 'CT', delaware: 'DE', florida: 'FL', georgia: 'GA',
+  hawaii: 'HI', idaho: 'ID', illinois: 'IL', indiana: 'IN', iowa: 'IA',
+  kansas: 'KS', kentucky: 'KY', louisiana: 'LA', maine: 'ME', maryland: 'MD',
+  massachusetts: 'MA', michigan: 'MI', minnesota: 'MN', mississippi: 'MS', missouri: 'MO',
+  montana: 'MT', nebraska: 'NE', nevada: 'NV', 'new hampshire': 'NH', 'new jersey': 'NJ',
+  'new mexico': 'NM', 'new york': 'NY', 'north carolina': 'NC', 'north dakota': 'ND', ohio: 'OH',
+  oklahoma: 'OK', oregon: 'OR', pennsylvania: 'PA', 'rhode island': 'RI', 'south carolina': 'SC',
+  'south dakota': 'SD', tennessee: 'TN', texas: 'TX', utah: 'UT', vermont: 'VT',
+  virginia: 'VA', washington: 'WA', 'west virginia': 'WV', wisconsin: 'WI', wyoming: 'WY',
+  'district of columbia': 'DC', 'washington dc': 'DC', 'washington d.c.': 'DC'
+};
+
+// Accepts either a 2-letter code or a full state name (any case) and returns the
+// USPS abbreviation, or null if it isn't recognized. Never guess from the first
+// two letters of a full name — "Alaska"/"Arizona" would silently collide with
+// Alabama/Arkansas's real abbreviations.
+export function normalizeState(value: string | null | undefined): string | null {
+  const v = (value || '').trim();
+  if (!v) return null;
+  if (v.length === 2 && US_STATES.includes(v.toUpperCase())) return v.toUpperCase();
+  return STATE_NAME_TO_ABBR[v.toLowerCase()] || null;
+}
+
+// Lead sheets often give coverage as a range or a bound ("$10k - $25k",
+// "$25,001 - $50,000", "Less than $250,000") rather than a single number.
+// Returns the average of every number found (a single number if there's only
+// one), with "k" suffixes expanded, or null if nothing numeric is present.
+export function parseCoverageRange(text: string | null | undefined): number | null {
+  if (!text) return null;
+  const matches = text.match(/[\d,]+(\.\d+)?\s*[kK]?/g);
+  if (!matches) return null;
+  const numbers = matches
+    .map((m) => {
+      const isK = /[kK]\s*$/.test(m);
+      const digits = parseFloat(m.replace(/[,kK\s]/g, ''));
+      return isNaN(digits) ? null : digits * (isK ? 1000 : 1);
+    })
+    .filter((n): n is number => n !== null && n > 0);
+  if (numbers.length === 0) return null;
+  return numbers.reduce((a, b) => a + b, 0) / numbers.length;
+}
+
 export function localTimeForState(state: string | null): string {
   const tz = (state && STATE_TIMEZONES[state]) || 'America/New_York';
   try {

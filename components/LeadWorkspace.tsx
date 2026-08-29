@@ -16,9 +16,10 @@ type AnyRow = Record<string, any>;
 
 const NOTE_FIELDS: { key: keyof NoteVersion; label: string; type?: 'text' | 'textarea' | 'date' }[] = [
   { key: 'name', label: 'NAME' },
-  { key: 'note_date', label: 'DATE', type: 'date' },
+  { key: 'note_date', label: 'DOB', type: 'date' },
   { key: 'phone', label: 'PHONE #' },
   { key: 'beneficiary', label: 'BENI' },
+  { key: 'beneficiary_dob', label: 'BENI DOB', type: 'date' },
   { key: 'budget', label: 'BUDGET' },
   { key: 'health', label: 'HEALTH', type: 'textarea' },
   { key: 'discount', label: 'DISCOUNT (Non-Smoker)' },
@@ -39,9 +40,9 @@ function emptyNoteForm(customer: Customer): AnyRow {
   return {
     label: 'Call Note',
     name: `${customer.first_name} ${customer.last_name}`,
-    note_date: new Date().toISOString().slice(0, 10),
+    note_date: customer.dob ? customer.dob.slice(0, 10) : '',
     phone: customer.phone || '',
-    beneficiary: '', budget: '', health: '', discount: '',
+    beneficiary: '', beneficiary_dob: '', budget: '', health: '', discount: '',
     bank_name: '', bank_state: customer.state || '', routing_number: '', account_number: '',
     mailing_address: '', email: customer.email || '', born_in: '', ssn: '',
     plan_bronze_coverage: '', plan_bronze_price: '', plan_silver_coverage: '', plan_silver_price: '',
@@ -50,7 +51,7 @@ function emptyNoteForm(customer: Customer): AnyRow {
 }
 
 const NOTE_FORM_KEYS = [
-  'label', 'name', 'note_date', 'phone', 'beneficiary', 'budget', 'health', 'discount',
+  'label', 'name', 'note_date', 'phone', 'beneficiary', 'beneficiary_dob', 'budget', 'health', 'discount',
   'bank_name', 'bank_state', 'routing_number', 'account_number', 'mailing_address', 'email',
   'born_in', 'ssn', 'plan_bronze_coverage', 'plan_bronze_price', 'plan_silver_coverage', 'plan_silver_price',
   'plan_gold_coverage', 'plan_gold_price', 'draft_date', 'code_word', 'free_text'
@@ -80,7 +81,6 @@ export default function LeadWorkspace({
   const [showSell, setShowSell] = useState(false);
   const [showQuote, setShowQuote] = useState(false);
   const [showAppt, setShowAppt] = useState(false);
-  const [showSensitive, setShowSensitive] = useState(false);
   const [activeTab, setActiveTab] = useState<'calls' | 'notes'>('calls');
 
   const badge = statusBadge(customer.status, customer.purchased_at);
@@ -101,6 +101,7 @@ export default function LeadWorkspace({
   const dailyLimitReached = todayCount >= MAX_CALLS_PER_DAY;
   const lastNote = notes[0];
   const [callError, setCallError] = useState('');
+  const [pendingDisposition, setPendingDisposition] = useState(false);
 
   async function refresh() {
     router.refresh();
@@ -119,6 +120,7 @@ export default function LeadWorkspace({
         setCallError(data.error || 'Could not log that call.');
         return;
       }
+      setPendingDisposition(false);
       if (outcome === 'dnc' && confirm('Marked Do Not Call. Delete this lead entirely too?')) {
         await fetch(`/api/leads/${customer.id}`, { method: 'DELETE' });
         router.push('/leads');
@@ -157,6 +159,7 @@ export default function LeadWorkspace({
   }
 
   function nextInQueue() {
+    if (pendingDisposition) return;
     if (queue.length === 0) { router.push('/leads'); return; }
     const [next, ...rest] = queue;
     const dest = `/leads/${next}?dialing=1${rest.length ? `&queue=${rest.join(',')}` : ''}`;
@@ -167,10 +170,11 @@ export default function LeadWorkspace({
     <div className="space-y-4">
       {isDialing && (
         <div className="card flex items-center justify-between bg-brand-50 p-3 text-sm">
-          <span className="font-medium text-brand-700">📞 Dialing for the day — {queue.length} more lead{queue.length === 1 ? '' : 's'} in queue</span>
-          <div className="flex gap-2">
+          <span className="font-medium text-brand-700">⚡ Power Dial — {queue.length} more lead{queue.length === 1 ? '' : 's'} in queue</span>
+          <div className="flex items-center gap-2">
+            {pendingDisposition && <span className="text-xs text-amber-700">Log this call&apos;s outcome before moving on</span>}
             <Link href="/leads" className="btn-secondary text-xs">Exit Queue</Link>
-            <button className="btn-primary text-xs" onClick={nextInQueue}>Skip / Next Lead ▶</button>
+            <button className="btn-primary text-xs" disabled={pendingDisposition} onClick={nextInQueue}>Skip / Next Lead ▶</button>
           </div>
         </div>
       )}
@@ -191,7 +195,7 @@ export default function LeadWorkspace({
         </div>
         <div className="flex flex-wrap gap-2">
           {customer.phone && (
-            <a href={`tel:${customer.phone.replace(/[^\d+]/g, '')}`} className="btn-good">
+            <a href={`tel:${customer.phone.replace(/[^\d+]/g, '')}`} className="btn-good" onClick={() => setPendingDisposition(true)}>
               📞 Call {customer.phone}
             </a>
           )}
@@ -285,13 +289,6 @@ export default function LeadWorkspace({
           <div className="mb-2 flex items-center justify-between">
             <div className="label">Notes {!editingNote && <span className="font-normal normal-case text-slate-400">(locked — click Edit to change)</span>}</div>
             <div className="flex items-center gap-3">
-              <button
-                className="text-xs font-medium text-brand-600 hover:underline"
-                onClick={() => setShowSensitive((v) => !v)}
-                type="button"
-              >
-                {showSensitive ? 'Hide' : 'Show'} bank / SSN fields
-              </button>
               {!editingNote && (
                 <button className="btn-secondary text-xs" type="button" onClick={() => setEditingNote(true)}>✏️ Edit</button>
               )}
@@ -349,30 +346,28 @@ export default function LeadWorkspace({
             </div>
           </div>
 
-          {showSensitive && (
-            <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-3">
-              <div className="mb-2 text-xs font-semibold text-amber-800">🔒 Protected financial info — kept out of lead lists &amp; search</div>
-              <RoutingLookup
-                bankName={noteForm.bank_name}
-                state={noteForm.bank_state || customer.state || ''}
-                routingNumber={noteForm.routing_number}
-                onBankChange={(v) => setNoteForm((s) => ({ ...s, bank_name: v }))}
-                onStateChange={(v) => setNoteForm((s) => ({ ...s, bank_state: v }))}
-                onRoutingChange={(v) => setNoteForm((s) => ({ ...s, routing_number: v }))}
-                disabled={!editingNote}
-              />
-              <div className="mt-2 grid grid-cols-2 gap-2">
-                <div>
-                  <label className="label mb-1 block">ACCOUNT #</label>
-                  <input className="input disabled:bg-slate-50 disabled:text-slate-500" disabled={!editingNote} value={noteForm.account_number || ''} onChange={(e) => setNoteForm((s) => ({ ...s, account_number: e.target.value }))} />
-                </div>
-                <div>
-                  <label className="label mb-1 block">SSN</label>
-                  <input className="input disabled:bg-slate-50 disabled:text-slate-500" disabled={!editingNote} value={noteForm.ssn || ''} onChange={(e) => setNoteForm((s) => ({ ...s, ssn: e.target.value }))} placeholder="XXX-XX-XXXX" />
-                </div>
+          <div className="mt-3 rounded-lg border border-line p-3">
+            <div className="mb-2 text-xs font-semibold text-slate-500">Bank / SSN</div>
+            <RoutingLookup
+              bankName={noteForm.bank_name}
+              state={noteForm.bank_state || customer.state || ''}
+              routingNumber={noteForm.routing_number}
+              onBankChange={(v) => setNoteForm((s) => ({ ...s, bank_name: v }))}
+              onStateChange={(v) => setNoteForm((s) => ({ ...s, bank_state: v }))}
+              onRoutingChange={(v) => setNoteForm((s) => ({ ...s, routing_number: v }))}
+              disabled={!editingNote}
+            />
+            <div className="mt-2 grid grid-cols-2 gap-2">
+              <div>
+                <label className="label mb-1 block">ACCOUNT #</label>
+                <input className="input disabled:bg-slate-50 disabled:text-slate-500" disabled={!editingNote} value={noteForm.account_number || ''} onChange={(e) => setNoteForm((s) => ({ ...s, account_number: e.target.value }))} />
+              </div>
+              <div>
+                <label className="label mb-1 block">SSN</label>
+                <input className="input disabled:bg-slate-50 disabled:text-slate-500" disabled={!editingNote} value={noteForm.ssn || ''} onChange={(e) => setNoteForm((s) => ({ ...s, ssn: e.target.value }))} placeholder="XXX-XX-XXXX" />
               </div>
             </div>
-          )}
+          </div>
 
           <div className="mt-3 flex items-center justify-between">
             {editingNote ? (

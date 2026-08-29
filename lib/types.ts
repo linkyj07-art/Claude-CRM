@@ -32,6 +32,7 @@ export interface Customer {
   lead_vendor_id: string | null;
   best_time: string | null;
   lead_cost: number;
+  trusted_form_url: string | null;
   status: CustomerStatus;
   purchased_at: string;
   sold_at: string | null;
@@ -48,6 +49,7 @@ export interface NoteVersion {
   note_date: string | null;
   phone: string | null;
   beneficiary: string | null;
+  beneficiary_dob: string | null;
   budget: string | null;
   health: string | null;
   discount: string | null;

@@ -80,9 +80,11 @@ Vercel's platform — just a larger lift than the Railway/Fly.io path above.
 
 - **Dashboard (`/`)** — money (today/week/month/pending/chargebacks/net),
   activity, conversion rates, and lead economics, with a period switcher.
-- **Dial For The Day (`/dial`)** — queues fresh → working → aging leads and
-  drops you straight into the first one's workspace, with a "skip / next"
-  control to move through the queue.
+- **Power Dial (`/dial`)** — queues fresh → working → 45-90 day → 90+ day
+  leads (youngest first within each tier) and drops you straight into the
+  first one's workspace, with a "skip / next" control to move through the
+  queue. Once you tap Call on a lead, you can't skip to the next one until
+  you log that call's outcome.
 - **Leads (`/leads`)** — searchable/filterable list, quick "+ Add Lead".
 - **Lead Workspace (`/leads/[id]`)** — the core screen: lead info, live
   local time for the lead's state vs. your Mountain time, call-attempt

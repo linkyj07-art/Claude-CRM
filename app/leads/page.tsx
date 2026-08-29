@@ -45,7 +45,7 @@ export default function LeadsPage({ searchParams }: { searchParams: { status?: s
           <NewLeadButton vendors={vendors} />
           <ImportLeadsButton vendors={vendors} />
           <Link href="/leads/review" className="btn-secondary">🔎 Review Queue</Link>
-          <a href="/dial" className="btn-primary">☎️ Dial For The Day</a>
+          <a href="/dial" className="btn-primary">⚡ Power Dial</a>
         </div>
       </div>
 

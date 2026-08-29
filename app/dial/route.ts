@@ -6,8 +6,8 @@ export async function GET(req: NextRequest) {
   const rows = db
     .prepare(
       `SELECT id, status FROM customers
-       WHERE archived = 0 AND status IN ('fresh','working','aging_45_90')
-       ORDER BY CASE status WHEN 'fresh' THEN 0 WHEN 'working' THEN 1 ELSE 2 END, purchased_at ASC`
+       WHERE archived = 0 AND status IN ('fresh','working','aging_45_90','aging_90_plus')
+       ORDER BY CASE status WHEN 'fresh' THEN 0 WHEN 'working' THEN 1 WHEN 'aging_45_90' THEN 2 ELSE 3 END, purchased_at ASC`
     )
     .all() as { id: string; status: string }[];
 
