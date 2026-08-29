@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { getDb } from '@/lib/db';
 import StatCard from '@/components/StatCard';
 import { fmtMoney, fmtMoney0, fmtPct, agentDateStr, agentWeekStart, agentHour } from '@/lib/util';
-import { getMoneyTiles, getActivityStats, getConversionRates, getLeadEconomics, getGoalProgress, getDailyTrend, Period } from '@/lib/metrics';
+import { getMoneyTiles, getActivityStats, getConversionRates, getLeadEconomics, getGoalProgress, getDailyTrend, getMoneyComparison, getRecentActivity, Period } from '@/lib/metrics';
 import { DailyGoal, WeeklyGoal, LeadVendor } from '@/lib/types';
 import { quoteOfTheDay } from '@/lib/quotes';
 import { getCurrentUser } from '@/lib/currentUser';
@@ -25,13 +25,41 @@ function GoalBar({ label, actual, target }: { label: string; actual: number; tar
   );
 }
 
-function MiniStat({ label, value, tone = 'default' }: { label: string; value: string; tone?: 'default' | 'good' }) {
+function ChangeBadge({ pct }: { pct: number | null }) {
+  if (pct === null) return null;
+  const up = pct >= 0;
+  return (
+    <span className={`ml-1.5 text-[11px] font-semibold ${up ? 'text-emerald-500' : 'text-red-400'}`}>
+      {up ? '▲' : '▼'} {Math.abs(pct).toFixed(0)}%
+    </span>
+  );
+}
+
+function MiniStat({ label, value, tone = 'default', changePct }: { label: string; value: string; tone?: 'default' | 'good'; changePct?: number | null }) {
   return (
     <div>
       <div className="text-[11px] font-medium uppercase tracking-wide text-slate-500">{label}</div>
-      <div className={`mt-0.5 text-lg font-bold tabular-nums ${tone === 'good' ? 'text-emerald-500' : 'text-ink'}`}>{value}</div>
+      <div className={`mt-0.5 text-lg font-bold tabular-nums ${tone === 'good' ? 'text-emerald-500' : 'text-ink'}`}>
+        {value}
+        {changePct !== undefined && <ChangeBadge pct={changePct} />}
+      </div>
     </div>
   );
+}
+
+const ACTIVITY_ICON: Record<string, string> = {
+  lead_purchased: '🆕', status_change: '🔄', call: '📞', note: '📝',
+  quote: '🧮', appointment: '📅', policy_issued: '🏆', commission: '💰'
+};
+
+function timeAgo(occurredAt: string): string {
+  const then = new Date(occurredAt.replace(' ', 'T') + (occurredAt.includes('Z') ? '' : 'Z'));
+  const mins = Math.max(0, Math.floor((Date.now() - then.getTime()) / 60000));
+  if (mins < 1) return 'just now';
+  if (mins < 60) return `${mins}m ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}h ago`;
+  return `${Math.floor(hours / 24)}d ago`;
 }
 
 export const dynamic = 'force-dynamic';
@@ -57,6 +85,8 @@ export default async function DashboardPage({ searchParams }: { searchParams: { 
   const activity = getActivityStats(db, period, user.id, vendorId);
   const conversion = getConversionRates(activity);
   const leadEcon = getLeadEconomics(db, activity, period, user.id, vendorId);
+  const moneyComparison = getMoneyComparison(db, user.id);
+  const recentActivity = getRecentActivity(db, user.id, 8);
 
   const freshCount = (db.prepare(`SELECT COUNT(*) n FROM customers WHERE status = 'fresh' AND archived = 0 AND owner_id = ?`).get(user.id) as { n: number }).n;
   const workingCount = (db.prepare(`SELECT COUNT(*) n FROM customers WHERE status IN ('working','aging_45_90') AND archived = 0 AND owner_id = ?`).get(user.id) as { n: number }).n;
@@ -125,12 +155,15 @@ export default async function DashboardPage({ searchParams }: { searchParams: { 
         <div className="relative flex flex-wrap items-end justify-between gap-6">
           <div>
             <div className="label mb-1">💰 This Month</div>
-            <div className="text-4xl font-bold leading-none tracking-tight text-ink">{fmtMoney(money.month)}</div>
-            <div className="mt-1.5 text-xs text-slate-500">Net commission booked this month</div>
+            <div className="flex items-baseline gap-1">
+              <div className="text-4xl font-bold leading-none tracking-tight text-ink">{fmtMoney(money.month)}</div>
+              <ChangeBadge pct={moneyComparison.monthChangePct} />
+            </div>
+            <div className="mt-1.5 text-xs text-slate-500">Net commission booked this month · vs. prior 30 days</div>
           </div>
           <div className="flex flex-wrap gap-x-6 gap-y-3">
-            <MiniStat label="Today" value={fmtMoney(money.today)} tone="good" />
-            <MiniStat label="This Week" value={fmtMoney(money.week)} tone="good" />
+            <MiniStat label="Today" value={fmtMoney(money.today)} tone="good" changePct={moneyComparison.todayChangePct} />
+            <MiniStat label="This Week" value={fmtMoney(money.week)} tone="good" changePct={moneyComparison.weekChangePct} />
             <MiniStat label="Pending" value={fmtMoney(money.pending)} />
             <MiniStat label="Net (Lifetime)" value={fmtMoney(money.net)} tone="good" />
           </div>
@@ -186,21 +219,46 @@ export default async function DashboardPage({ searchParams }: { searchParams: { 
         </div>
       </section>
 
-      {/* LEAD ECONOMICS */}
-      <section>
-        <div className="mb-2 label">💳 Lead Economics</div>
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-          <StatCard label="Lead Spend" value={fmtMoney0(leadEcon.leadSpend)} />
-          <StatCard label="Cost / Lead" value={leadEcon.costPerLead !== null ? fmtMoney(leadEcon.costPerLead) : '—'} />
-          <StatCard label="Cost / Issued" value={leadEcon.costPerIssued !== null ? fmtMoney0(leadEcon.costPerIssued) : '—'} />
-          <StatCard label="Net Commission" value={fmtMoney0(leadEcon.netCommission)} tone="good" href="/commissions" />
-          <StatCard label="ROI" value={leadEcon.roi !== null ? `${leadEcon.roi.toFixed(0)}%` : '—'} tone={leadEcon.roi !== null && leadEcon.roi >= 0 ? 'good' : 'bad'} href="/analytics" />
-        </div>
-      </section>
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_320px]">
+        <div className="space-y-4">
+          {/* LEAD ECONOMICS */}
+          <section>
+            <div className="mb-2 label">💳 Lead Economics</div>
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+              <StatCard label="Lead Spend" value={fmtMoney0(leadEcon.leadSpend)} />
+              <StatCard label="Cost / Lead" value={leadEcon.costPerLead !== null ? fmtMoney(leadEcon.costPerLead) : '—'} />
+              <StatCard label="Cost / Issued" value={leadEcon.costPerIssued !== null ? fmtMoney0(leadEcon.costPerIssued) : '—'} />
+              <StatCard label="Net Commission" value={fmtMoney0(leadEcon.netCommission)} tone="good" href="/commissions" />
+              <StatCard label="ROI" value={leadEcon.roi !== null ? `${leadEcon.roi.toFixed(0)}%` : '—'} tone={leadEcon.roi !== null && leadEcon.roi >= 0 ? 'good' : 'bad'} href="/analytics" />
+            </div>
+          </section>
 
-      <div className="card p-4 text-sm text-slate-500">
-        Want the full pipeline, cost-per-stage breakdown, and ROI by vendor / lead age / state / source?
-        See <Link href="/analytics" className="font-medium text-brand-600 hover:underline">Analytics →</Link>
+          <div className="card p-4 text-sm text-slate-500">
+            Want the full pipeline, cost-per-stage breakdown, and ROI by vendor / lead age / state / source?
+            See <Link href="/analytics" className="font-medium text-brand-600 hover:underline">Analytics →</Link>
+          </div>
+        </div>
+
+        {/* RECENT ACTIVITY */}
+        <div className="card p-4">
+          <div className="label mb-3">🕒 Recent Activity</div>
+          {recentActivity.length === 0 ? (
+            <div className="text-sm text-slate-400">Nothing logged yet — activity from your leads will show up here.</div>
+          ) : (
+            <div className="space-y-3">
+              {recentActivity.map((a) => (
+                <Link key={a.id} href={`/leads/${a.customerId}`} className="flex gap-2.5 rounded-lg -mx-1.5 px-1.5 py-1 hover:bg-slate-50">
+                  <span className="mt-0.5 text-sm">{ACTIVITY_ICON[a.eventType] || '•'}</span>
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate text-xs font-medium text-ink">{a.customerName}</div>
+                    <div className="truncate text-xs text-slate-500">{a.summary}</div>
+                  </div>
+                  <span className="shrink-0 text-[11px] text-slate-400">{timeAgo(a.occurredAt)}</span>
+                </Link>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

@@ -555,3 +555,73 @@ export function getCallOutcomeBreakdown(db: Database.Database, ownerId: string):
     .map((r) => ({ outcome: r.outcome, label: OUTCOME_LABELS[r.outcome] || r.outcome, count: r.n }))
     .sort((a, b) => b.count - a.count);
 }
+
+export interface MoneyComparison {
+  todayChangePct: number | null;
+  weekChangePct: number | null;
+  monthChangePct: number | null;
+}
+
+function sumCommissionBetween(db: Database.Database, ownerId: string, sinceISO: string, untilISO: string): number {
+  const row = db
+    .prepare(`SELECT COALESCE(SUM(cm.net_commission),0) s FROM commissions cm JOIN customers c ON c.id = cm.customer_id WHERE c.owner_id = ? AND cm.created_at >= ? AND cm.created_at < ?`)
+    .get(ownerId, sinceISO, untilISO) as { s: number };
+  return row.s;
+}
+
+function pctChange(curr: number, prev: number): number | null {
+  if (prev === 0) return curr > 0 ? 100 : null;
+  return ((curr - prev) / prev) * 100;
+}
+
+// "This Month"/"This Week" on the dashboard are rolling 30/7-day windows
+// (see periodStartISO), not calendar boundaries, so the fair prior-period
+// comparison is the equal-length window immediately before each one.
+export function getMoneyComparison(db: Database.Database, ownerId: string): MoneyComparison {
+  const now = new Date();
+  const iso = (d: Date) => d.toISOString().slice(0, 19).replace('T', ' ');
+  const daysAgo = (n: number) => { const d = new Date(now); d.setDate(d.getDate() - n); return d; };
+  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const yesterdayStart = new Date(todayStart); yesterdayStart.setDate(yesterdayStart.getDate() - 1);
+
+  const todayVal = sumCommissionBetween(db, ownerId, iso(todayStart), iso(now));
+  const yesterdayVal = sumCommissionBetween(db, ownerId, iso(yesterdayStart), iso(todayStart));
+  const weekVal = sumCommissionBetween(db, ownerId, iso(daysAgo(7)), iso(now));
+  const prevWeekVal = sumCommissionBetween(db, ownerId, iso(daysAgo(14)), iso(daysAgo(7)));
+  const monthVal = sumCommissionBetween(db, ownerId, iso(daysAgo(30)), iso(now));
+  const prevMonthVal = sumCommissionBetween(db, ownerId, iso(daysAgo(60)), iso(daysAgo(30)));
+
+  return {
+    todayChangePct: pctChange(todayVal, yesterdayVal),
+    weekChangePct: pctChange(weekVal, prevWeekVal),
+    monthChangePct: pctChange(monthVal, prevMonthVal)
+  };
+}
+
+export interface ActivityItem {
+  id: string;
+  customerId: string;
+  customerName: string;
+  eventType: string;
+  summary: string;
+  occurredAt: string;
+}
+
+export function getRecentActivity(db: Database.Database, ownerId: string, limit = 8): ActivityItem[] {
+  const rows = db
+    .prepare(
+      `SELECT a.id, a.customer_id, c.first_name, c.last_name, a.event_type, a.summary, a.occurred_at
+       FROM audit_history a JOIN customers c ON c.id = a.customer_id
+       WHERE c.owner_id = ?
+       ORDER BY a.occurred_at DESC LIMIT ?`
+    )
+    .all(ownerId, limit) as { id: string; customer_id: string; first_name: string; last_name: string; event_type: string; summary: string; occurred_at: string }[];
+  return rows.map((r) => ({
+    id: r.id,
+    customerId: r.customer_id,
+    customerName: `${r.first_name} ${r.last_name}`,
+    eventType: r.event_type,
+    summary: r.summary,
+    occurredAt: r.occurred_at
+  }));
+}
