@@ -22,15 +22,24 @@ function LoginForm() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, password })
       });
-      const data = await res.json();
+      let data: { error?: string } = {};
+      try {
+        data = await res.json();
+      } catch {
+        // Server sent something that wasn't JSON (e.g. a 500 error page) —
+        // still surface a visible error instead of silently doing nothing.
+      }
       if (!res.ok) {
-        setError(data.error || 'Login failed.');
+        setError(data.error || `Login failed (server said: ${res.status}). Try again in a moment.`);
+        setBusy(false);
         return;
       }
-      const next = params.get('next') || '/';
-      router.push(next);
-      router.refresh();
-    } finally {
+      // Full navigation (not client-side router.push) so the freshly-set
+      // session cookie is guaranteed to be picked up by middleware on the
+      // very next request, instead of relying on the client router's cache.
+      window.location.href = params.get('next') || '/';
+    } catch (err) {
+      setError('Could not reach the server. Check your connection and try again.');
       setBusy(false);
     }
   }
