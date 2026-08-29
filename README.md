@@ -162,23 +162,36 @@ useful when you've got several tabs/sites open and Quo isn't the focused app.
 
 The CRM runs in your browser and Quo is a separate desktop app, so the button
 can't click Quo's UI directly (browsers can't reach outside the tab). Instead
-it talks to a tiny local helper that runs alongside the CRM on your Mac:
+it talks to a tiny local helper that runs alongside the CRM on your Mac.
 
-1. **One-time setup:** open **System Settings → Privacy & Security →
-   Accessibility** and enable whatever terminal app you'll run the helper
-   from (Terminal, iTerm, your editor's integrated terminal, etc.) — it needs
-   permission to control the Mac via System Events to switch focus to Quo and
-   send its hangup shortcut.
-2. **Start the helper** in a terminal tab and leave it running while you make
-   calls:
-   ```bash
-   npm run quo-helper
-   ```
-   It listens on `http://127.0.0.1:8787` and does three things per click:
-   switches focus to Quo, sends Quo's own end-call shortcut (`Cmd+Shift+H` by
-   default), then switches focus back to whatever you were using.
-3. **Click ☎️ End Quo Call** in the Lead Workspace. If the helper isn't
-   running, the button tells you so instead of failing silently.
+### Setup (run once, on the Mac that runs Quo)
+
+```bash
+bash scripts/install-quo-helper.sh
+```
+
+This installs Node if you don't have it, opens the macOS Accessibility
+settings pane for you, and starts the helper. The **one thing no script can
+do for you** is click the toggle in that Accessibility pane — macOS
+deliberately blocks any program from granting itself that permission, so
+that's a one-time manual click on your end. The installer tells you exactly
+which entry to enable.
+
+Want it to start automatically every time you log in, instead of running the
+script by hand each day?
+```bash
+bash scripts/install-quo-helper.sh --autostart
+```
+This registers a `launchd` agent that starts the helper at login and
+restarts it if it ever crashes (logs at `data/quo-helper.log`). To remove it
+later: `launchctl unload ~/Library/LaunchAgents/com.crm.quo-helper.plist &&
+rm ~/Library/LaunchAgents/com.crm.quo-helper.plist`.
+
+Either way, it listens on `http://127.0.0.1:8787` and does three things per
+click of **☎️ End Quo Call**: switches focus to Quo, sends Quo's own end-call
+shortcut (`Cmd+Shift+H` by default), then switches focus back to whatever you
+were using. If the helper isn't running, the button tells you so instead of
+failing silently.
 
 If your Quo hangup shortcut isn't `Cmd+Shift+H`, or Quo's app name differs,
 override with environment variables before starting the helper:
