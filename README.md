@@ -207,6 +207,35 @@ not reachable from outside your machine. See the comments in
 `scripts/quo-helper-server.js` for the full detail, including why it has no
 auth token (the only thing it can do is hang up a call).
 
+## Incoming call popup
+
+When a call rings in on Quo from a number that matches an existing lead, the
+CRM can pop up that lead's name — as a real OS-level notification you'll see
+even if the CRM tab isn't in front — with a click-through straight to their
+Lead Workspace. Unmatched numbers are silently ignored.
+
+This works through Quo's own **Zapier** integration (Quo → Settings →
+Connect other platforms → Zapier), since Quo doesn't expose incoming-call
+events to outside tools directly. Set it up once:
+
+1. **Generate a secret token** for the webhook — any long random string works:
+   ```bash
+   openssl rand -hex 24
+   ```
+2. **Add it as an environment variable** on your deployment: `QUO_WEBHOOK_TOKEN=<the value from step 1>` (Railway: your service → **Variables**).
+3. **In Zapier**, create a new Zap:
+   - **Trigger:** Quo → an incoming/new call event (Zapier will show whatever call events Quo's integration exposes — pick the one that fires when a call rings in).
+   - **Action:** *Webhooks by Zapier* → **POST**.
+     - **URL:** `https://<your-crm-domain>/api/webhooks/incoming-call?token=<the same token from step 1>`
+     - **Payload type:** JSON
+     - **Data:** one field, key `phone`, value set to whichever field from the Quo trigger holds the caller's phone number.
+4. Turn the Zap on.
+
+The first time it fires, your browser will ask permission for notifications —
+allow it. From then on, any matching call pops a notification within a few
+seconds; click it (or its "Open lead →" link if you're already looking at
+the CRM) to jump to that lead.
+
 ## Protected fields & login
 
 SSN, bank name/state, routing number, and account number live in

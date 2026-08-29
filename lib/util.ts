@@ -187,6 +187,14 @@ export function stateFromAreaCode(phone: string | null | undefined): string | nu
   return AREA_CODE_TO_STATE[areaCode] || null;
 }
 
+// Last 10 digits only, formatting and country code stripped — good enough to
+// match a caller ID against a lead's saved phone number regardless of how
+// either one is formatted ((555) 123-4567 vs +15551234567 vs 555-123-4567).
+export function normalizePhone(phone: string | null | undefined): string {
+  if (!phone) return '';
+  return phone.replace(/\D/g, '').slice(-10);
+}
+
 // Accepts either a 2-letter code or a full state name (any case) and returns the
 // USPS abbreviation, or null if it isn't recognized. Never guess from the first
 // two letters of a full name — "Alaska"/"Arizona" would silently collide with
