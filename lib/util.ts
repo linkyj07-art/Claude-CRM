@@ -231,17 +231,70 @@ export function localTimeForState(state: string | null): string {
   }
 }
 
-// TCPA-safe outbound calling window: 8am-9pm in the lead's own local time.
+// Federal TCPA/TSR floor: 8am-9pm in the called party's local time, every
+// day. A number of states impose their own narrower "mini-TCPA" windows on
+// top of that floor — those live in CALL_WINDOW_OVERRIDES below. Sourced
+// from each state's telemarketing statute as of 2026; holiday-specific bans
+// (e.g. Rhode Island) aren't modeled here, only day-of-week + hour.
 export const CALL_WINDOW_START_HOUR = 8;
 export const CALL_WINDOW_END_HOUR = 21;
+
+interface CallWindowRule {
+  start: number;
+  end: number;
+  saturdayStart?: number;
+  saturdayEnd?: number;
+  sundayStart?: number;
+  sundayEnd?: number;
+  sundayClosed?: boolean;
+}
+
+const CALL_WINDOW_OVERRIDES: Record<string, CallWindowRule> = {
+  FL: { start: 8, end: 20, sundayClosed: true }, // Fla. Stat. 501.616
+  AL: { start: 8, end: 20, sundayClosed: true },
+  MD: { start: 8, end: 20 }, // Md. Com. Law 14-4502(c)
+  OK: { start: 8, end: 20 }, // Okla. Stat. tit. 15 Section 775A.6
+  CT: { start: 9, end: 20 }, // Conn. Gen. Stat., SB 1058 (2023)
+  NV: { start: 9, end: 20 },
+  NJ: { start: 9, end: 20 }, // N.J.S.A. 56:8-130
+  TX: { start: 9, end: 21, sundayStart: 12, sundayEnd: 21 }, // Tex. Bus. & Com. Code 301.051
+  RI: { start: 9, end: 18, saturdayStart: 10, saturdayEnd: 17, sundayClosed: true }
+};
+
+const WEEKDAY_FMT_CACHE = new Map<string, Intl.DateTimeFormat>();
+function weekdayAndHour(tz: string, reference: Date): { weekday: string; hour: number } {
+  let fmt = WEEKDAY_FMT_CACHE.get(tz);
+  if (!fmt) {
+    fmt = new Intl.DateTimeFormat('en-US', { hour: 'numeric', hourCycle: 'h23', weekday: 'short', timeZone: tz });
+    WEEKDAY_FMT_CACHE.set(tz, fmt);
+  }
+  const parts = fmt.formatToParts(reference);
+  const hour = Number(parts.find((p) => p.type === 'hour')?.value);
+  const weekday = parts.find((p) => p.type === 'weekday')?.value || '';
+  return { weekday, hour };
+}
 
 export function isWithinCallingHours(state: string | null, reference: Date = new Date()): boolean {
   const tz = (state && STATE_TIMEZONES[state]) || 'America/New_York';
   try {
-    const hour = Number(
-      new Intl.DateTimeFormat('en-US', { hour: 'numeric', hourCycle: 'h23', timeZone: tz }).format(reference)
-    );
-    return hour >= CALL_WINDOW_START_HOUR && hour < CALL_WINDOW_END_HOUR;
+    const { weekday, hour } = weekdayAndHour(tz, reference);
+    const rule: CallWindowRule = (state && CALL_WINDOW_OVERRIDES[state]) || {
+      start: CALL_WINDOW_START_HOUR,
+      end: CALL_WINDOW_END_HOUR
+    };
+
+    if (weekday === 'Sun') {
+      if (rule.sundayClosed) return false;
+      const start = rule.sundayStart ?? rule.start;
+      const end = rule.sundayEnd ?? rule.end;
+      return hour >= start && hour < end;
+    }
+    if (weekday === 'Sat' && (rule.saturdayStart !== undefined || rule.saturdayEnd !== undefined)) {
+      const start = rule.saturdayStart ?? rule.start;
+      const end = rule.saturdayEnd ?? rule.end;
+      return hour >= start && hour < end;
+    }
+    return hour >= rule.start && hour < rule.end;
   } catch {
     return true;
   }
