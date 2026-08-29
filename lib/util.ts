@@ -231,6 +231,22 @@ export function localTimeForState(state: string | null): string {
   }
 }
 
+// TCPA-safe outbound calling window: 8am-9pm in the lead's own local time.
+export const CALL_WINDOW_START_HOUR = 8;
+export const CALL_WINDOW_END_HOUR = 21;
+
+export function isWithinCallingHours(state: string | null, reference: Date = new Date()): boolean {
+  const tz = (state && STATE_TIMEZONES[state]) || 'America/New_York';
+  try {
+    const hour = Number(
+      new Intl.DateTimeFormat('en-US', { hour: 'numeric', hourCycle: 'h23', timeZone: tz }).format(reference)
+    );
+    return hour >= CALL_WINDOW_START_HOUR && hour < CALL_WINDOW_END_HOUR;
+  } catch {
+    return true;
+  }
+}
+
 export const AGENT_TIMEZONE = 'America/Boise';
 
 export function agentLocalTime(): string {

@@ -1,13 +1,13 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import Badge from './Badge';
 import {
   Customer, NoteVersion, CallRecord, Policy, Commission, Carrier, CarrierRule, LeadVendor
 } from '@/lib/types';
-import { fmtMoney, fmtMoney0, leadAgeLabel, localTimeForState, agentLocalTime, statusBadge, isValidRoutingNumber, callsToday, MAX_CALLS_PER_DAY } from '@/lib/util';
+import { fmtMoney, fmtMoney0, leadAgeLabel, localTimeForState, agentLocalTime, statusBadge, isValidRoutingNumber, callsToday, MAX_CALLS_PER_DAY, isWithinCallingHours } from '@/lib/util';
 import { suggestCarriers } from '@/lib/underwriting';
 import RoutingLookup from './RoutingLookup';
 import SellModal from './SellModal';
@@ -74,7 +74,13 @@ export default function LeadWorkspace({
   const router = useRouter();
   const searchParams = useSearchParams();
   const queue = (searchParams.get('queue') || '').split(',').filter(Boolean);
+  // Leads that went to 2 unanswered dials during pass 1 get held here instead
+  // of dropped — once the primary queue is exhausted they get one more pass
+  // (pass=2) rather than vanishing from Power Dial for the rest of the day.
+  const recycleQueue = (searchParams.get('recycle') || '').split(',').filter(Boolean);
+  const dialPass = searchParams.get('pass') || '1';
   const isDialing = searchParams.get('dialing') === '1';
+  const withinCallingHours = isWithinCallingHours(customer.state);
   const [busy, setBusy] = useState(false);
   const [noteForm, setNoteForm] = useState<AnyRow>(() => noteFormFromNote(notes[0], customer));
   const [editingNote, setEditingNote] = useState(() => !notes[0]);
@@ -152,6 +158,38 @@ export default function LeadWorkspace({
     } finally { setBusy(false); }
   }
 
+  // Single place that knows how to move to the next lead in a Power Dial
+  // session: pull from the live queue first, and once that's empty fall back
+  // to the recycled (maxed-out) leads for one more pass before finally
+  // exiting to the leads list. Pass maxedOutId when this lead just hit its
+  // 2nd unanswered dial so it rejoins the queue instead of disappearing.
+  function advanceQueue(maxedOutId?: string) {
+    const updatedRecycle =
+      maxedOutId && dialPass !== '2' && !recycleQueue.includes(maxedOutId)
+        ? [...recycleQueue, maxedOutId]
+        : recycleQueue;
+
+    if (queue.length > 0) {
+      const [next, ...rest] = queue;
+      const params = new URLSearchParams({ dialing: '1' });
+      if (rest.length) params.set('queue', rest.join(','));
+      if (updatedRecycle.length) params.set('recycle', updatedRecycle.join(','));
+      if (dialPass === '2') params.set('pass', '2');
+      router.push(`/leads/${next}?${params.toString()}`);
+      return;
+    }
+
+    if (dialPass !== '2' && updatedRecycle.length > 0) {
+      const [next, ...rest] = updatedRecycle;
+      const params = new URLSearchParams({ dialing: '1', pass: '2' });
+      if (rest.length) params.set('queue', rest.join(','));
+      router.push(`/leads/${next}?${params.toString()}`);
+      return;
+    }
+
+    router.push('/leads');
+  }
+
   async function logCall(outcome: string, disposition?: string) {
     setBusy(true);
     setCallError('');
@@ -174,14 +212,23 @@ export default function LeadWorkspace({
         router.push('/leads');
         return;
       }
+      // A "Sold" disposition needs the full Sell modal (policy/commission
+      // details) before this lead is really done — open it and stay put
+      // instead of auto-advancing Power Dial out from under the agent.
+      if (outcome === 'connected' && disposition === 'sold') {
+        await refresh();
+        setShowSell(true);
+        return;
+      }
       // Power Dial: once this lead's disposition is logged, move straight to
       // the next one instead of making the agent click Skip / Next Lead too —
       // relying on the just-cleared pendingCallId here rather than the
       // (still-stale-until-re-render) pendingDisposition flag. No Answer and
       // Voicemail are the exception, but only once: after the FIRST such
       // outcome on this lead, stay put for an immediate redial; once a
-      // SECOND one lands (this lead has now gone unanswered twice), move on
-      // like any other outcome instead of dialing it forever.
+      // SECOND one lands (this lead has now gone unanswered twice), it's
+      // "maxed out" — move on now, but let advanceQueue hold onto it for a
+      // second pass once the rest of the queue is worked through.
       const isRedialOutcome = outcome === 'no_answer' || outcome === 'voicemail';
       const priorRedialAttempts = calls.filter(
         (c) => c.id !== pendingCallId && (c.outcome === 'no_answer' || c.outcome === 'voicemail')
@@ -189,9 +236,8 @@ export default function LeadWorkspace({
       const redialAttemptsSoFar = priorRedialAttempts + (isRedialOutcome ? 1 : 0);
       const shouldRedial = isRedialOutcome && redialAttemptsSoFar < 2;
       if (isDialing && !shouldRedial) {
-        if (queue.length === 0) { router.push('/leads'); return; }
-        const [next, ...rest] = queue;
-        router.push(`/leads/${next}?dialing=1${rest.length ? `&queue=${rest.join(',')}` : ''}`);
+        const maxedOutId = isRedialOutcome && redialAttemptsSoFar >= 2 ? customer.id : undefined;
+        advanceQueue(maxedOutId);
         return;
       }
       await refresh();
@@ -228,10 +274,27 @@ export default function LeadWorkspace({
 
   function nextInQueue() {
     if (pendingDisposition) return;
-    if (queue.length === 0) { router.push('/leads'); return; }
-    const [next, ...rest] = queue;
-    const dest = `/leads/${next}?dialing=1${rest.length ? `&queue=${rest.join(',')}` : ''}`;
-    router.push(dest);
+    advanceQueue();
+  }
+
+  // A lead can still land here outside its state's calling window — the
+  // window closed after /dial built the queue, or this is a recycled lead
+  // being retried later. Skip it immediately rather than let the agent dial
+  // someone it isn't legal/appropriate to call right now; it stays eligible
+  // for a future Power Dial run once its window reopens.
+  useEffect(() => {
+    if (isDialing && !withinCallingHours) {
+      advanceQueue();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [customer.id, isDialing, withinCallingHours]);
+
+  if (isDialing && !withinCallingHours) {
+    return (
+      <div className="card p-8 text-center text-sm text-slate-500">
+        ⏰ {customer.first_name} {customer.last_name} ({customer.state || 'unknown state'}) is outside calling hours right now — skipping…
+      </div>
+    );
   }
 
   return (
@@ -273,7 +336,7 @@ export default function LeadWorkspace({
               </a>
             )}
             {pendingCallId && (
-              <div className="absolute left-0 top-full z-30 mt-2 w-64 rounded-xl border border-line bg-panel p-3 shadow-2xl">
+              <div className="absolute left-0 top-full z-30 mt-2 w-72 rounded-xl border border-line bg-panel p-3 shadow-2xl">
                 <div className="mb-2 text-xs font-semibold text-brand-400">📞 In progress — what happened?</div>
                 {callError && <div className="mb-2 rounded bg-red-50 p-2 text-xs text-red-700">{callError}</div>}
                 <div className="grid grid-cols-2 gap-1.5">
@@ -283,6 +346,8 @@ export default function LeadWorkspace({
                   <button disabled={busy} onClick={() => logCall('busy')} className="btn-secondary text-xs px-2 py-1.5">Busy</button>
                   <button disabled={busy} onClick={() => logCall('wrong_number')} className="btn-secondary text-xs px-2 py-1.5">Wrong #</button>
                   <button disabled={busy} onClick={() => logCall('connected', 'interested')} className="btn-good text-xs px-2 py-1.5">Connected</button>
+                  <button disabled={busy} onClick={() => logCall('connected', 'sold')} className="btn-good text-xs px-2 py-1.5">💰 Sold</button>
+                  <button disabled={busy} onClick={() => logCall('connected', 'not_interested')} className="btn-secondary text-xs px-2 py-1.5">Not Interested</button>
                   <button disabled={busy} onClick={() => logCall('dnc')} className="btn-danger text-xs px-2 py-1.5">DNC</button>
                 </div>
                 <button className="mt-2 w-full text-center text-xs text-slate-400 hover:text-ink" disabled={busy} onClick={cancelPendingCall}>

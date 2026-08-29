@@ -16,7 +16,7 @@ const STATUS_OPTIONS = [
   ['sold', 'Sold'], ['lost', 'Lost'], ['archived', 'Archived']
 ];
 
-export default async function LeadsPage({ searchParams }: { searchParams: { status?: string; q?: string; state?: string; vendor?: string; empty?: string } }) {
+export default async function LeadsPage({ searchParams }: { searchParams: { status?: string; q?: string; state?: string; vendor?: string; empty?: string; closed?: string } }) {
   const user = await getCurrentUser();
   if (!user) redirect('/login');
 
@@ -54,7 +54,12 @@ export default async function LeadsPage({ searchParams }: { searchParams: { stat
         </div>
       </div>
 
-      {searchParams.empty && (
+      {searchParams.empty && searchParams.closed && (
+        <div className="card border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+          You&apos;ve got fresh or working leads, but they&apos;re all outside their state&apos;s calling hours (8am-9pm local) right now. Check back later.
+        </div>
+      )}
+      {searchParams.empty && !searchParams.closed && (
         <div className="card border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">No fresh or working leads left in the queue right now.</div>
       )}
 
