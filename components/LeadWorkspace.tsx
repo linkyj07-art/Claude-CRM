@@ -233,8 +233,6 @@ export default function LeadWorkspace({
     }
   }
 
-  const NO_ANSWER_AUTO_PAUSE_THRESHOLD = 5;
-
   // Fires one auto-dial: waits the configured pace, re-checks (right before
   // dialing, not just whenever the queue was last built) that this lead is
   // still actually callable, then dials. Never fires blind past a failure —
@@ -432,7 +430,17 @@ export default function LeadWorkspace({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isDialing, customer.id]);
 
+  // Outcomes where the call is definitely over the instant this button is
+  // clicked — nobody picked up, so there's nothing left to hang up on
+  // manually. Other outcomes (Connected, Busy, etc.) don't auto-hang-up
+  // since the agent might still be on the line or need to act on it
+  // themselves; the End Quo Call button stays available for those.
+  const AUTO_HANGUP_OUTCOMES = ['no_answer', 'voicemail', 'google_voice'];
+
   async function logCall(outcome: string, disposition?: string) {
+    if (AUTO_HANGUP_OUTCOMES.includes(outcome)) {
+      endQuoCall(); // fire-and-forget, runs alongside logging the disposition below
+    }
     setBusy(true);
     setCallError('');
     try {
@@ -478,20 +486,15 @@ export default function LeadWorkspace({
       const redialAttemptsSoFar = priorRedialAttempts + (isRedialOutcome ? 1 : 0);
       const shouldRedial = isRedialOutcome && redialAttemptsSoFar < 2;
 
-      // Session stats + the no-answer streak that auto-pauses Auto-Dial —
-      // tracked for every disposition made while dialing, regardless of
-      // whether Auto-Dial is even on, so the streak/connect count stay
-      // accurate if it gets turned on mid-session.
+      // Session stats — tracked for every disposition made while dialing,
+      // regardless of whether Auto-Dial is even on, so the connect count
+      // stays accurate if it gets turned on mid-session.
       let session = dialSession;
       if (isDialing) {
         session = await patchDialSession({
           incrementConnect: outcome === 'connected',
           noAnswerStreak: isRedialOutcome ? 'increment' : 'reset'
         });
-        if (session?.autoDial && session.consecutiveNoAnswer >= NO_ANSWER_AUTO_PAUSE_THRESHOLD) {
-          session = await patchDialSession({ autoDial: false });
-          alert(`Auto-Dial paused itself after ${NO_ANSWER_AUTO_PAUSE_THRESHOLD} unanswered calls in a row — check that Quo and your line are actually working before turning it back on.`);
-        }
       }
 
       if (isDialing && !shouldRedial) {
