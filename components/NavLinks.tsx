@@ -31,7 +31,7 @@ export default function NavLinks() {
           >
             {item.label}
             {active && (
-              <span className="absolute inset-x-2 -bottom-[11px] h-0.5 rounded-full bg-gradient-to-r from-brand-400 to-brand-600" />
+              <span className="fade-in absolute inset-x-2 -bottom-[11px] h-0.5 rounded-full bg-gradient-to-r from-brand-400 to-brand-600" />
             )}
           </Link>
         );

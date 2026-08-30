@@ -26,7 +26,7 @@ export default function TopNav({ user }: { user: SessionUser | null }) {
   return (
     <header className="sticky top-0 z-40 border-b border-line bg-paper/90 backdrop-blur">
       <div className="mx-auto flex max-w-[1400px] items-center gap-1 px-4 py-2.5 md:px-6">
-        <Link href="/" className="mr-3 flex items-center gap-2 text-[15px] font-bold text-ink transition-transform hover:scale-105">
+        <Link href="/" className="mr-3 flex items-center gap-2 text-[15px] font-bold text-ink transition-transform duration-150 ease-out hover:scale-105">
           <Logo size={28} />
           Solace
         </Link>

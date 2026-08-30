@@ -110,7 +110,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: { 
   return (
     <div className="space-y-6">
       {/* HERO */}
-      <div className="card relative overflow-hidden p-5">
+      <div className="card fade-in relative overflow-hidden p-5">
         <div className="pointer-events-none absolute -left-16 -top-24 h-64 w-64 rounded-full bg-brand-500/20 blur-3xl" />
         <div className="pointer-events-none absolute -bottom-24 -right-10 h-56 w-56 rounded-full bg-brand-400/10 blur-3xl" />
         <div className="relative flex flex-wrap items-center justify-between gap-3">
@@ -185,7 +185,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: { 
       )}
 
       {/* MONEY — hero figure + trend, secondary stats as a light row instead of five boxes */}
-      <section className="card relative overflow-hidden p-5">
+      <section className="card fade-in relative overflow-hidden p-5" style={{ animationDelay: '60ms' }}>
         <div className="pointer-events-none absolute -right-24 -top-24 h-64 w-64 rounded-full bg-emerald-500/10 blur-3xl" />
         <div className="relative flex flex-wrap items-end justify-between gap-6">
           <div>
@@ -209,7 +209,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: { 
       </section>
 
       {/* FILTER BAR */}
-      <div className="flex flex-wrap items-center gap-2 rounded-xl border border-line bg-panel2/60 p-1.5">
+      <div className="fade-in flex flex-wrap items-center gap-2 rounded-xl border border-line bg-panel2/60 p-1.5" style={{ animationDelay: '100ms' }}>
         {(['today', 'week', 'month', 'all'] as Period[]).map((p) => (
           <a
             key={p}
@@ -233,7 +233,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: { 
       </div>
 
       {/* ACTIVITY + CONVERSION — one surface, two rows */}
-      <section className="card p-5">
+      <section className="card fade-in p-5" style={{ animationDelay: '140ms' }}>
         <div className="mb-3 flex items-center justify-between">
           <div className="label">📞 Activity &amp; Conversion — {PERIOD_LABEL[period]}{vendorLabel ? ` · ${vendorLabel}` : ''}</div>
         </div>
@@ -254,7 +254,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: { 
         </div>
       </section>
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_320px]">
+      <div className="fade-in grid grid-cols-1 gap-4 lg:grid-cols-[1fr_320px]" style={{ animationDelay: '180ms' }}>
         <div className="space-y-4">
           {/* LEAD ECONOMICS */}
           <section>

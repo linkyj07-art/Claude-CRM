@@ -33,14 +33,14 @@ export default function StatCard({
 
   if (href) {
     return (
-      <Link href={href} className="card group block p-5 transition-transform hover:-translate-y-0.5 hover:border-brand-400">
+      <Link href={href} className="card group block p-5 transition-all duration-200 ease-out hover:-translate-y-0.5 hover:border-brand-400 hover:shadow-lg">
         {content}
       </Link>
     );
   }
 
   return (
-    <div className="card group p-5 transition-transform hover:-translate-y-0.5">
+    <div className="card group p-5 transition-all duration-200 ease-out hover:-translate-y-0.5 hover:shadow-lg">
       {content}
     </div>
   );
