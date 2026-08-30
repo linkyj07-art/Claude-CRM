@@ -230,21 +230,22 @@ function findIncomingCallPhone(words) {
 // so far) instead, measured directly from a real capture confirmed via
 // screenshot to show the popup with Reject/Accept -- not tesseract's
 // per-capture guess at where the button row's text extends.
-const BUTTON_ROW_OFFSET = { left: -266, right: 310, top: 73, bottom: 188 };
+//
+// The real OCR data actually showed TWO separate garbled text regions in
+// that capture, one per button, with a real gap between them -- not one
+// contiguous block. An earlier version treated it as one combined box split
+// 25%/75%, which was reasonably close for Reject but notably off for Accept
+// (the gap isn't centered, so an even split undershoots the right button).
+// This uses each button's own measured region directly instead.
+const REJECT_OFFSET = { x: -124, y: 130.5 };
+const ACCEPT_OFFSET = { x: 202, y: 117 };
 
 function findButtonRowCenter(words, side) {
   const callingWord = words.find((w) => /calling/i.test(w.text));
   if (!callingWord) return null;
 
-  const left = callingWord.left + BUTTON_ROW_OFFSET.left;
-  const right = callingWord.left + BUTTON_ROW_OFFSET.right;
-  const top = callingWord.top + BUTTON_ROW_OFFSET.top;
-  const bottom = callingWord.top + BUTTON_ROW_OFFSET.bottom;
-
-  const width = right - left;
-  const x = side === 'left' ? left + width * 0.25 : left + width * 0.75;
-  const y = (top + bottom) / 2;
-  return { x, y };
+  const offset = side === 'left' ? REJECT_OFFSET : ACCEPT_OFFSET;
+  return { x: callingWord.left + offset.x, y: callingWord.top + offset.y };
 }
 
 async function clickInQuo(imgLocalPoint, region, scale) {
