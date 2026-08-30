@@ -318,6 +318,14 @@ async function findAndClick(side, notFoundMessage) {
         const center = findButtonRowCenter(words, side);
         if (center) {
           await clickInQuo(center, region, scale);
+          // We know for certain this call just ended (answered or
+          // declined) -- reset the polling debounce immediately rather
+          // than waiting for it to notice on its own. Without this, a new
+          // call from the same number arriving before the next couple of
+          // poll ticks catch up can look like "the same call still
+          // ringing" and silently not notify.
+          currentRingingPhone = null;
+          consecutiveMisses = 0;
           return;
         }
         if (attempt < 2) await sleep(250);
