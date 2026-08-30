@@ -159,7 +159,13 @@ async function captureRegion(region) {
 // would give us the words but not where they are on screen.
 function ocrWords(imgPath) {
   return new Promise((resolve, reject) => {
-    execFile('tesseract', [imgPath, 'stdout', 'tsv'], { maxBuffer: 10 * 1024 * 1024 }, (error, stdout, stderr) => {
+    // --psm 11 (sparse text): tesseract's default page-segmentation mode
+    // assumes a normal block of paragraph text, and real logs showed it
+    // reliably reading the phone number but consistently failing to find
+    // "Accept"/"Reject" even while the call was still actively ringing --
+    // short, isolated button labels on a solid color background are exactly
+    // the case sparse-text mode is meant for.
+    execFile('tesseract', [imgPath, 'stdout', '--psm', '11', 'tsv'], { maxBuffer: 10 * 1024 * 1024 }, (error, stdout, stderr) => {
       if (error) {
         reject(new Error(stderr?.trim() || error.message));
         return;
@@ -189,18 +195,25 @@ function ocrWords(imgPath) {
 
 const PHONE_PATTERN = /\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}/;
 
-// Restricts the phone-number search to the same OCR "block" as the
-// "Incoming" text (Quo's popup renders as one contiguous block distinct
-// from the rest of the UI) so a different number elsewhere on screen — an
-// old call in the sidebar's history list, for instance — never gets
-// mistaken for the one actually ringing.
+// Prefers the same OCR "block" as the "Incoming" text (Quo's popup usually
+// renders as one contiguous block distinct from the rest of the UI), so a
+// different number elsewhere on screen — an old call in the sidebar's
+// history list, for instance — doesn't get mistaken for the one actually
+// ringing. Falls back to words within a tight vertical band of "Incoming"
+// (sorted top-to-bottom to preserve reading order) since block segmentation
+// isn't guaranteed stable across tesseract page-segmentation modes.
 function findIncomingCallPhone(words) {
   const incomingWord = words.find((w) => /incoming/i.test(w.text));
   if (!incomingWord) return null;
 
   const sameBlock = words.filter((w) => w.blockNum === incomingWord.blockNum);
-  const joined = sameBlock.map((w) => w.text).join(' ');
-  const match = joined.match(PHONE_PATTERN);
+  let match = sameBlock.map((w) => w.text).join(' ').match(PHONE_PATTERN);
+  if (match) return match[0];
+
+  const nearby = words
+    .filter((w) => Math.abs(w.top - incomingWord.top) < 150)
+    .sort((a, b) => a.top - b.top || a.left - b.left);
+  match = nearby.map((w) => w.text).join(' ').match(PHONE_PATTERN);
   return match ? match[0] : null;
 }
 
