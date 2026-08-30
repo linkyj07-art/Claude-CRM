@@ -257,14 +257,43 @@ function findButtonRowCenter(words, side) {
 // CGEvent mouse click, independent of the accessibility tree -- the same
 // class of tool used to interact with games/web content that don't expose
 // accessible elements. Requires `brew install cliclick` (one-time).
+// Reads wherever the cursor actually is right now, via cliclick's own `p`
+// command, so clickInQuo can snap it back there after clicking Quo's
+// button -- without this the click would visibly yank the cursor over to
+// Quo and leave it there. Best-effort: if this fails (e.g. an older
+// cliclick without `p`), clickInQuo just clicks and leaves the cursor
+// where it lands, same as before this existed.
+function getMousePosition() {
+  return new Promise((resolve, reject) => {
+    execFile('cliclick', ['p'], (error, stdout, stderr) => {
+      if (error) {
+        reject(new Error(stderr?.trim() || error.message));
+        return;
+      }
+      const match = /(-?\d+),(-?\d+)/.exec(stdout);
+      if (!match) {
+        reject(new Error(`Could not parse cliclick position output: ${stdout}`));
+        return;
+      }
+      resolve({ x: Number(match[1]), y: Number(match[2]) });
+    });
+  });
+}
+
 async function clickInQuo(imgLocalPoint, region, scale) {
   const screenX = Math.round(region.x + imgLocalPoint.x / scale.scaleX);
   const screenY = Math.round(region.y + imgLocalPoint.y / scale.scaleY);
   console.log(
     `[action] clicking at screen (${screenX}, ${screenY}) -- window region x=${region.x} y=${region.y} w=${region.w} h=${region.h}, scale ${scale.scaleX.toFixed(2)}x${scale.scaleY.toFixed(2)}, OCR point (${imgLocalPoint.x.toFixed(0)}, ${imgLocalPoint.y.toFixed(0)})`
   );
+  const original = await getMousePosition().catch(() => null);
   await new Promise((resolve, reject) => {
-    execFile('cliclick', [`c:${screenX},${screenY}`], (error, _stdout, stderr) => {
+    // Click, then immediately move the cursor back to wherever it was --
+    // the click itself has already been delivered to Quo by the time the
+    // move happens, so moving away right after doesn't affect it.
+    const args = [`c:${screenX},${screenY}`];
+    if (original) args.push(`m:${original.x},${original.y}`);
+    execFile('cliclick', args, (error, _stdout, stderr) => {
       if (error) {
         const hint = /not found|ENOENT/i.test(error.message)
           ? ' (cliclick not installed -- run: brew install cliclick)'
