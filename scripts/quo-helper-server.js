@@ -54,7 +54,7 @@ const QUO_APP_NAME = process.env.QUO_APP_NAME || 'Quo';
 const QUO_HANGUP_KEY = process.env.QUO_HANGUP_KEY || 'h'; // Cmd+Shift+H by default
 const CRM_BASE_URL = process.env.CRM_BASE_URL || '';
 const QUO_WEBHOOK_TOKEN = process.env.QUO_WEBHOOK_TOKEN || '';
-const POLL_MS = process.env.QUO_POLL_MS ? Number(process.env.QUO_POLL_MS) : 2000;
+const POLL_MS = process.env.QUO_POLL_MS ? Number(process.env.QUO_POLL_MS) : 1000;
 const CAPTURE_PATH = path.join(os.tmpdir(), 'quo-helper-capture.png');
 
 if (process.platform !== 'darwin') {
@@ -179,13 +179,27 @@ async function clickInQuo(imgLocalPoint, region) {
   await runOsascript([`tell application "System Events" to click at {${screenX}, ${screenY}}`]);
 }
 
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+// A single OCR pass can miss the button through no fault of the call still
+// being up — a mistimed screenshot, a momentary redraw, etc. — so retry a
+// couple of times before concluding it's actually gone, rather than failing
+// on the first miss.
 async function findAndClick(labelPattern, notFoundMessage) {
   const region = await getQuoWindowRegion();
-  await captureRegion(region);
-  const words = await ocrWords(CAPTURE_PATH);
-  const center = findButtonCenter(words, labelPattern);
-  if (!center) throw new Error(notFoundMessage);
-  await clickInQuo(center, region);
+  for (let attempt = 0; attempt < 3; attempt++) {
+    await captureRegion(region);
+    const words = await ocrWords(CAPTURE_PATH);
+    const center = findButtonCenter(words, labelPattern);
+    if (center) {
+      await clickInQuo(center, region);
+      return;
+    }
+    if (attempt < 2) await sleep(400);
+  }
+  throw new Error(notFoundMessage);
 }
 
 function answerCall() {
