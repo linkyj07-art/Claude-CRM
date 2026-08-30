@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Badge from './Badge';
 import {
@@ -106,10 +106,18 @@ export default function LeadWorkspace({
   // instead of in the URL, specifically so a second device (phone alongside
   // laptop) can follow the same session — polled below, and re-fetched
   // on-demand by advanceQueue whenever this hasn't loaded yet.
-  type DialSession = { currentLeadId: string | null; queue: string[]; recycle: string[]; pass: number };
+  type DialSession = {
+    currentLeadId: string | null; queue: string[]; recycle: string[]; pass: number;
+    autoDial: boolean; autoDialPaceMs: number; sessionDials: number; sessionConnects: number; consecutiveNoAnswer: number;
+  };
   const [dialSession, setDialSession] = useState<DialSession | null>(null);
   const [busy, setBusy] = useState(false);
   const [quoBusy, setQuoBusy] = useState(false);
+  const [autoDialing, setAutoDialing] = useState(false);
+  // Guards against firing a second auto-dial for the same lead — e.g. a
+  // React effect re-run (dev strict mode double-invoke) or a `refresh()`
+  // re-render that doesn't actually change the lead.
+  const dialedForLeadRef = useRef<string | null>(null);
   const [noteForm, setNoteForm] = useState<AnyRow>(() => noteFormFromNote(notes[0], customer));
   const [editingNote, setEditingNote] = useState(() => !notes[0]);
   const [copied, setCopied] = useState(false);
@@ -166,6 +174,70 @@ export default function LeadWorkspace({
     }
   }
 
+  // Tells the Quo helper to actually dial a number (open tel: + send Enter),
+  // vs. the plain `tel:` link, which only opens Quo with the number filled
+  // in and still needs a manual Enter. Returns whether it worked so callers
+  // can fall back to the plain link when the helper isn't reachable.
+  async function quoDialCall(phone: string): Promise<boolean> {
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_QUO_HELPER_URL || 'http://127.0.0.1:8787'}/dial-call`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone })
+      });
+      return res.ok;
+    } catch {
+      return false;
+    }
+  }
+
+  // Single place that patches the Auto-Dial toggle/pace or bumps a session
+  // counter (dials/connects/no-answer streak) on the server, and syncs the
+  // result back into local state. Counters are incremented atomically
+  // server-side (see the route) rather than read-modify-write from
+  // possibly-stale client state.
+  async function patchDialSession(patch: {
+    autoDial?: boolean; autoDialPaceMs?: number;
+    incrementDial?: boolean; incrementConnect?: boolean; noAnswerStreak?: 'increment' | 'reset';
+  }): Promise<DialSession | null> {
+    try {
+      const res = await fetch('/api/dial-session/auto-dial', {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(patch)
+      });
+      if (!res.ok) return null;
+      const raw = await res.json();
+      if (isDialSession(raw)) {
+        setDialSession(raw);
+        return raw;
+      }
+      return null;
+    } catch {
+      return null;
+    }
+  }
+
+  const NO_ANSWER_AUTO_PAUSE_THRESHOLD = 5;
+
+  // Fires one auto-dial: waits the configured pace, re-checks (right before
+  // dialing, not just whenever the queue was last built) that this lead is
+  // still actually callable, then dials. Never fires blind past a failure —
+  // if the helper can't be reached, Auto-Dial turns itself back off and
+  // says so, rather than silently sitting there doing nothing call after
+  // call.
+  async function fireAutoDial(phone: string, paceMs: number) {
+    setAutoDialing(true);
+    try {
+      if (paceMs > 0) await new Promise((resolve) => setTimeout(resolve, paceMs));
+      if (!withinCallingHours || dailyLimitReached || customer.status === 'dnc' || !customer.phone) return;
+      await startCall();
+      const dialed = await quoDialCall(phone);
+      if (!dialed) {
+        await patchDialSession({ autoDial: false });
+        alert('Auto-Dial could not reach the Quo helper, so it turned itself off. Make sure the helper is running on this Mac (`npm run quo-helper`), then turn Auto-Dial back on.');
+      }
+    } finally {
+      setAutoDialing(false);
+    }
+  }
+
   // Tapping Call logs the dial immediately (as 'pending') instead of waiting
   // for an outcome — that's the actual attempt being made, and the agent
   // picks what happened once the call is over via the outcome buttons below,
@@ -183,10 +255,26 @@ export default function LeadWorkspace({
         return;
       }
       setPendingCallId(data.id);
+      // Counts every dial made during a Power Dial session, manual or
+      // auto-fired, toward the session stats shown in the header — not
+      // awaited, since it shouldn't slow down the actual call.
+      if (isDialing) patchDialSession({ incrementDial: true });
       await refresh();
     } catch {
       setCallError('Could not start that call.');
     }
+  }
+
+  // Manual dial button: try the helper first (opens Quo AND presses Enter
+  // for you), falling back to the plain tel: link — which only opens Quo
+  // with the number filled in, same as always — if the helper isn't
+  // reachable. Never worse than the old behavior, just better when it can be.
+  async function placeManualCall() {
+    await startCall();
+    if (!customer.phone) return;
+    const digits = customer.phone.replace(/[^\d+]/g, '');
+    const dialed = await quoDialCall(digits);
+    if (!dialed) window.location.href = `tel:${digits}`;
   }
 
   async function cancelPendingCall() {
@@ -355,12 +443,34 @@ export default function LeadWorkspace({
       ).length;
       const redialAttemptsSoFar = priorRedialAttempts + (isRedialOutcome ? 1 : 0);
       const shouldRedial = isRedialOutcome && redialAttemptsSoFar < 2;
+
+      // Session stats + the no-answer streak that auto-pauses Auto-Dial —
+      // tracked for every disposition made while dialing, regardless of
+      // whether Auto-Dial is even on, so the streak/connect count stay
+      // accurate if it gets turned on mid-session.
+      let session = dialSession;
+      if (isDialing) {
+        session = await patchDialSession({
+          incrementConnect: outcome === 'connected',
+          noAnswerStreak: isRedialOutcome ? 'increment' : 'reset'
+        });
+        if (session?.autoDial && session.consecutiveNoAnswer >= NO_ANSWER_AUTO_PAUSE_THRESHOLD) {
+          session = await patchDialSession({ autoDial: false });
+          alert(`Auto-Dial paused itself after ${NO_ANSWER_AUTO_PAUSE_THRESHOLD} unanswered calls in a row — check that Quo and your line are actually working before turning it back on.`);
+        }
+      }
+
       if (isDialing && !shouldRedial) {
         const maxedOutId = isRedialOutcome && redialAttemptsSoFar >= 2 ? customer.id : undefined;
+        // The lead advanceQueue navigates to fires its own auto-dial (if
+        // enabled) from its mount effect once it lands.
         advanceQueue(maxedOutId);
         return;
       }
       await refresh();
+      if (isDialing && shouldRedial && session?.autoDial && customer.phone) {
+        fireAutoDial(customer.phone, session.autoDialPaceMs);
+      }
     } finally { setBusy(false); }
   }
 
@@ -419,6 +529,9 @@ export default function LeadWorkspace({
 
   async function exitQueue() {
     if (pendingDisposition) return;
+    if (dialSession && dialSession.sessionDials > 0) {
+      alert(`Session summary: ${dialSession.sessionDials} dial${dialSession.sessionDials === 1 ? '' : 's'}, ${dialSession.sessionConnects} connect${dialSession.sessionConnects === 1 ? '' : 's'}.`);
+    }
     try {
       await fetch('/api/dial-session', { method: 'DELETE' });
     } catch {
@@ -450,6 +563,46 @@ export default function LeadWorkspace({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [customer.id, isDialing, skipReason]);
 
+  // Fires Auto-Dial for whichever lead this view lands on with it already
+  // on — covers both the very first lead of a session and every lead
+  // advanceQueue navigates to afterward, since both are a fresh mount of
+  // this component for a new customer.id. The same-lead redial case (no
+  // navigation, no remount) is fired explicitly from logCall instead.
+  // Reads the session fresh via currentDialSession() rather than trusting
+  // component state, since dialSession can still be null for a few hundred
+  // ms right after mount, before the poll below has resolved once.
+  useEffect(() => {
+    if (!isDialing || skipReason || !customer.phone) return;
+    if (dialedForLeadRef.current === customer.id) return;
+    let cancelled = false;
+    (async () => {
+      const session = await currentDialSession();
+      if (cancelled || !session?.autoDial || dialedForLeadRef.current === customer.id) return;
+      dialedForLeadRef.current = customer.id;
+      await fireAutoDial(customer.phone!, session.autoDialPaceMs);
+    })();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isDialing, customer.id, skipReason]);
+
+  // Alt+A toggles Auto-Dial without needing the mouse — the whole point is
+  // being able to kill it fast (e.g. stepping away) without hunting for a
+  // button. Ignored while typing in a field so it doesn't fight with the
+  // Mac's own Option+A character shortcut mid-note.
+  useEffect(() => {
+    if (!isDialing) return;
+    function onKeyDown(e: KeyboardEvent) {
+      if (!e.altKey || e.key.toLowerCase() !== 'a' || !dialSession) return;
+      const active = document.activeElement as HTMLElement | null;
+      const isTyping = !!active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || active.isContentEditable);
+      if (isTyping) return;
+      e.preventDefault();
+      patchDialSession({ autoDial: !dialSession.autoDial });
+    }
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [isDialing, dialSession]);
+
   if (isDialing && skipReason) {
     return (
       <div className="card p-8 text-center text-sm text-slate-500">
@@ -461,16 +614,48 @@ export default function LeadWorkspace({
   return (
     <div className="space-y-4">
       {isDialing && (
-        <div className="card flex items-center justify-between bg-brand-50 p-3 text-sm">
-          <span className="font-medium text-brand-700">
-            ⚡ Power Dial — {dialSession ? `${dialSession.queue.length} more lead${dialSession.queue.length === 1 ? '' : 's'} in queue` : 'syncing…'}
-          </span>
-          <div className="flex items-center gap-2">
-            {pendingDisposition && <span className="text-xs text-amber-700">Log this call&apos;s outcome before moving on</span>}
-            <button className="btn-secondary text-xs" disabled={pendingDisposition} title={pendingDisposition ? "Log this call's outcome first" : undefined} onClick={exitQueue}>
-              Exit Queue
+        <div className="card space-y-2 bg-brand-50 p-3 text-sm">
+          <div className="flex items-center justify-between">
+            <span className="font-medium text-brand-700">
+              ⚡ Power Dial — {dialSession ? `${dialSession.queue.length} more lead${dialSession.queue.length === 1 ? '' : 's'} in queue` : 'syncing…'}
+            </span>
+            <div className="flex items-center gap-2">
+              {pendingDisposition && <span className="text-xs text-amber-700">Log this call&apos;s outcome before moving on</span>}
+              <button className="btn-secondary text-xs" disabled={pendingDisposition} title={pendingDisposition ? "Log this call's outcome first" : undefined} onClick={exitQueue}>
+                Exit Queue
+              </button>
+              <button className="btn-primary text-xs" disabled={pendingDisposition} onClick={nextInQueue}>Skip This Lead ▶</button>
+            </div>
+          </div>
+          <div className="flex flex-wrap items-center gap-3 border-t border-brand-100 pt-2">
+            <button
+              className={dialSession?.autoDial ? 'btn-danger text-xs' : 'btn-good text-xs'}
+              disabled={!dialSession}
+              onClick={() => dialSession && patchDialSession({ autoDial: !dialSession.autoDial })}
+              title="Automatically dials the next lead in Quo as the queue redials/advances. Alt+A toggles this without the mouse."
+            >
+              {dialSession?.autoDial ? '⏸ Auto-Dial: ON (Alt+A to pause)' : '▶️ Auto-Dial: OFF (Alt+A to start)'}
             </button>
-            <button className="btn-primary text-xs" disabled={pendingDisposition} onClick={nextInQueue}>Skip This Lead ▶</button>
+            <label className="flex items-center gap-1 text-xs text-slate-500">
+              Pace:
+              <select
+                className="rounded border border-line bg-panel px-1 py-0.5"
+                value={dialSession?.autoDialPaceMs ?? 2000}
+                disabled={!dialSession}
+                onChange={(e) => patchDialSession({ autoDialPaceMs: Number(e.target.value) })}
+              >
+                <option value={0}>Instant</option>
+                <option value={2000}>2s</option>
+                <option value={4000}>4s</option>
+                <option value={6000}>6s</option>
+              </select>
+            </label>
+            {dialSession && (
+              <span className="text-xs text-slate-500">
+                📞 {dialSession.sessionDials} dial{dialSession.sessionDials === 1 ? '' : 's'} · ✅ {dialSession.sessionConnects} connect{dialSession.sessionConnects === 1 ? '' : 's'} this session
+              </span>
+            )}
+            {autoDialing && <span className="text-xs font-medium text-brand-600">📞 Auto-dialing…</span>}
           </div>
         </div>
       )}
@@ -497,9 +682,9 @@ export default function LeadWorkspace({
         <div className="flex flex-wrap gap-2">
           <div className="relative">
             {customer.phone && (
-              <a href={`tel:${customer.phone.replace(/[^\d+]/g, '')}`} className="btn-good" onClick={startCall}>
+              <button className="btn-good" onClick={placeManualCall}>
                 📞 Call {customer.phone}
-              </a>
+              </button>
             )}
             {pendingCallId && (
               <div className="absolute left-0 top-full z-30 mt-2 w-72 rounded-xl border border-line bg-panel p-3 shadow-2xl">

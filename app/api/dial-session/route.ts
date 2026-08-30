@@ -1,19 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
 import { getCurrentUser } from '@/lib/currentUser';
-
-type DialSessionRow = { current_lead_id: string | null; queue: string; recycle: string; pass: number; updated_at: string };
-
-function serialize(row: DialSessionRow | undefined) {
-  if (!row) return null;
-  return {
-    currentLeadId: row.current_lead_id,
-    queue: row.queue ? row.queue.split(',').filter(Boolean) : [],
-    recycle: row.recycle ? row.recycle.split(',').filter(Boolean) : [],
-    pass: row.pass,
-    updatedAt: row.updated_at
-  };
-}
+import { DialSessionRow, serializeDialSession as serialize } from '@/lib/dialSession';
 
 // A single Power Dial session per user, persisted server-side, is what lets
 // a second device (phone alongside laptop) follow the exact same queue

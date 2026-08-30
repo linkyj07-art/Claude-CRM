@@ -6,7 +6,16 @@
 //    briefly focuses Quo, sends its hangup shortcut (Cmd+Shift+H by
 //    default), then restores whatever app you were using.
 //
-// 2. INCOMING CALL DETECTION + ANSWER/DECLINE — Quo's call popup is built
+// 2. AUTO-DIAL — Power Dial's "Auto-Dial" toggle POSTs a phone number to
+//    /dial-call, which opens it as a tel: link (the same mechanism the
+//    CRM's own Call button already used manually — macOS is configured to
+//    hand tel: links to Quo, which pre-fills its search bar with that exact
+//    number), then sends Enter to actually place the call. No OCR needed
+//    here — unlike Answer/Decline, dialing always lands on exactly one
+//    ready-to-go number, so this uses the same reliable activate+keystroke
+//    pattern as End Call.
+//
+// 3. INCOMING CALL DETECTION + ANSWER/DECLINE — Quo's call popup is built
 //    on a web view that hides its content from accessibility tools unless
 //    VoiceOver is running, which isn't workable for an always-on background
 //    helper. So instead this periodically screenshots Quo's window (without
@@ -37,12 +46,12 @@
 // AND Screen Recording -> enable whatever app runs this script (usually
 // Terminal, iTerm, or your code editor's integrated terminal).
 //
-// Note: /end-call and /answer-call /decline-call have no authentication —
-// anything running on your Mac (or, in principle, a malicious page in your
-// browser that discovers the port) can hit them. All they can do is
-// interact with Quo's own call controls, so the worst case is an unwanted
-// hangup/answer/decline, not data exposure. Don't expose this port beyond
-// 127.0.0.1.
+// Note: /end-call, /dial-call, /answer-call, /decline-call have no
+// authentication — anything running on your Mac (or, in principle, a
+// malicious page in your browser that discovers the port) can hit them. All
+// they can do is interact with Quo's own call controls, so the worst case
+// is an unwanted hangup/dial/answer/decline, not data exposure. Don't
+// expose this port beyond 127.0.0.1.
 
 const http = require('http');
 const os = require('os');
@@ -63,6 +72,10 @@ const QUO_HANGUP_KEY = process.env.QUO_HANGUP_KEY || 'h'; // Cmd+Shift+H by defa
 const CRM_BASE_URL = process.env.CRM_BASE_URL || '';
 const QUO_WEBHOOK_TOKEN = process.env.QUO_WEBHOOK_TOKEN || '';
 const POLL_MS = process.env.QUO_POLL_MS ? Number(process.env.QUO_POLL_MS) : 300;
+// How long to wait after opening tel:<number> before sending Enter -- Quo
+// pre-fills its search bar essentially instantly, so this only needs to
+// cover the OS handing off the tel: URL and Quo redrawing, not a real load.
+const DIAL_SETTLE_MS = process.env.QUO_DIAL_SETTLE_MS ? Number(process.env.QUO_DIAL_SETTLE_MS) : 300;
 // On the Desktop (not a hidden temp folder) so it can actually be opened
 // and inspected while debugging -- one file, overwritten every capture, not
 // something that accumulates.
@@ -380,6 +393,55 @@ function declineCall() {
   return findAndClick('left', 'Could not find "is calling you" on screen right now — is a call actually ringing?');
 }
 
+// Opens tel:<phone>, which macOS hands to Quo (the same thing that already
+// happened when you clicked the CRM's Call button manually — this just
+// automates the "now press Enter" step that used to require you). Sends a
+// hangup first, even though nothing should still be active at this point --
+// harmless no-op if Quo has nothing up, but guarantees a stray still-open
+// call can never eat the number this is about to dial.
+async function dialCall(phone) {
+  const digits = String(phone || '').replace(/[^\d+]/g, '');
+  if (!digits) {
+    throw new Error('No phone number provided to dial.');
+  }
+  if (actionInFlight) {
+    throw new Error('Another action is already in progress -- wait for it to finish before dialing.');
+  }
+  actionInFlight = true;
+  try {
+    const frontApp = await runOsascript([
+      'tell application "System Events" to set frontApp to name of first application process whose frontmost is true',
+      `tell application "${QUO_APP_NAME}" to activate`,
+      'delay 0.2',
+      `tell application "System Events" to keystroke "${QUO_HANGUP_KEY}" using {command down, shift down}`,
+      'delay 0.15',
+      'return frontApp'
+    ]);
+    console.log(`[action] dial-call: activated "${QUO_APP_NAME}" (was: "${frontApp}"), sent safety hangup flush`);
+    try {
+      await new Promise((resolve, reject) => {
+        execFile('open', [`tel:${digits}`], (error, _stdout, stderr) => {
+          if (error) reject(new Error(stderr?.trim() || error.message));
+          else resolve();
+        });
+      });
+      console.log(`[action] dial-call: opened tel:${digits}`);
+      await sleep(DIAL_SETTLE_MS);
+      await runOsascript([
+        `tell application "${QUO_APP_NAME}" to activate`,
+        'delay 0.1',
+        'tell application "System Events" to keystroke return'
+      ]);
+      console.log(`[action] dial-call: sent Enter to dial ${digits}`);
+    } finally {
+      await runOsascript([`tell application "${frontApp}" to activate`]).catch(() => {});
+      console.log(`[action] dial-call: restored focus to "${frontApp}"`);
+    }
+  } finally {
+    actionInFlight = false;
+  }
+}
+
 // --- Incoming-call polling -------------------------------------------
 // currentRingingPhone debounces repeated POSTs while the same call is still
 // ringing (this runs every POLL_MS while the popup is up) and resets once
@@ -504,6 +566,21 @@ const server = http.createServer((req, res) => {
 
   if (req.method === 'POST' && req.url === '/end-call') {
     handleAction(res, 'end-call', endQuoCall);
+    return;
+  }
+
+  if (req.method === 'POST' && req.url === '/dial-call') {
+    let body = '';
+    req.on('data', (chunk) => { body += chunk; });
+    req.on('end', () => {
+      let phone;
+      try {
+        phone = JSON.parse(body || '{}').phone;
+      } catch {
+        phone = undefined;
+      }
+      handleAction(res, 'dial-call', () => dialCall(phone));
+    });
     return;
   }
 

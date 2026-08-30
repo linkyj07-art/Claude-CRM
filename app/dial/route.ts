@@ -76,12 +76,17 @@ export async function GET(req: NextRequest) {
     return NextResponse.redirect(new URL(`/leads?empty=1${reason}`, origin));
   }
   const [first, ...rest] = rows;
+  // A brand-new session always starts Auto-Dial off and its stats at zero —
+  // even if the user's last session left it on, so Auto-Dial never carries
+  // over silently into a session the user hasn't looked at yet.
   db.prepare(
-    `INSERT INTO dial_sessions (user_id, current_lead_id, queue, recycle, pass, updated_at)
-     VALUES (?, ?, ?, '', 1, datetime('now'))
+    `INSERT INTO dial_sessions (user_id, current_lead_id, queue, recycle, pass, auto_dial, auto_dial_pace_ms, session_dials, session_connects, consecutive_no_answer, updated_at)
+     VALUES (?, ?, ?, '', 1, 0, 2000, 0, 0, 0, datetime('now'))
      ON CONFLICT(user_id) DO UPDATE SET
        current_lead_id = excluded.current_lead_id, queue = excluded.queue,
-       recycle = '', pass = 1, updated_at = excluded.updated_at`
+       recycle = '', pass = 1, auto_dial = 0, auto_dial_pace_ms = 2000,
+       session_dials = 0, session_connects = 0, consecutive_no_answer = 0,
+       updated_at = excluded.updated_at`
   ).run(user.id, first.id, rest.map((r) => r.id).join(','));
 
   return NextResponse.redirect(new URL(`/leads/${first.id}?dialing=1`, origin));
