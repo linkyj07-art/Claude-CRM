@@ -14,6 +14,15 @@ on run
 			return "Quo isn't running — open it first, then run this again while a call is ringing."
 		end if
 		tell process "Quo"
+			-- Chromium-based apps (Quo's call screen is one — confirmed via a
+			-- real dump showing an AXWebArea) only populate their full
+			-- accessibility tree when something is actively using assistive
+			-- tech. Turning on VoiceOver system-wide does that, but so does
+			-- this narrower flag scoped to just this one process — try it so
+			-- the real (always-running) helper never needs VoiceOver on.
+			try
+				set value of attribute "AXManualAccessibility" to true
+			end try
 			set frontmost to true
 			set output to ""
 			set winList to windows
