@@ -5,17 +5,7 @@ import { SessionUser } from '@/lib/currentUser';
 import QuickAccessMenu from './QuickAccessMenu';
 import LogoutButton from './LogoutButton';
 import Logo from './Logo';
-
-const NAV_ITEMS = [
-  { href: '/', label: 'Dashboard' },
-  { href: '/leads', label: 'Leads' },
-  { href: '/calls', label: 'Calls' },
-  { href: '/calendar', label: 'Calendar' },
-  { href: '/policies', label: 'Policies' },
-  { href: '/commissions', label: 'Commissions' },
-  { href: '/disputes', label: 'Disputes' },
-  { href: '/analytics', label: 'Analytics' }
-];
+import NavLinks from './NavLinks';
 
 export default function TopNav({ user }: { user: SessionUser | null }) {
   if (!user) {
@@ -36,21 +26,11 @@ export default function TopNav({ user }: { user: SessionUser | null }) {
   return (
     <header className="sticky top-0 z-40 border-b border-line bg-paper/90 backdrop-blur">
       <div className="mx-auto flex max-w-[1400px] items-center gap-1 px-4 py-2.5 md:px-6">
-        <Link href="/" className="mr-3 flex items-center gap-2 text-[15px] font-bold text-ink">
+        <Link href="/" className="mr-3 flex items-center gap-2 text-[15px] font-bold text-ink transition-transform hover:scale-105">
           <Logo size={28} />
           Solace
         </Link>
-        <nav className="flex flex-1 items-center gap-1 overflow-x-auto">
-          {NAV_ITEMS.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className="whitespace-nowrap rounded-lg px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-100 hover:text-ink"
-            >
-              {item.label}
-            </Link>
-          ))}
-        </nav>
+        <NavLinks />
         <span className="mr-1 hidden text-sm text-slate-500 sm:inline">{user.name}</span>
         <Link href="/quick-links" className="btn-secondary hidden sm:inline-flex">👥 Team</Link>
         <QuickAccessMenu carriers={carriers} quickLinks={quickLinks} />
