@@ -122,9 +122,6 @@ Vercel's platform — just a larger lift than the Railway/Fly.io path above.
   every new lead — manually added, CSV-imported, or delivered by webhook —
   so a number that already asked to stop never re-enters your dial queue
   under a new lead.
-- **Referrals** — log who a client referred (and what it was worth once
-  they buy) right from that client's Lead Workspace; feeds the lifetime
-  value numbers on Analytics.
 
 ## The data model
 

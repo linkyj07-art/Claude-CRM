@@ -38,7 +38,6 @@ export async function GET() {
   addSheet(workbook, 'Commissions', db.prepare(`SELECT * FROM commissions WHERE customer_id IN ${ownedSub} ORDER BY created_at DESC`).all(user.id) as Record<string, unknown>[]);
   addSheet(workbook, 'Payments', db.prepare(`SELECT * FROM payments WHERE customer_id IN ${ownedSub} ORDER BY paid_at DESC`).all(user.id) as Record<string, unknown>[]);
   addSheet(workbook, 'Disputes', db.prepare(`SELECT * FROM disputes WHERE customer_id IN ${ownedSub} ORDER BY created_at DESC`).all(user.id) as Record<string, unknown>[]);
-  addSheet(workbook, 'Referrals', db.prepare(`SELECT * FROM referrals WHERE referrer_customer_id IN ${ownedSub} ORDER BY created_at DESC`).all(user.id) as Record<string, unknown>[]);
   addSheet(workbook, 'Audit History', db.prepare(`SELECT * FROM audit_history WHERE customer_id IN ${ownedSub} ORDER BY occurred_at DESC`).all(user.id) as Record<string, unknown>[]);
   // Company-wide, not owner-scoped — see schema.sql's note on dnc_numbers.
   addSheet(workbook, 'DNC List', db.prepare('SELECT * FROM dnc_numbers ORDER BY created_at DESC').all() as Record<string, unknown>[]);

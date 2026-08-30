@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Badge from './Badge';
 import {
-  Customer, NoteVersion, CallRecord, Policy, Commission, Carrier, CarrierRule, LeadVendor, Referral
+  Customer, NoteVersion, CallRecord, Policy, Commission, Carrier, CarrierRule, LeadVendor
 } from '@/lib/types';
 import { fmtMoney, fmtMoney0, leadAgeLabel, localTimeForState, agentLocalTime, statusBadge, isValidRoutingNumber, callsToday, MAX_CALLS_PER_DAY, isWithinCallingHours, callingWindowStatus } from '@/lib/util';
 import { suggestCarriers } from '@/lib/underwriting';
@@ -91,10 +91,10 @@ function noteFormFromNote(note: NoteVersion | undefined, customer: Customer): An
 }
 
 export default function LeadWorkspace({
-  customer, notes, calls, quotes, appointments, applications, policies, commissions, payments, referrals, vendors, carriers, rules, quoteToken
+  customer, notes, calls, quotes, appointments, applications, policies, commissions, payments, vendors, carriers, rules, quoteToken
 }: {
   customer: Customer; notes: NoteVersion[]; calls: CallRecord[]; quotes: AnyRow[]; appointments: AnyRow[];
-  applications: AnyRow[]; policies: Policy[]; commissions: Commission[]; payments: AnyRow[]; referrals: Referral[];
+  applications: AnyRow[]; policies: Policy[]; commissions: Commission[]; payments: AnyRow[];
   vendors: LeadVendor[]; carriers: Carrier[]; rules: CarrierRule[]; quoteToken: string;
 }) {
   const router = useRouter();
@@ -124,8 +124,6 @@ export default function LeadWorkspace({
   const [showInfoPanel, setShowInfoPanel] = useState(!isDialing);
   const [showNotesPanel, setShowNotesPanel] = useState(!isDialing);
   const [showStatusPanel, setShowStatusPanel] = useState(!isDialing);
-  const [referralForm, setReferralForm] = useState({ referred_name: '', value: '' });
-  const [addingReferral, setAddingReferral] = useState(false);
 
   const badge = statusBadge(customer.status, customer.purchased_at);
   // Health conditions are often disclosed across several calls/notes rather than
@@ -383,31 +381,6 @@ export default function LeadWorkspace({
       setEditingNote(false);
       await refresh();
     } finally { setBusy(false); }
-  }
-
-  async function addReferral() {
-    if (!referralForm.referred_name.trim()) return;
-    setAddingReferral(true);
-    try {
-      const res = await fetch(`/api/leads/${customer.id}/referrals`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(referralForm)
-      });
-      if (!res.ok) {
-        alert('Could not save this referral — please try again.');
-        return;
-      }
-      setReferralForm({ referred_name: '', value: '' });
-      await refresh();
-    } finally { setAddingReferral(false); }
-  }
-
-  async function deleteReferral(id: string) {
-    const res = await fetch(`/api/referrals/${id}`, { method: 'DELETE' });
-    if (!res.ok) {
-      alert('Could not remove that referral — please try again.');
-      return;
-    }
-    await refresh();
   }
 
   async function copyAllNotes() {
@@ -840,38 +813,6 @@ export default function LeadWorkspace({
               <button className="btn-secondary text-xs" onClick={() => setStatus('lost')}>Lost</button>
               <button className="btn-secondary text-xs" onClick={() => setStatus('invalid')}>Invalid</button>
               <button className="btn-secondary text-xs" onClick={() => setStatus('dnc')}>DNC</button>
-            </div>
-          </div>
-          <div className="card p-4">
-            <div className="label mb-2">🎁 Referrals</div>
-            {referrals.length > 0 && (
-              <div className="mb-2 space-y-1.5">
-                {referrals.map((r) => (
-                  <div key={r.id} className="flex items-center justify-between rounded-lg border border-line p-2 text-sm">
-                    <span className="font-medium text-ink">{r.referred_name}</span>
-                    <div className="flex items-center gap-2">
-                      {r.value > 0 && <span className="text-emerald-600">{fmtMoney0(r.value)}</span>}
-                      <button className="text-xs text-slate-400 hover:text-red-500" onClick={() => deleteReferral(r.id)}>✕</button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-            <div className="flex gap-1.5">
-              <input
-                className="input flex-1"
-                placeholder="Who did they refer?"
-                value={referralForm.referred_name}
-                onChange={(e) => setReferralForm({ ...referralForm, referred_name: e.target.value })}
-              />
-              <input
-                className="input w-24"
-                type="number"
-                placeholder="$"
-                value={referralForm.value}
-                onChange={(e) => setReferralForm({ ...referralForm, value: e.target.value })}
-              />
-              <button className="btn-secondary text-xs" disabled={addingReferral || !referralForm.referred_name.trim()} onClick={addReferral}>+ Add</button>
             </div>
           </div>
         </div>
