@@ -35,10 +35,14 @@ export default function LeadsTable({ leads }: { leads: LeadRow[] }) {
     if (!confirm(`Permanently delete ${selected.size} lead${selected.size === 1 ? '' : 's'}? This can't be undone.`)) return;
     setBusy(true);
     try {
-      await fetch('/api/leads', {
+      const res = await fetch('/api/leads', {
         method: 'DELETE', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ids: Array.from(selected) })
       });
+      if (!res.ok) {
+        alert('Could not delete those leads — please try again.');
+        return;
+      }
       setSelected(new Set());
       router.refresh();
     } finally { setBusy(false); }
@@ -48,10 +52,14 @@ export default function LeadsTable({ leads }: { leads: LeadRow[] }) {
     if (confirmText !== 'DELETE ALL') return;
     setBusy(true);
     try {
-      await fetch('/api/leads', {
+      const res = await fetch('/api/leads', {
         method: 'DELETE', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ all: true })
       });
+      if (!res.ok) {
+        alert('Could not delete these leads — please try again.');
+        return;
+      }
       setConfirmAll(false);
       setConfirmText('');
       setSelected(new Set());

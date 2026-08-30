@@ -37,9 +37,13 @@ export default function DisputeRow({ dispute }: { dispute: DisputeRowData }) {
   async function update(fields: Record<string, unknown>) {
     setBusy(true);
     try {
-      await fetch(`/api/disputes/${dispute.id}`, {
+      const res = await fetch(`/api/disputes/${dispute.id}`, {
         method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(fields)
       });
+      if (!res.ok) {
+        alert('Could not save that change — please try again.');
+        return;
+      }
       router.refresh();
     } finally {
       setBusy(false);

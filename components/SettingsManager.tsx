@@ -133,10 +133,14 @@ function LicensingTab({ licensedStates, onChanged }: { licensedStates: string[];
   async function save() {
     setBusy(true);
     try {
-      await fetch('/api/settings/licensed-states', {
+      const res = await fetch('/api/settings/licensed-states', {
         method: 'PUT', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ states: Array.from(selected) })
       });
+      if (!res.ok) {
+        alert('Could not save your licensed states — please try again.');
+        return;
+      }
       setSaved(true);
       onChanged();
     } finally { setBusy(false); }
@@ -172,7 +176,11 @@ function CarriersTab({ carriers, onChanged }: { carriers: Carrier[]; onChanged: 
   async function addCarrier() {
     setBusy(true);
     try {
-      await fetch('/api/carriers', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form) });
+      const res = await fetch('/api/carriers', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form) });
+      if (!res.ok) {
+        alert('Could not add that carrier — please try again.');
+        return;
+      }
       setForm({ name: '', agent_portal_url: '', application_url: '', claims_url: '', support_phone: '', notes: '' });
       setAdding(false);
       onChanged();
@@ -183,13 +191,21 @@ function CarriersTab({ carriers, onChanged }: { carriers: Carrier[]; onChanged: 
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
     const body = Object.fromEntries(fd.entries());
-    await fetch(`/api/carriers/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    const res = await fetch(`/api/carriers/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    if (!res.ok) {
+      alert('Could not save this carrier — please try again.');
+      return;
+    }
     onChanged();
   }
 
   async function deleteCarrier(id: string) {
     if (!confirm('Remove this carrier? Its underwriting rules will be removed too.')) return;
-    await fetch(`/api/carriers/${id}`, { method: 'DELETE' });
+    const res = await fetch(`/api/carriers/${id}`, { method: 'DELETE' });
+    if (!res.ok) {
+      alert('Could not remove that carrier — please try again.');
+      return;
+    }
     onChanged();
   }
 
@@ -257,10 +273,14 @@ function CarrierRuleCard({ carrier, rules, onChanged }: { carrier: Carrier; rule
   async function addRule() {
     setBusy(true);
     try {
-      await fetch('/api/underwriting-rules', {
+      const res = await fetch('/api/underwriting-rules', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ...form, carrier_id: carrier.id })
       });
+      if (!res.ok) {
+        alert('Could not add that rule — please try again.');
+        return;
+      }
       setForm({ keywords: '', tier_note: '', priority: 0, is_knockout: false });
       setAdding(false);
       onChanged();
@@ -276,12 +296,20 @@ function CarrierRuleCard({ carrier, rules, onChanged }: { carrier: Carrier; rule
       priority: Number(fd.get('priority') || 0),
       is_knockout: fd.get('is_knockout') === 'on'
     };
-    await fetch(`/api/underwriting-rules/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    const res = await fetch(`/api/underwriting-rules/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    if (!res.ok) {
+      alert('Could not save that rule — please try again.');
+      return;
+    }
     onChanged();
   }
 
   async function deleteRule(id: string) {
-    await fetch(`/api/underwriting-rules/${id}`, { method: 'DELETE' });
+    const res = await fetch(`/api/underwriting-rules/${id}`, { method: 'DELETE' });
+    if (!res.ok) {
+      alert('Could not remove that rule — please try again.');
+      return;
+    }
     onChanged();
   }
 
@@ -333,7 +361,11 @@ function LinksTab({ quickLinks, onChanged }: { quickLinks: QuickLink[]; onChange
   async function addLink() {
     setBusy(true);
     try {
-      await fetch('/api/quick-links', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form) });
+      const res = await fetch('/api/quick-links', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form) });
+      if (!res.ok) {
+        alert('Could not add that link — please try again.');
+        return;
+      }
       setForm({ category: 'quoter', label: '', url: '' });
       onChanged();
     } finally { setBusy(false); }
@@ -343,12 +375,20 @@ function LinksTab({ quickLinks, onChanged }: { quickLinks: QuickLink[]; onChange
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
     const body = Object.fromEntries(fd.entries());
-    await fetch(`/api/quick-links/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    const res = await fetch(`/api/quick-links/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    if (!res.ok) {
+      alert('Could not save that link — please try again.');
+      return;
+    }
     onChanged();
   }
 
   async function deleteLink(id: string) {
-    await fetch(`/api/quick-links/${id}`, { method: 'DELETE' });
+    const res = await fetch(`/api/quick-links/${id}`, { method: 'DELETE' });
+    if (!res.ok) {
+      alert('Could not remove that link — please try again.');
+      return;
+    }
     onChanged();
   }
 

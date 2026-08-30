@@ -53,6 +53,7 @@ export default function GoalsManager() {
           const weeklyKey = `weekly-${weekStart}`;
           if (weekday === 1 && !skipped.has(weeklyKey)) {
             const res = await fetch(`/api/goals/weekly?week=${weekStart}`);
+            if (!res.ok) return; // e.g. session hiccup mid-poll — don't misread as "no goal set"
             const data = await res.json();
             if (!data.goal) {
               if (!cancelled) setShowWeekly(weekStart);
@@ -63,6 +64,7 @@ export default function GoalsManager() {
           const dailyKey = `daily-${date}`;
           if (!skipped.has(dailyKey)) {
             const res = await fetch(`/api/goals/daily?date=${date}`);
+            if (!res.ok) return;
             const data = await res.json();
             if (!data.goal) {
               if (!cancelled) setShowDaily(date);
@@ -77,6 +79,7 @@ export default function GoalsManager() {
 
         async function checkPeriod(kind: 'daily' | 'weekly', key: string, label: string) {
           const res = await fetch(`/api/goals/${kind}?${kind === 'daily' ? 'date' : 'week'}=${key}`);
+          if (!res.ok) return;
           const data: { goal: Goal; progress: Progress } = await res.json();
           if (!data.goal) return;
           const metrics: [string, number | null, number][] = [
@@ -152,10 +155,14 @@ export default function GoalsManager() {
           title="🗓️ Set This Week's Goals"
           onSkip={skipWeekly}
           onSave={async (vals) => {
-            await fetch('/api/goals/weekly', {
+            const res = await fetch('/api/goals/weekly', {
               method: 'POST', headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ week_start: showWeekly, ...vals })
             });
+            if (!res.ok) {
+              alert('Could not save this week\'s goals — please try again.');
+              return;
+            }
             setShowWeekly(null);
             recheck();
           }}
@@ -166,11 +173,16 @@ export default function GoalsManager() {
           title="☀️ Set Today's Goals"
           onSkip={skipDaily}
           onSave={async (vals) => {
-            await fetch('/api/goals/daily', {
+            const res = await fetch('/api/goals/daily', {
               method: 'POST', headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ date: showDaily, ...vals })
             });
+            if (!res.ok) {
+              alert('Could not save today\'s goals — please try again.');
+              return;
+            }
             setShowDaily(null);
+            recheck();
           }}
         />
       )}

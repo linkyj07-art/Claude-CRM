@@ -9,7 +9,11 @@ export function DismissDuplicateButton({ id }: { id: string }) {
   async function dismiss() {
     setBusy(true);
     try {
-      await fetch(`/api/duplicate-leads/${id}`, { method: 'DELETE' });
+      const res = await fetch(`/api/duplicate-leads/${id}`, { method: 'DELETE' });
+      if (!res.ok) {
+        alert('Could not dismiss that — please try again.');
+        return;
+      }
       router.refresh();
     } finally { setBusy(false); }
   }
@@ -22,7 +26,11 @@ export function AddAnywayButton({ id }: { id: string }) {
   async function addAnyway() {
     setBusy(true);
     try {
-      await fetch(`/api/duplicate-leads/${id}/add`, { method: 'POST' });
+      const res = await fetch(`/api/duplicate-leads/${id}/add`, { method: 'POST' });
+      if (!res.ok) {
+        alert('Could not add this lead — please try again.');
+        return;
+      }
       router.refresh();
     } finally { setBusy(false); }
   }
@@ -35,10 +43,14 @@ export function ArchiveLeadButton({ id }: { id: string }) {
   async function archive() {
     setBusy(true);
     try {
-      await fetch(`/api/leads/${id}`, {
+      const res = await fetch(`/api/leads/${id}`, {
         method: 'PATCH', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: 'archived', archived: 1 })
       });
+      if (!res.ok) {
+        alert('Could not archive this lead — please try again.');
+        return;
+      }
       router.refresh();
     } finally { setBusy(false); }
   }
