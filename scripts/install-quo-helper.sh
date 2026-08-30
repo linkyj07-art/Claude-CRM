@@ -124,8 +124,14 @@ ${ENV_VARS_XML}  <key>StandardOutPath</key>
 </plist>
 EOF
 
-  launchctl unload "$PLIST_PATH" >/dev/null 2>&1 || true
-  launchctl load -w "$PLIST_PATH"
+  # launchctl load/unload is the legacy interface — it's flaky on modern
+  # macOS (Ventura+), sometimes failing with a bare "Input/output error" and
+  # no useful detail. bootstrap/bootout is the current, more reliable
+  # replacement, addressed to this user's own GUI launchd domain.
+  LAUNCHD_DOMAIN="gui/$(id -u)"
+  launchctl bootout "$LAUNCHD_DOMAIN" "$PLIST_PATH" >/dev/null 2>&1 || true
+  launchctl bootstrap "$LAUNCHD_DOMAIN" "$PLIST_PATH"
+  launchctl enable "$LAUNCHD_DOMAIN/com.crm.quo-helper" >/dev/null 2>&1 || true
   echo
   echo "Installed launchd agent at $PLIST_PATH"
   echo "The helper now starts automatically at login and restarts if it ever crashes."
@@ -142,7 +148,7 @@ EOF
   fi
   echo
   echo "To stop autostart later:"
-  echo "  launchctl unload $PLIST_PATH && rm $PLIST_PATH"
+  echo "  launchctl bootout $LAUNCHD_DOMAIN $PLIST_PATH && rm $PLIST_PATH"
 else
   echo
   echo "Starting the helper in the foreground. Leave this window open while"
