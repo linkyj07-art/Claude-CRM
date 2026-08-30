@@ -66,6 +66,13 @@ export async function GET(req: NextRequest) {
   const rows = callable
     .map((r) => ({ ...r, minutesLeft: isTestLead(r) ? Infinity : minutesUntilCallingWindowCloses(r.state) }))
     .sort((a, b) => {
+      // Test leads jump straight to the very front — otherwise they'd sort
+      // by purchased_at like anything else and end up buried behind a
+      // whole day's worth of older real leads, defeating the point of
+      // dropping in a few to try Power Dial/Auto-Dial right now.
+      const aTest = isTestLead(a);
+      const bTest = isTestLead(b);
+      if (aTest !== bTest) return aTest ? -1 : 1;
       const aUrgent = a.minutesLeft <= CLOSING_SOON_MINUTES;
       const bUrgent = b.minutesLeft <= CLOSING_SOON_MINUTES;
       if (aUrgent && bUrgent) return a.minutesLeft - b.minutesLeft;
