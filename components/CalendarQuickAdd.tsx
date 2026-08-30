@@ -21,17 +21,22 @@ export default function CalendarQuickAdd({ defaultDate }: { defaultDate: string 
     setSelected(null);
     if (q.trim().length < 2) { setResults([]); return; }
     const res = await fetch(`/api/leads?q=${encodeURIComponent(q)}`);
-    setResults(await res.json());
+    const data = res.ok ? await res.json() : [];
+    setResults(Array.isArray(data) ? data : []);
   }
 
   async function save() {
     if (!selected) return;
     setBusy(true);
     try {
-      await fetch(`/api/leads/${selected.id}/appointments`, {
+      const res = await fetch(`/api/leads/${selected.id}/appointments`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ scheduled_at: scheduledAt, type, notes })
       });
+      if (!res.ok) {
+        alert('Could not save this appointment — please try again.');
+        return;
+      }
       close();
       router.refresh();
     } finally { setBusy(false); }

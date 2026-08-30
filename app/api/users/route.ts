@@ -2,16 +2,23 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
 import { hashPassword } from '@/lib/auth';
 import { newId } from '@/lib/util';
+import { getCurrentUser } from '@/lib/currentUser';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
+  const user = await getCurrentUser();
+  if (!user) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+
   const db = getDb();
   const users = db.prepare('SELECT id, username, name, created_at FROM users ORDER BY created_at ASC').all();
   return NextResponse.json({ users });
 }
 
 export async function POST(req: NextRequest) {
+  const requester = await getCurrentUser();
+  if (!requester) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+
   const body = await req.json().catch(() => ({}));
   const username = typeof body.username === 'string' ? body.username.trim() : '';
   const password = typeof body.password === 'string' ? body.password : '';

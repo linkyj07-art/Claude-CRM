@@ -1,8 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
 import { newId } from '@/lib/util';
+import { getCurrentUser } from '@/lib/currentUser';
 
 export async function POST(req: NextRequest) {
+  const user = await getCurrentUser();
+  if (!user) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+
   const body = await req.json();
   const db = getDb();
   const id = newId();

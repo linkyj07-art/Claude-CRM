@@ -23,8 +23,8 @@ export default function RoutingLookup({
       if (bankName) params.set('bank', bankName);
       if (state) params.set('state', state);
       const res = await fetch(`/api/routing/search?${params.toString()}`);
-      const data = await res.json();
-      setResults(data);
+      const data = res.ok ? await res.json() : [];
+      setResults(Array.isArray(data) ? data : []);
       setSearched(true);
     } finally { setLoading(false); }
   }

@@ -367,14 +367,16 @@ export default function LeadWorkspace({
   async function saveNote() {
     setBusy(true);
     try {
-      if (lastNote) {
-        await fetch(`/api/leads/${customer.id}/notes/${lastNote.id}`, {
-          method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(noteForm)
-        });
-      } else {
-        await fetch(`/api/leads/${customer.id}/notes`, {
-          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(noteForm)
-        });
+      const res = lastNote
+        ? await fetch(`/api/leads/${customer.id}/notes/${lastNote.id}`, {
+            method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(noteForm)
+          })
+        : await fetch(`/api/leads/${customer.id}/notes`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(noteForm)
+          });
+      if (!res.ok) {
+        alert('Could not save this note — your changes are still in the form. Please try again.');
+        return;
       }
       setEditingNote(false);
       await refresh();
@@ -395,9 +397,13 @@ export default function LeadWorkspace({
     if (!confirm(`Set lead status to "${status}"?`)) return;
     setBusy(true);
     try {
-      await fetch(`/api/leads/${customer.id}`, {
+      const res = await fetch(`/api/leads/${customer.id}`, {
         method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status })
       });
+      if (!res.ok) {
+        alert('Could not update this lead\'s status — please try again.');
+        return;
+      }
       await refresh();
     } finally { setBusy(false); }
   }
@@ -405,9 +411,13 @@ export default function LeadWorkspace({
   async function markFollowedUp() {
     setBusy(true);
     try {
-      await fetch(`/api/leads/${customer.id}`, {
+      const res = await fetch(`/api/leads/${customer.id}`, {
         method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ last_followed_up_at: new Date().toISOString() })
       });
+      if (!res.ok) {
+        alert('Could not mark this lead as followed up — please try again.');
+        return;
+      }
       await refresh();
     } finally { setBusy(false); }
   }
@@ -435,7 +445,15 @@ export default function LeadWorkspace({
   // Call button to press; it stays eligible for a future Power Dial run
   // once whichever condition cleared it out reverses (window reopens, a
   // phone number gets added, or the day rolls over).
-  const skipReason = !withinCallingHours
+  // The dial-session queue itself is kept free of out-of-hours leads (see
+  // /api/dial-session), so landing here with the window already closed
+  // should be rare — a lead that went out of hours while it was the one
+  // actively being viewed, not one pulled fresh off the queue. Advance past
+  // it silently rather than flashing a "skipping…" card the agent has to
+  // watch; the phone/daily-limit cases are worth surfacing since they're
+  // usually a one-off data issue rather than routine housekeeping.
+  const outOfHours = !withinCallingHours;
+  const skipReason = outOfHours
     ? `outside calling hours right now (${customer.state || 'unknown state'})`
     : !customer.phone
       ? 'has no phone number on file'
@@ -451,6 +469,7 @@ export default function LeadWorkspace({
   }, [customer.id, isDialing, skipReason]);
 
   if (isDialing && skipReason) {
+    if (outOfHours) return null;
     return (
       <div className="card p-8 text-center text-sm text-slate-500">
         ⏭️ {customer.first_name} {customer.last_name} — {skipReason} — skipping…
@@ -950,7 +969,11 @@ function QuoteModal({ customer, quoteToken, onClose, onSaved }: { customer: Cust
   async function save() {
     setBusy(true);
     try {
-      await fetch(`/api/leads/${customer.id}/quotes`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form) });
+      const res = await fetch(`/api/leads/${customer.id}/quotes`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form) });
+      if (!res.ok) {
+        alert('Could not save this quote — please try again.');
+        return;
+      }
       onSaved(); onClose();
     } finally { setBusy(false); }
   }
@@ -1024,7 +1047,11 @@ function ApptModal({ customer, onClose, onSaved }: { customer: Customer; onClose
   async function save() {
     setBusy(true);
     try {
-      await fetch(`/api/leads/${customer.id}/appointments`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form) });
+      const res = await fetch(`/api/leads/${customer.id}/appointments`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form) });
+      if (!res.ok) {
+        alert('Could not save this appointment — please try again.');
+        return;
+      }
       onSaved(); onClose();
     } finally { setBusy(false); }
   }

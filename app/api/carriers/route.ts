@@ -1,8 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
 import { newId } from '@/lib/util';
+import { getCurrentUser } from '@/lib/currentUser';
 
 export async function GET() {
+  const user = await getCurrentUser();
+  if (!user) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+
   const db = getDb();
   const carriers = db.prepare('SELECT * FROM carriers ORDER BY sort_order, name').all();
   const rules = db.prepare('SELECT * FROM carrier_underwriting_rules ORDER BY created_at').all();
@@ -10,6 +14,9 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
+  const user = await getCurrentUser();
+  if (!user) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+
   const body = await req.json();
   const db = getDb();
   const id = newId();

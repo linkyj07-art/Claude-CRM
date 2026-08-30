@@ -52,11 +52,16 @@ export default function SellModal({
   async function save() {
     setBusy(true);
     try {
-      await fetch(`/api/leads/${customer.id}/sell`, {
+      const res = await fetch(`/api/leads/${customer.id}/sell`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ...form, annual_premium: annualPremium, expected_commission: expectedCommission, net_commission: netCommission })
       });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        alert(data.error || 'Could not record this sale — please try again.');
+        return;
+      }
       onSaved();
     } finally { setBusy(false); }
   }

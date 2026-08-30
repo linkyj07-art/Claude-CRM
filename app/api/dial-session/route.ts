@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
 import { getCurrentUser } from '@/lib/currentUser';
+import { isWithinCallingHours } from '@/lib/util';
 
 type DialSessionRow = { current_lead_id: string | null; queue: string; recycle: string; pass: number; updated_at: string };
+type Db = ReturnType<typeof getDb>;
 
 function serialize(row: DialSessionRow | undefined) {
   if (!row) return null;
@@ -15,6 +17,21 @@ function serialize(row: DialSessionRow | undefined) {
   };
 }
 
+// A lead queued while its state was inside the calling window can age out of
+// that window before Power Dial actually reaches it (deep queue, or a state
+// whose window closes early). Rather than only catching that once the agent
+// lands on the lead's page — which flashed a visible "skipping…" card —
+// every read/write of the queue drops anything that's gone out of hours in
+// the meantime, so the agent never sees a dead-on-arrival lead at all.
+function dropOutOfHours(db: Db, ids: string[]): string[] {
+  if (ids.length === 0) return ids;
+  const placeholders = ids.map(() => '?').join(',');
+  const rows = db.prepare(`SELECT id, state FROM customers WHERE id IN (${placeholders})`).all(...ids) as
+    { id: string; state: string | null }[];
+  const stateById = new Map(rows.map((r) => [r.id, r.state]));
+  return ids.filter((id) => stateById.has(id) && isWithinCallingHours(stateById.get(id) ?? null));
+}
+
 // A single Power Dial session per user, persisted server-side, is what lets
 // a second device (phone alongside laptop) follow the exact same queue
 // instead of building its own — LeadWorkspace polls this while dialing and
@@ -23,7 +40,20 @@ function serialize(row: DialSessionRow | undefined) {
 export async function GET() {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
-  const row = getDb().prepare('SELECT * FROM dial_sessions WHERE user_id = ?').get(user.id) as DialSessionRow | undefined;
+  const db = getDb();
+  const row = db.prepare('SELECT * FROM dial_sessions WHERE user_id = ?').get(user.id) as DialSessionRow | undefined;
+  if (row) {
+    const queue = row.queue ? row.queue.split(',').filter(Boolean) : [];
+    const recycle = row.recycle ? row.recycle.split(',').filter(Boolean) : [];
+    const cleanQueue = dropOutOfHours(db, queue);
+    const cleanRecycle = dropOutOfHours(db, recycle);
+    if (cleanQueue.length !== queue.length || cleanRecycle.length !== recycle.length) {
+      db.prepare(`UPDATE dial_sessions SET queue = ?, recycle = ?, updated_at = datetime('now') WHERE user_id = ?`)
+        .run(cleanQueue.join(','), cleanRecycle.join(','), user.id);
+      row.queue = cleanQueue.join(',');
+      row.recycle = cleanRecycle.join(',');
+    }
+  }
   return NextResponse.json(serialize(row));
 }
 
@@ -37,13 +67,15 @@ export async function POST(req: NextRequest) {
   const pass = body.pass === 2 ? 2 : 1;
 
   const db = getDb();
+  const cleanQueue = dropOutOfHours(db, queue);
+  const cleanRecycle = dropOutOfHours(db, recycle);
   db.prepare(
     `INSERT INTO dial_sessions (user_id, current_lead_id, queue, recycle, pass, updated_at)
      VALUES (?, ?, ?, ?, ?, datetime('now'))
      ON CONFLICT(user_id) DO UPDATE SET
        current_lead_id = excluded.current_lead_id, queue = excluded.queue,
        recycle = excluded.recycle, pass = excluded.pass, updated_at = excluded.updated_at`
-  ).run(user.id, currentLeadId, queue.join(','), recycle.join(','), pass);
+  ).run(user.id, currentLeadId, cleanQueue.join(','), cleanRecycle.join(','), pass);
 
   const row = db.prepare('SELECT * FROM dial_sessions WHERE user_id = ?').get(user.id) as DialSessionRow;
   return NextResponse.json(serialize(row));

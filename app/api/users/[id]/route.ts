@@ -6,6 +6,9 @@ import { getCurrentUser } from '@/lib/currentUser';
 export const dynamic = 'force-dynamic';
 
 export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
+  const requester = await getCurrentUser();
+  if (!requester) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+
   const body = await req.json().catch(() => ({}));
   const password = typeof body.password === 'string' ? body.password : '';
   if (!password || password.length < 6) {
@@ -18,9 +21,11 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
 }
 
 export async function DELETE(_req: NextRequest, { params }: { params: { id: string } }) {
-  const db = getDb();
   const me = await getCurrentUser();
-  if (me?.id === params.id) {
+  if (!me) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+
+  const db = getDb();
+  if (me.id === params.id) {
     return NextResponse.json({ error: "You can't delete your own account while logged in as it." }, { status: 400 });
   }
   const count = (db.prepare('SELECT COUNT(*) n FROM users').get() as { n: number }).n;

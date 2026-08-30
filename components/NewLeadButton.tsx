@@ -20,7 +20,11 @@ export default function NewLeadButton({ vendors }: { vendors: LeadVendor[] }) {
     setBusy(true);
     try {
       const res = await fetch('/api/leads', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form) });
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.id) {
+        alert(data.error || 'Could not add that lead — please try again.');
+        return;
+      }
       setOpen(false);
       router.push(`/leads/${data.id}`);
       router.refresh();
