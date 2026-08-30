@@ -1,5 +1,5 @@
 import Database from 'better-sqlite3';
-import { agentDateStr, agentWeekStart } from './util';
+import { agentDateStr, agentWeekStart, agentMidnightUTC } from './util';
 
 export type Period = 'today' | 'week' | 'month' | 'all';
 
@@ -51,10 +51,16 @@ export function getGoalProgress(db: Database.Database, kind: 'daily' | 'weekly',
   return { dials, appointments, ap };
 }
 
+// "Today" has to mean the agent's own calendar day, not the server's — the
+// server runs in UTC on Railway, so a naive new Date(y, m, d) built from
+// that server-local clock put the boundary 6-7 hours off from actual
+// midnight in the agent's own timezone, which skewed every "Today" number
+// on the dashboard (including the Calls/conversion stats) by however many
+// hours of the previous evening or the start of today got mis-bucketed.
 export function periodStartISO(period: Period): string | null {
   const now = new Date();
   if (period === 'today') {
-    return new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString().slice(0, 19).replace('T', ' ');
+    return agentMidnightUTC(0, now).toISOString().slice(0, 19).replace('T', ' ');
   }
   if (period === 'week') {
     const d = new Date(now);
@@ -581,8 +587,11 @@ export function getMoneyComparison(db: Database.Database, ownerId: string): Mone
   const now = new Date();
   const iso = (d: Date) => d.toISOString().slice(0, 19).replace('T', ' ');
   const daysAgo = (n: number) => { const d = new Date(now); d.setDate(d.getDate() - n); return d; };
-  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const yesterdayStart = new Date(todayStart); yesterdayStart.setDate(yesterdayStart.getDate() - 1);
+  // Agent-timezone midnight, not the server's (see periodStartISO's comment) —
+  // otherwise "today vs. yesterday" split at the wrong hour and skewed the
+  // comparison arrows by however many hours off the server's own timezone is.
+  const todayStart = agentMidnightUTC(0, now);
+  const yesterdayStart = agentMidnightUTC(1, now);
 
   const todayVal = sumCommissionBetween(db, ownerId, iso(todayStart), iso(now));
   const yesterdayVal = sumCommissionBetween(db, ownerId, iso(yesterdayStart), iso(todayStart));

@@ -290,14 +290,27 @@ export function reconcileContactFields(fields: ContactFieldInputs) {
     return pool.splice(idx, 1)[0];
   }
 
+  // True if a value confidently belongs to one of the OTHER recognized
+  // shapes — used to stop resolve()'s last-resort fallback from putting a
+  // value back into a field it obviously isn't (a real state name sitting
+  // in Gender, from a misaligned source row) just because nothing else in
+  // this row's pool happened to claim it.
+  function looksLikeAnyKnownField(v: string): boolean {
+    return looksLikePhone(v) || looksLikeDob(v) || looksLikeEmail(v) || looksLikeGender(v) || !!normalizeState(v);
+  }
+
   function resolve(valid: boolean, original: string, matches: (v: string) => boolean): string {
     if (valid) return original;
     const claimed = claim(matches);
     if (claimed !== null) return claimed;
     // Nothing else fits either. If our own (shape-mismatched) value is
-    // still sitting unclaimed in the pool, nobody else needed it — keep it.
-    // If it's already gone (another field just claimed it out from under
-    // us), returning it here would duplicate it into two fields.
+    // still sitting unclaimed in the pool, nobody else needed it — keep it,
+    // UNLESS it confidently belongs to some other field type, in which case
+    // showing it here would just be confusing wrong data (a state name as
+    // someone's "gender") rather than useful preserved data — leave blank
+    // instead. If it's already gone (another field just claimed it out from
+    // under us), returning it here would duplicate it into two fields.
+    if (original && looksLikeAnyKnownField(original)) return '';
     const idx = pool.indexOf(original);
     if (idx !== -1) {
       pool.splice(idx, 1);
@@ -551,6 +564,25 @@ export function agentHour(reference: Date = new Date()): number {
   const hourStr = new Intl.DateTimeFormat('en-US', { hour: 'numeric', hour12: false, timeZone: AGENT_TIMEZONE }).format(reference);
   const hour = Number(hourStr);
   return hour === 24 ? 0 : hour;
+}
+
+// The real UTC instant of midnight, `daysAgo` calendar days back, in the
+// agent's own timezone — for bucketing UTC-stored timestamps (calls,
+// policies, etc.) into "today"/"this week" the way the agent actually
+// experiences their day, not the server's. Works out the current UTC
+// offset by re-interpreting the agent's local wall-clock digits as if they
+// were themselves UTC and diffing that against the real instant — DST-safe
+// with no string-parsing of a "GMT-6" style offset label.
+export function agentMidnightUTC(daysAgo = 0, reference: Date = new Date()): Date {
+  const fmt = new Intl.DateTimeFormat('en-US', {
+    timeZone: AGENT_TIMEZONE, year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23'
+  });
+  const parts = Object.fromEntries(fmt.formatToParts(reference).map((p) => [p.type, p.value]));
+  const localAsUTC = Date.UTC(Number(parts.year), Number(parts.month) - 1, Number(parts.day), Number(parts.hour), Number(parts.minute), Number(parts.second));
+  const offsetMs = localAsUTC - reference.getTime();
+  const localMidnightAsUTC = Date.UTC(Number(parts.year), Number(parts.month) - 1, Number(parts.day) - daysAgo, 0, 0, 0);
+  return new Date(localMidnightAsUTC - offsetMs);
 }
 
 // 0 (Sunday) - 6 (Saturday), in the agent's timezone.
