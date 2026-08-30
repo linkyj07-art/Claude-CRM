@@ -63,7 +63,10 @@ const QUO_HANGUP_KEY = process.env.QUO_HANGUP_KEY || 'h'; // Cmd+Shift+H by defa
 const CRM_BASE_URL = process.env.CRM_BASE_URL || '';
 const QUO_WEBHOOK_TOKEN = process.env.QUO_WEBHOOK_TOKEN || '';
 const POLL_MS = process.env.QUO_POLL_MS ? Number(process.env.QUO_POLL_MS) : 1000;
-const CAPTURE_PATH = path.join(os.tmpdir(), 'quo-helper-capture.png');
+// On the Desktop (not a hidden temp folder) so it can actually be opened
+// and inspected while debugging -- one file, overwritten every capture, not
+// something that accumulates.
+const CAPTURE_PATH = path.join(os.homedir(), 'Desktop', 'quo-helper-capture.png');
 
 if (process.platform !== 'darwin') {
   console.error('quo-helper only works on macOS (it relies on AppleScript/System Events).');
@@ -110,14 +113,44 @@ async function getQuoWindowRegion() {
   return { x: parts[0], y: parts[1], w: parts[2], h: parts[3] };
 }
 
-function captureRegion(region) {
+function getImagePixelSize(imgPath) {
   return new Promise((resolve, reject) => {
+    execFile('sips', ['-g', 'pixelWidth', '-g', 'pixelHeight', imgPath], (error, stdout, stderr) => {
+      if (error) {
+        reject(new Error(stderr?.trim() || error.message));
+        return;
+      }
+      const w = /pixelWidth:\s*(\d+)/.exec(stdout);
+      const h = /pixelHeight:\s*(\d+)/.exec(stdout);
+      if (!w || !h) {
+        reject(new Error(`Could not parse sips output: ${stdout}`));
+        return;
+      }
+      resolve({ width: Number(w[1]), height: Number(h[1]) });
+    });
+  });
+}
+
+// On a Retina display, screencapture -R (which takes the same point-based
+// coordinates System Events uses for window position/size) produces an
+// image at roughly 2x that many actual pixels. Tesseract's OCR bounding
+// boxes are in those image pixels, not points -- so converting an OCR
+// coordinate straight into a click point without correcting for this would
+// click at roughly double the intended offset from the window's origin.
+// scaleX/scaleY (image pixels per point) let callers convert back.
+async function captureRegion(region) {
+  await new Promise((resolve, reject) => {
     const arg = `${region.x},${region.y},${region.w},${region.h}`;
     execFile('screencapture', ['-R', arg, '-o', '-x', CAPTURE_PATH], (error, _stdout, stderr) => {
       if (error) reject(new Error(stderr?.trim() || error.message));
-      else resolve(CAPTURE_PATH);
+      else resolve();
     });
   });
+  const pixelSize = await getImagePixelSize(CAPTURE_PATH);
+  return {
+    scaleX: pixelSize.width / region.w,
+    scaleY: pixelSize.height / region.h
+  };
 }
 
 // Tesseract's TSV output gives per-word bounding boxes (image-local
@@ -171,19 +204,39 @@ function findIncomingCallPhone(words) {
   return match ? match[0] : null;
 }
 
-// Same block-scoping as above, so we never click an "Accept"/"Reject"-like
-// word that happens to appear somewhere unrelated on screen.
+// Real captures showed buttons often end up in a DIFFERENT tesseract
+// "block" than the "Incoming call" text -- block_num is tesseract's own
+// visual layout guess, not the popup's actual DOM structure, and it
+// frequently segments a row of buttons separately from the text above them.
+// So: prefer the same block, but fall back to the closest vertical match to
+// "Incoming" (buttons are always a bit below it, never far) instead of
+// failing outright, and only fall back further to a bare global match as a
+// last resort.
 function findButtonCenter(words, labelPattern) {
   const incomingWord = words.find((w) => /incoming/i.test(w.text));
-  const candidates = incomingWord ? words.filter((w) => w.blockNum === incomingWord.blockNum) : words;
-  const target = candidates.find((w) => labelPattern.test(w.text));
+  const allMatches = words.filter((w) => labelPattern.test(w.text));
+  if (allMatches.length === 0) return null;
+
+  let target;
+  if (incomingWord) {
+    target =
+      allMatches.find((w) => w.blockNum === incomingWord.blockNum) ||
+      allMatches.reduce((closest, w) => {
+        const dist = Math.abs(w.top - incomingWord.top);
+        const closestDist = closest ? Math.abs(closest.top - incomingWord.top) : Infinity;
+        return dist < closestDist ? w : closest;
+      }, null);
+  } else {
+    target = allMatches[0];
+  }
+
   if (!target) return null;
   return { x: target.left + target.width / 2, y: target.top + target.height / 2 };
 }
 
-async function clickInQuo(imgLocalPoint, region) {
-  const screenX = Math.round(region.x + imgLocalPoint.x);
-  const screenY = Math.round(region.y + imgLocalPoint.y);
+async function clickInQuo(imgLocalPoint, region, scale) {
+  const screenX = Math.round(region.x + imgLocalPoint.x / scale.scaleX);
+  const screenY = Math.round(region.y + imgLocalPoint.y / scale.scaleY);
   await runOsascript([`tell application "System Events" to click at {${screenX}, ${screenY}}`]);
 }
 
@@ -198,11 +251,11 @@ function sleep(ms) {
 async function findAndClick(labelPattern, notFoundMessage) {
   const region = await getQuoWindowRegion();
   for (let attempt = 0; attempt < 3; attempt++) {
-    await captureRegion(region);
+    const scale = await captureRegion(region);
     const words = await ocrWords(CAPTURE_PATH);
     const center = findButtonCenter(words, labelPattern);
     if (center) {
-      await clickInQuo(center, region);
+      await clickInQuo(center, region, scale);
       return;
     }
     if (attempt < 2) await sleep(400);
@@ -226,9 +279,14 @@ function declineCall() {
 // --- Incoming-call polling -------------------------------------------
 // currentRingingPhone debounces repeated POSTs while the same call is still
 // ringing (this runs every POLL_MS while the popup is up) and resets once
-// no incoming-call popup is detected, so the NEXT call — even from the same
-// number — notifies again.
+// no incoming-call popup is detected for MISSES_BEFORE_RESET consecutive
+// ticks, so the NEXT call — even from the same number — notifies again.
+// Requiring more than one miss (rather than resetting on the very first)
+// absorbs a single flaky OCR read mid-call — confirmed via real logs to
+// happen — without waiting for the call to still actually be ringing.
 let currentRingingPhone = null;
+let consecutiveMisses = 0;
+const MISSES_BEFORE_RESET = 2;
 let pollBusy = false;
 
 function notifyIncomingCall(phone) {
@@ -254,12 +312,18 @@ async function pollOnce() {
     // same still-ringing call, which would otherwise look like a new call.
     const normalized = phone ? phone.replace(/\D/g, '') : null;
 
-    if (normalized && normalized !== currentRingingPhone) {
-      currentRingingPhone = normalized;
-      console.log(`[incoming-call] Detected: ${phone}`);
-      await notifyIncomingCall(phone);
-    } else if (!normalized) {
-      currentRingingPhone = null;
+    if (normalized) {
+      consecutiveMisses = 0;
+      if (normalized !== currentRingingPhone) {
+        currentRingingPhone = normalized;
+        console.log(`[incoming-call] Detected: ${phone}`);
+        await notifyIncomingCall(phone);
+      }
+    } else {
+      consecutiveMisses += 1;
+      if (consecutiveMisses >= MISSES_BEFORE_RESET) {
+        currentRingingPhone = null;
+      }
     }
   } catch {
     // Quo minimized, window covered, OCR hiccup, etc. — deliberately NOT
