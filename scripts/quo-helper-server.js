@@ -248,13 +248,33 @@ function findButtonRowCenter(words, side) {
   return { x: callingWord.left + offset.x, y: callingWord.top + offset.y };
 }
 
+// AppleScript's "click at" runs with no error and computes a plausible
+// coordinate, but real testing showed zero effect on Quo even with
+// confirmed-correct activation and recalibrated coordinates -- consistent
+// with "click at" resolving through the same accessibility layer that's
+// blocked for Quo's Chromium content without VoiceOver (the reason reading
+// its text never worked either). cliclick performs a real, low-level
+// CGEvent mouse click, independent of the accessibility tree -- the same
+// class of tool used to interact with games/web content that don't expose
+// accessible elements. Requires `brew install cliclick` (one-time).
 async function clickInQuo(imgLocalPoint, region, scale) {
   const screenX = Math.round(region.x + imgLocalPoint.x / scale.scaleX);
   const screenY = Math.round(region.y + imgLocalPoint.y / scale.scaleY);
   console.log(
     `[action] clicking at screen (${screenX}, ${screenY}) -- window region x=${region.x} y=${region.y} w=${region.w} h=${region.h}, scale ${scale.scaleX.toFixed(2)}x${scale.scaleY.toFixed(2)}, OCR point (${imgLocalPoint.x.toFixed(0)}, ${imgLocalPoint.y.toFixed(0)})`
   );
-  await runOsascript([`tell application "System Events" to click at {${screenX}, ${screenY}}`]);
+  await new Promise((resolve, reject) => {
+    execFile('cliclick', [`c:${screenX},${screenY}`], (error, _stdout, stderr) => {
+      if (error) {
+        const hint = /not found|ENOENT/i.test(error.message)
+          ? ' (cliclick not installed -- run: brew install cliclick)'
+          : '';
+        reject(new Error((stderr?.trim() || error.message) + hint));
+      } else {
+        resolve();
+      }
+    });
+  });
 }
 
 function sleep(ms) {
