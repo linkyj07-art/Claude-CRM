@@ -32,8 +32,11 @@ function saveDismissed(ids: Set<string>) {
   }
 }
 
+const QUO_HELPER_URL = process.env.NEXT_PUBLIC_QUO_HELPER_URL || 'http://127.0.0.1:8787';
+
 export default function IncomingCallPopup() {
   const [due, setDue] = useState<IncomingCall[]>([]);
+  const [actingOn, setActingOn] = useState<string | null>(null);
   // Tracks which ids have already fired a native OS notification, so a
   // re-poll of the same still-undismissed call doesn't notify twice.
   const notifiedRef = useRef<Set<string>>(new Set());
@@ -88,18 +91,49 @@ export default function IncomingCallPopup() {
     setDue((prev) => prev.filter((c) => c.id !== id));
   }
 
+  async function respond(id: string, action: 'answer' | 'decline') {
+    setActingOn(id);
+    try {
+      const res = await fetch(`${QUO_HELPER_URL}/${action}-call`, { method: 'POST' });
+      if (!res.ok) throw new Error(await res.text());
+      dismiss(id);
+    } catch {
+      alert(`Could not ${action} the call from here — the Quo helper may not be running, or the call may have already ended. You can still ${action} it directly in Quo.`);
+    } finally {
+      setActingOn(null);
+    }
+  }
+
   if (due.length === 0) return null;
 
   return (
     <div className="fixed bottom-4 left-4 z-50 space-y-2">
       {due.map((c) => (
-        <div key={c.id} className="flex w-72 items-start gap-2 rounded-lg border border-brand-500 bg-panel p-3 shadow-2xl">
-          <div className="flex-1 text-sm">
-            <div className="font-semibold text-ink">📞 {c.first_name} {c.last_name}</div>
-            <div className="text-xs text-slate-500">Incoming call — {c.phone}</div>
-            <a href={`/leads/${c.customer_id}`} className="mt-1 inline-block text-xs font-medium text-brand-600 hover:underline">Open lead →</a>
+        <div key={c.id} className="w-72 rounded-lg border border-brand-500 bg-panel p-3 shadow-2xl">
+          <div className="flex items-start gap-2">
+            <div className="flex-1 text-sm">
+              <div className="font-semibold text-ink">📞 {c.first_name} {c.last_name}</div>
+              <div className="text-xs text-slate-500">Incoming call — {c.phone}</div>
+              <a href={`/leads/${c.customer_id}`} className="mt-1 inline-block text-xs font-medium text-brand-600 hover:underline">Open lead →</a>
+            </div>
+            <button onClick={() => dismiss(c.id)} className="text-slate-400 hover:text-ink" aria-label="Dismiss">✕</button>
           </div>
-          <button onClick={() => dismiss(c.id)} className="text-slate-400 hover:text-ink" aria-label="Dismiss">✕</button>
+          <div className="mt-2 grid grid-cols-2 gap-1.5">
+            <button
+              disabled={actingOn === c.id}
+              onClick={() => respond(c.id, 'answer')}
+              className="btn-good text-xs px-2 py-1.5"
+            >
+              ✅ Answer
+            </button>
+            <button
+              disabled={actingOn === c.id}
+              onClick={() => respond(c.id, 'decline')}
+              className="btn-danger text-xs px-2 py-1.5"
+            >
+              ❌ Decline
+            </button>
+          </div>
         </div>
       ))}
     </div>
