@@ -20,7 +20,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   db.prepare('UPDATE calls SET outcome = ?, disposition = ?, duration_seconds = ? WHERE id = ?')
     .run(body.outcome, body.disposition || null, body.duration_seconds || 0, params.callId);
 
-  applyCallOutcome(params.id, body.outcome, body.disposition, call.attempt_number);
+  applyCallOutcome(params.id, body.outcome, body.disposition, call.attempt_number, user.id);
   return NextResponse.json({ ok: true });
 }
 

@@ -33,6 +33,6 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
      VALUES (?, ?, 'outbound', ?, ?, ?, ?, ?, datetime('now'))`
   ).run(id, params.id, attempt, body.outcome, body.disposition || null, body.duration_seconds || 0, body.notes || null);
 
-  applyCallOutcome(params.id, body.outcome, body.disposition, attempt);
+  applyCallOutcome(params.id, body.outcome, body.disposition, attempt, user.id);
   return NextResponse.json({ id, attempt });
 }

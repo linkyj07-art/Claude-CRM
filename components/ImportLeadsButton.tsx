@@ -10,7 +10,7 @@ const TEMPLATE_HEADERS = [
   'Lead Vendor', 'Best Time', 'Lead Cost', 'Purchase Date', 'Age Range'
 ];
 
-type ImportResult = { imported: number; duplicates: number; backfilled: number; total: number; skipped: { row: number; reason: string }[] };
+type ImportResult = { imported: number; duplicates: number; backfilled: number; dncMatched: number; total: number; skipped: { row: number; reason: string }[] };
 
 export default function ImportLeadsButton({ vendors }: { vendors: LeadVendor[] }) {
   const router = useRouter();
@@ -133,6 +133,7 @@ export default function ImportLeadsButton({ vendors }: { vendors: LeadVendor[] }
                   Imported {result.imported} of {result.total} rows.
                   {result.duplicates > 0 && ` ${result.duplicates} matched an existing lead and were sent to the Review Queue instead.`}
                   {result.backfilled > 0 && ` ${result.backfilled} matched an existing lead by phone and filled in missing info (DOB/email/gender/state) on it.`}
+                  {result.dncMatched > 0 && ` ${result.dncMatched} matched your internal Do Not Call list and were imported as DNC instead of fresh.`}
                 </div>
                 {result.skipped.length > 0 && (
                   <div className="max-h-40 overflow-y-auto rounded bg-amber-50 p-2 text-xs text-amber-800">

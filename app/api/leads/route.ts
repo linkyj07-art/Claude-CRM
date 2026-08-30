@@ -3,6 +3,7 @@ import { getDb } from '@/lib/db';
 import { newId } from '@/lib/util';
 import { logAudit } from '@/lib/audit';
 import { getCurrentUser } from '@/lib/currentUser';
+import { findDncMatch } from '@/lib/dnc';
 
 export async function GET(req: NextRequest) {
   const user = await getCurrentUser();
@@ -35,19 +36,21 @@ export async function POST(req: NextRequest) {
   const body = await req.json();
   const db = getDb();
   const id = newId();
+  const dncMatch = findDncMatch(body.phone);
   db.prepare(
     `INSERT INTO customers (id, owner_id, first_name, last_name, phone, email, dob, gender, marital_status,
       military, military_branch, coverage_wanted, address, city, state, postal_code, timezone,
       ad_type, platform, lead_vendor_id, best_time, lead_cost, status, purchased_at, created_at, updated_at)
      VALUES (@id, @owner_id, @first_name, @last_name, @phone, @email, @dob, @gender, @marital_status,
       @military, @military_branch, @coverage_wanted, @address, @city, @state, @postal_code, @timezone,
-      @ad_type, @platform, @lead_vendor_id, @best_time, @lead_cost, 'fresh', datetime('now'), datetime('now'), datetime('now'))`
+      @ad_type, @platform, @lead_vendor_id, @best_time, @lead_cost, @status, datetime('now'), datetime('now'), datetime('now'))`
   ).run({
     id,
     owner_id: user.id,
     first_name: body.first_name || 'New',
     last_name: body.last_name || 'Lead',
     phone: body.phone || null,
+    status: dncMatch ? 'dnc' : 'fresh',
     email: body.email || null,
     dob: body.dob || null,
     gender: body.gender || null,
@@ -67,6 +70,14 @@ export async function POST(req: NextRequest) {
     lead_cost: body.lead_cost ? Number(body.lead_cost) : 0
   });
   logAudit(id, 'lead_purchased', `Lead added — ${body.ad_type || 'Final Expense'} / ${body.platform || 'manual entry'}`);
+  if (dncMatch) {
+    return NextResponse.json({
+      id,
+      dncMatch: true,
+      dncReason: dncMatch.reason,
+      dncSince: dncMatch.created_at
+    });
+  }
   return NextResponse.json({ id });
 }
 

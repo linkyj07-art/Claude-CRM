@@ -319,6 +319,28 @@ CREATE TABLE IF NOT EXISTS duplicate_leads (
 
 CREATE INDEX IF NOT EXISTS idx_dupe_customer ON duplicate_leads(customer_id);
 
+-- A permanent, company-wide "do not call" memory that survives even if the
+-- original lead record it came from gets deleted — deliberately NOT scoped
+-- to owner_id (a DNC request binds whoever places the call next, not just
+-- the agent who was on the phone when it came in) and NOT a foreign key to
+-- customers (so it can't be cascade-deleted along with the lead that
+-- triggered it — the whole point is outliving that row). first_name/
+-- last_name are a denormalized snapshot for display only, same pattern as
+-- duplicate_leads. phone is stored normalized (last 10 digits) so matching
+-- doesn't care how a new lead's number happens to be formatted.
+CREATE TABLE IF NOT EXISTS dnc_numbers (
+  id TEXT PRIMARY KEY,
+  phone TEXT NOT NULL UNIQUE,
+  phone_display TEXT,
+  first_name TEXT,
+  last_name TEXT,
+  reason TEXT,
+  added_by_user_id TEXT REFERENCES users(id),
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_dnc_phone ON dnc_numbers(phone);
+
 -- Fed by the /api/webhooks/incoming-call endpoint (Zapier/Make -> Quo's
 -- "new incoming call" event), one row per call that matched an existing
 -- lead by phone number. Only matched calls are recorded — an unknown number

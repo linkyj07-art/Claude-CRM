@@ -3,6 +3,7 @@ import { getDb } from '@/lib/db';
 import { logAudit, openDispute } from '@/lib/audit';
 import { getCurrentUser } from '@/lib/currentUser';
 import { ownsCustomer } from '@/lib/ownership';
+import { addToDncRegistry } from '@/lib/dnc';
 
 export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
   const user = await getCurrentUser();
@@ -64,6 +65,11 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     };
     logAudit(params.id, 'status_change', labelMap[body.status] || `Status changed to ${body.status}`);
     if (body.status === 'disputed') openDispute(params.id, 'Disputed with vendor');
+    if (body.status === 'dnc') {
+      const customer = db.prepare('SELECT phone, first_name, last_name FROM customers WHERE id = ?').get(params.id) as
+        { phone: string | null; first_name: string; last_name: string } | undefined;
+      if (customer) addToDncRegistry(customer.phone, customer.first_name, customer.last_name, 'Marked Do Not Call', user.id);
+    }
   }
   return NextResponse.json({ ok: true });
 }

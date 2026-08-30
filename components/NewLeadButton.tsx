@@ -25,6 +25,9 @@ export default function NewLeadButton({ vendors }: { vendors: LeadVendor[] }) {
         alert(data.error || 'Could not add that lead — please try again.');
         return;
       }
+      if (data.dncMatch) {
+        alert(`Heads up: this phone number is on your internal Do Not Call list (${data.dncReason || 'marked DNC'} on a previous lead). Saved, but marked DNC so it won't be dialed.`);
+      }
       setOpen(false);
       router.push(`/leads/${data.id}`);
       router.refresh();

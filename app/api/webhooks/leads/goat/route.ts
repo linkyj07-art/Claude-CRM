@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
 import { newId, normalizeState, normalizePhone, parseCoverageRange, stateFromAreaCode } from '@/lib/util';
 import { logAudit } from '@/lib/audit';
+import { findDncMatch } from '@/lib/dnc';
 
 // Fed by Goat Leads' own webhook delivery (their dashboard POSTs a new lead
 // here in real time), not a logged-in browser — middleware.ts lets this one
@@ -143,6 +144,8 @@ export async function POST(req: NextRequest) {
   const leadCostRaw = str(body, map.lead_cost).replace(/[^0-9.]/g, '');
   const leadCost = leadCostRaw ? parseFloat(leadCostRaw) || 0 : 0;
 
+  const dncMatch = findDncMatch(rawPhone);
+
   const customerData = {
     owner_id: owner.id,
     first_name: firstName || 'New',
@@ -165,7 +168,7 @@ export async function POST(req: NextRequest) {
     best_time: str(body, map.best_time) || null,
     lead_cost: leadCost,
     trusted_form_url: str(body, map.trusted_form_url) || null,
-    status: 'fresh',
+    status: dncMatch ? 'dnc' : 'fresh',
     purchased_at: new Date().toISOString().slice(0, 19).replace('T', ' ')
   };
 
@@ -202,5 +205,5 @@ export async function POST(req: NextRequest) {
   ).run({ ...customerData, id });
 
   logAudit(id, 'lead_purchased', 'Lead added — Goat Leads webhook');
-  return NextResponse.json({ ok: true, id, receivedFields, mappedFields: map });
+  return NextResponse.json({ ok: true, id, dncMatch: !!dncMatch, receivedFields, mappedFields: map });
 }

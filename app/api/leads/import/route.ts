@@ -4,6 +4,7 @@ import ExcelJS from 'exceljs';
 import { getDb } from '@/lib/db';
 import { newId, normalizeState, parseCoverageRange, stateFromAreaCode, reconcileContactFields } from '@/lib/util';
 import { logAudit } from '@/lib/audit';
+import { findDncMatch } from '@/lib/dnc';
 import { CustomerStatus } from '@/lib/types';
 import { getCurrentUser } from '@/lib/currentUser';
 
@@ -263,6 +264,7 @@ export async function POST(req: NextRequest) {
   const importedIds: string[] = [];
   let duplicateCount = 0;
   let backfilledCount = 0;
+  let dncCount = 0;
   const nowStr = new Date().toISOString().slice(0, 19).replace('T', ' ');
 
   const runImport = db.transaction((rows: Record<string, string>[]) => {
@@ -328,6 +330,11 @@ export async function POST(req: NextRequest) {
         purchased_at: rowPurchasedAt || batchPurchasedAt || nowStr
       };
 
+      if (findDncMatch(phone)) {
+        data.status = 'dnc';
+        dncCount++;
+      }
+
       const dupeKey = normalizeDupeKey(first_name, last_name, phone, dob);
       const matchId = dupeKey ? dupeIndex.get(dupeKey) : undefined;
       if (matchId) {
@@ -374,5 +381,5 @@ export async function POST(req: NextRequest) {
     logAudit(id, 'lead_purchased', `Lead added — bulk import (${fileName})`);
   }
 
-  return NextResponse.json({ imported: importedIds.length, duplicates: duplicateCount, backfilled: backfilledCount, skipped, total: rows.length });
+  return NextResponse.json({ imported: importedIds.length, duplicates: duplicateCount, backfilled: backfilledCount, dncMatched: dncCount, skipped, total: rows.length });
 }
