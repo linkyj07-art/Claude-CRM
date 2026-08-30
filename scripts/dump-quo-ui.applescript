@@ -69,9 +69,12 @@ on dumpElement(elem, depth)
 		if elemValue is not "" then set elemLine to elemLine & " value=\"" & elemValue & "\""
 		set out to elemLine & linefeed
 
-		-- Depth-limited so this doesn't run away on a deeply nested window —
-		-- 8 levels is plenty to reach any visible label in a call-screen UI.
-		if depth < 8 then
+		-- Depth-limited so this doesn't run away forever, not because 8 was
+		-- expected to be enough — Quo's call screen is a web view (AXWebArea),
+		-- and web content nests much deeper than native AppKit UI, so the
+		-- limit has to be generous enough to actually reach real content
+		-- below that web area.
+		if depth < 25 then
 			try
 				set kids to UI elements of elem
 				repeat with kid in kids
