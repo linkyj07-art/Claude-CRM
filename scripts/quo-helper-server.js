@@ -62,7 +62,7 @@ const QUO_APP_NAME = process.env.QUO_APP_NAME || 'Quo';
 const QUO_HANGUP_KEY = process.env.QUO_HANGUP_KEY || 'h'; // Cmd+Shift+H by default
 const CRM_BASE_URL = process.env.CRM_BASE_URL || '';
 const QUO_WEBHOOK_TOKEN = process.env.QUO_WEBHOOK_TOKEN || '';
-const POLL_MS = process.env.QUO_POLL_MS ? Number(process.env.QUO_POLL_MS) : 500;
+const POLL_MS = process.env.QUO_POLL_MS ? Number(process.env.QUO_POLL_MS) : 300;
 // On the Desktop (not a hidden temp folder) so it can actually be opened
 // and inspected while debugging -- one file, overwritten every capture, not
 // something that accumulates.
@@ -237,6 +237,9 @@ function findButtonCenter(words, labelPattern) {
 async function clickInQuo(imgLocalPoint, region, scale) {
   const screenX = Math.round(region.x + imgLocalPoint.x / scale.scaleX);
   const screenY = Math.round(region.y + imgLocalPoint.y / scale.scaleY);
+  console.log(
+    `[action] clicking at screen (${screenX}, ${screenY}) -- window region x=${region.x} y=${region.y} w=${region.w} h=${region.h}, scale ${scale.scaleX.toFixed(2)}x${scale.scaleY.toFixed(2)}, OCR point (${imgLocalPoint.x.toFixed(0)}, ${imgLocalPoint.y.toFixed(0)})`
+  );
   await runOsascript([`tell application "System Events" to click at {${screenX}, ${screenY}}`]);
 }
 
@@ -365,14 +368,19 @@ function setCors(res, origin) {
   res.setHeader('Access-Control-Allow-Private-Network', 'true');
 }
 
-function handleAction(res, action) {
+// Logs both outcomes now, not just failure -- with only failure logged
+// before, a successful-but-clicked-the-wrong-spot outcome was
+// indistinguishable in the log from the request never arriving at all.
+function handleAction(res, name, action) {
+  console.log(`[action] ${name} requested`);
   action()
     .then(() => {
+      console.log(`[action] ${name} succeeded (clicked)`);
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ ok: true }));
     })
     .catch((err) => {
-      console.error('Action failed:', err.message);
+      console.error(`[action] ${name} failed:`, err.message);
       res.writeHead(500, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ ok: false, error: err.message }));
     });
@@ -394,17 +402,17 @@ const server = http.createServer((req, res) => {
   }
 
   if (req.method === 'POST' && req.url === '/end-call') {
-    handleAction(res, endQuoCall);
+    handleAction(res, 'end-call', endQuoCall);
     return;
   }
 
   if (req.method === 'POST' && req.url === '/answer-call') {
-    handleAction(res, answerCall);
+    handleAction(res, 'answer-call', answerCall);
     return;
   }
 
   if (req.method === 'POST' && req.url === '/decline-call') {
-    handleAction(res, declineCall);
+    handleAction(res, 'decline-call', declineCall);
     return;
   }
 
