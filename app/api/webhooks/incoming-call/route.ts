@@ -35,6 +35,17 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true, matched: false });
   }
 
+  // Belt-and-suspenders against duplicate popups for the one real call: the
+  // local helper already debounces repeated detections of the same ring,
+  // but a network retry, a helper restart mid-call, or any other double-POST
+  // shouldn't still produce two notifications for it.
+  const recentDupe = db
+    .prepare(`SELECT id FROM incoming_calls WHERE customer_id = ? AND created_at >= datetime('now', '-60 seconds')`)
+    .get(match.id);
+  if (recentDupe) {
+    return NextResponse.json({ ok: true, matched: true, customer_id: match.id, duplicate: true });
+  }
+
   db.prepare('INSERT INTO incoming_calls (id, customer_id, phone) VALUES (?, ?, ?)').run(newId(), match.id, String(rawPhone));
   return NextResponse.json({ ok: true, matched: true, customer_id: match.id });
 }
