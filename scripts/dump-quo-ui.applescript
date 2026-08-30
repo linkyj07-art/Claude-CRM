@@ -62,12 +62,12 @@ on dumpElement(elem, depth)
 			set elemValue to (value of elem) as string
 		end try
 
-		set line to indentStr & elemClass
-		if elemRole is not "" then set line to line & " role=" & elemRole
-		if elemTitle is not "" then set line to line & " title=\"" & elemTitle & "\""
-		if elemDesc is not "" then set line to line & " desc=\"" & elemDesc & "\""
-		if elemValue is not "" then set line to line & " value=\"" & elemValue & "\""
-		set out to line & linefeed
+		set elemLine to indentStr & elemClass
+		if elemRole is not "" then set elemLine to elemLine & " role=" & elemRole
+		if elemTitle is not "" then set elemLine to elemLine & " title=\"" & elemTitle & "\""
+		if elemDesc is not "" then set elemLine to elemLine & " desc=\"" & elemDesc & "\""
+		if elemValue is not "" then set elemLine to elemLine & " value=\"" & elemValue & "\""
+		set out to elemLine & linefeed
 
 		-- Depth-limited so this doesn't run away on a deeply nested window —
 		-- 8 levels is plenty to reach any visible label in a call-screen UI.
