@@ -28,6 +28,9 @@ export default async function CommissionsPage() {
   const pending = rows.filter((r) => r.status === 'pending').reduce((s, r) => s + (r.net_commission || 0), 0);
   const paid = rows.filter((r) => r.status === 'paid').reduce((s, r) => s + (r.net_commission || 0), 0);
   const chargebacks = rows.reduce((s, r) => s + (r.chargeback || 0), 0);
+  const today = new Date().toISOString().slice(0, 10);
+  const atRiskRows = rows.filter((r) => r.status === 'pending' && r.expected_pay_date && r.expected_pay_date < today);
+  const atRiskTotal = atRiskRows.reduce((s, r) => s + (r.net_commission || 0), 0);
 
   return (
     <div className="space-y-4">
@@ -36,6 +39,11 @@ export default async function CommissionsPage() {
         <p className="text-sm text-slate-500">
           Gross {fmtMoney(gross)} · Net {fmtMoney(net)} · Paid {fmtMoney(paid)} · Pending {fmtMoney(pending)} · Chargebacks {fmtMoney(-chargebacks)}
         </p>
+        {atRiskRows.length > 0 && (
+          <p className="mt-1 text-sm font-medium text-red-600">
+            ⚠️ {atRiskRows.length} commission{atRiskRows.length === 1 ? '' : 's'} ({fmtMoney(atRiskTotal)}) past its expected pay date — possible lapse or chargeback risk.
+          </p>
+        )}
       </div>
       <div className="card overflow-x-auto">
         <table className="w-full min-w-[900px] text-sm">
@@ -47,20 +55,26 @@ export default async function CommissionsPage() {
             </tr>
           </thead>
           <tbody>
-            {rows.map((r) => (
-              <tr key={r.id} className="border-b border-line last:border-0 hover:bg-slate-50">
-                <td className="px-3 py-2"><Link href={`/leads/${r.customer_id}`} className="font-medium text-ink hover:text-brand-600">{r.first_name} {r.last_name}</Link></td>
-                <td className="px-3 py-2 text-slate-600">{r.carrier}</td>
-                <td className="px-3 py-2">{r.commission_pct}%</td>
-                <td className="px-3 py-2">{fmtMoney(r.expected_commission)}</td>
-                <td className="px-3 py-2 text-slate-600 capitalize">{r.commission_type?.replace('_', ' ')}</td>
-                <td className="px-3 py-2 text-red-600">{r.chargeback ? fmtMoney(-r.chargeback) : '—'}</td>
-                <td className="px-3 py-2 font-semibold">{fmtMoney(r.net_commission)}</td>
-                <td className="px-3 py-2 text-slate-600">{r.expected_pay_date || '—'}</td>
-                <td className="px-3 py-2 text-slate-600">{r.actual_pay_date || '—'}</td>
-                <td className="px-3 py-2"><Badge label={r.status.replace('_', ' ').toUpperCase()} color={r.status === 'paid' ? 'good' : r.status === 'charged_back' ? 'bad' : 'warn'} /></td>
-              </tr>
-            ))}
+            {rows.map((r) => {
+              const isAtRisk = r.status === 'pending' && r.expected_pay_date && r.expected_pay_date < today;
+              return (
+                <tr key={r.id} className={`border-b border-line last:border-0 hover:bg-slate-50 ${isAtRisk ? 'bg-red-50/60' : ''}`}>
+                  <td className="px-3 py-2"><Link href={`/leads/${r.customer_id}`} className="font-medium text-ink hover:text-brand-600">{r.first_name} {r.last_name}</Link></td>
+                  <td className="px-3 py-2 text-slate-600">{r.carrier}</td>
+                  <td className="px-3 py-2">{r.commission_pct}%</td>
+                  <td className="px-3 py-2">{fmtMoney(r.expected_commission)}</td>
+                  <td className="px-3 py-2 text-slate-600 capitalize">{r.commission_type?.replace('_', ' ')}</td>
+                  <td className="px-3 py-2 text-red-600">{r.chargeback ? fmtMoney(-r.chargeback) : '—'}</td>
+                  <td className="px-3 py-2 font-semibold">{fmtMoney(r.net_commission)}</td>
+                  <td className="px-3 py-2 text-slate-600">{r.expected_pay_date || '—'}</td>
+                  <td className="px-3 py-2 text-slate-600">{r.actual_pay_date || '—'}</td>
+                  <td className="px-3 py-2">
+                    <Badge label={r.status.replace('_', ' ').toUpperCase()} color={r.status === 'paid' ? 'good' : r.status === 'charged_back' ? 'bad' : 'warn'} />
+                    {isAtRisk && <span className="ml-1.5 text-xs font-semibold text-red-600">⚠️ overdue</span>}
+                  </td>
+                </tr>
+              );
+            })}
             {rows.length === 0 && <tr><td colSpan={10} className="px-3 py-8 text-center text-slate-400">No commissions recorded yet.</td></tr>}
           </tbody>
         </table>

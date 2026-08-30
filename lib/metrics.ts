@@ -625,3 +625,80 @@ export function getRecentActivity(db: Database.Database, ownerId: string, limit 
     occurredAt: r.occurred_at
   }));
 }
+
+export interface FollowUpLead {
+  id: string;
+  name: string;
+  phone: string | null;
+  status: string;
+  lastActivityAt: string | null;
+  daysQuiet: number;
+}
+
+// Leads that are still "live" (not sold/lost/dnc/etc.) but haven't had a
+// call or note logged in a while — easy to lose track of once they're
+// buried under fresher leads in Power Dial's queue, especially once a lead
+// stops being "fresh" and no longer gets priority. Ranked by longest-quiet
+// first since those are the most at risk of going completely cold.
+export function getNeedsFollowUp(db: Database.Database, ownerId: string, quietDays = 7, limit = 8): FollowUpLead[] {
+  const rows = db
+    .prepare(
+      `SELECT c.id, c.first_name, c.last_name, c.phone, c.status, c.purchased_at,
+              (SELECT MAX(occurred_at) FROM calls WHERE customer_id = c.id) as last_call_at
+       FROM customers c
+       WHERE c.owner_id = ? AND c.archived = 0
+         AND c.status IN ('fresh','working','aging_45_90','aging_90_plus')
+       ORDER BY c.purchased_at ASC`
+    )
+    .all(ownerId) as { id: string; first_name: string; last_name: string; phone: string | null; status: string; purchased_at: string; last_call_at: string | null }[];
+
+  const now = Date.now();
+  const parseTs = (s: string) => new Date(s.replace(' ', 'T') + (s.includes('Z') ? '' : 'Z')).getTime();
+
+  return rows
+    .map((r) => {
+      const lastActivityAt = r.last_call_at || r.purchased_at;
+      const daysQuiet = Math.floor((now - parseTs(lastActivityAt)) / (1000 * 60 * 60 * 24));
+      return { id: r.id, name: `${r.first_name} ${r.last_name}`, phone: r.phone, status: r.status, lastActivityAt: r.last_call_at, daysQuiet };
+    })
+    .filter((r) => r.daysQuiet >= quietDays)
+    .sort((a, b) => b.daysQuiet - a.daysQuiet)
+    .slice(0, limit);
+}
+
+export interface CommissionAtRisk {
+  id: string;
+  customerId: string;
+  customerName: string;
+  carrier: string | null;
+  netCommission: number;
+  expectedPayDate: string;
+  daysOverdue: number;
+}
+
+// A commission still "pending" past its own expected pay date is the
+// earliest signal of a possible lapse or chargeback — worth a nudge before
+// it quietly falls out of the pending total with no follow-up.
+export function getCommissionsAtRisk(db: Database.Database, ownerId: string): CommissionAtRisk[] {
+  const rows = db
+    .prepare(
+      `SELECT cm.id, cm.customer_id, c.first_name, c.last_name, p.carrier, cm.net_commission, cm.expected_pay_date
+       FROM commissions cm
+       JOIN customers c ON c.id = cm.customer_id
+       LEFT JOIN policies p ON p.id = cm.policy_id
+       WHERE c.owner_id = ? AND cm.status = 'pending'
+         AND cm.expected_pay_date IS NOT NULL AND cm.expected_pay_date < date('now')
+       ORDER BY cm.expected_pay_date ASC`
+    )
+    .all(ownerId) as { id: string; customer_id: string; first_name: string; last_name: string; carrier: string | null; net_commission: number; expected_pay_date: string }[];
+
+  const today = new Date();
+  return rows.map((r) => {
+    const due = new Date(r.expected_pay_date);
+    const daysOverdue = Math.max(0, Math.floor((today.getTime() - due.getTime()) / (1000 * 60 * 60 * 24)));
+    return {
+      id: r.id, customerId: r.customer_id, customerName: `${r.first_name} ${r.last_name}`,
+      carrier: r.carrier, netCommission: r.net_commission || 0, expectedPayDate: r.expected_pay_date, daysOverdue
+    };
+  });
+}

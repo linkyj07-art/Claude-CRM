@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { getDb } from '@/lib/db';
 import StatCard from '@/components/StatCard';
 import { fmtMoney, fmtMoney0, fmtPct, agentDateStr, agentWeekStart, agentHour } from '@/lib/util';
-import { getMoneyTiles, getActivityStats, getConversionRates, getLeadEconomics, getGoalProgress, getDailyTrend, getMoneyComparison, getRecentActivity, Period } from '@/lib/metrics';
+import { getMoneyTiles, getActivityStats, getConversionRates, getLeadEconomics, getGoalProgress, getDailyTrend, getMoneyComparison, getRecentActivity, getNeedsFollowUp, getCommissionsAtRisk, Period } from '@/lib/metrics';
 import { DailyGoal, WeeklyGoal, LeadVendor } from '@/lib/types';
 import { quoteOfTheDay } from '@/lib/quotes';
 import { getCurrentUser } from '@/lib/currentUser';
@@ -87,6 +87,8 @@ export default async function DashboardPage({ searchParams }: { searchParams: { 
   const leadEcon = getLeadEconomics(db, activity, period, user.id, vendorId);
   const moneyComparison = getMoneyComparison(db, user.id);
   const recentActivity = getRecentActivity(db, user.id, 8);
+  const needsFollowUp = getNeedsFollowUp(db, user.id, 7, 6);
+  const commissionsAtRisk = getCommissionsAtRisk(db, user.id);
 
   const freshCount = (db.prepare(`SELECT COUNT(*) n FROM customers WHERE status = 'fresh' AND archived = 0 AND owner_id = ?`).get(user.id) as { n: number }).n;
   const workingCount = (db.prepare(`SELECT COUNT(*) n FROM customers WHERE status IN ('working','aging_45_90') AND archived = 0 AND owner_id = ?`).get(user.id) as { n: number }).n;
@@ -144,6 +146,39 @@ export default async function DashboardPage({ searchParams }: { searchParams: { 
               <div className="label">☀️ Today&apos;s Goals</div>
               <GoalBar label="Dials" actual={dailyProgress.dials} target={dailyGoal?.target_dials ?? null} />
               <GoalBar label="AP" actual={dailyProgress.ap} target={dailyGoal?.target_ap ?? null} />
+            </div>
+          )}
+        </section>
+      )}
+
+      {(needsFollowUp.length > 0 || commissionsAtRisk.length > 0) && (
+        <section className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+          {needsFollowUp.length > 0 && (
+            <div className="card p-4">
+              <div className="label mb-2">🕸️ Needs Follow-Up</div>
+              <div className="space-y-1.5">
+                {needsFollowUp.map((lead) => (
+                  <Link key={lead.id} href={`/leads/${lead.id}`} className="flex items-center justify-between rounded-lg -mx-1.5 px-1.5 py-1 text-sm hover:bg-slate-50">
+                    <span className="truncate font-medium text-ink">{lead.name}</span>
+                    <span className="shrink-0 text-xs text-amber-600">
+                      {lead.lastActivityAt ? `${lead.daysQuiet}d since last call` : `${lead.daysQuiet}d, never called`}
+                    </span>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )}
+          {commissionsAtRisk.length > 0 && (
+            <div className="card p-4">
+              <div className="label mb-2">⚠️ Commissions Past Expected Pay Date</div>
+              <div className="space-y-1.5">
+                {commissionsAtRisk.map((c) => (
+                  <Link key={c.id} href={`/leads/${c.customerId}`} className="flex items-center justify-between rounded-lg -mx-1.5 px-1.5 py-1 text-sm hover:bg-slate-50">
+                    <span className="truncate font-medium text-ink">{c.customerName} <span className="text-slate-400">· {c.carrier || 'No carrier'}</span></span>
+                    <span className="shrink-0 text-xs text-red-500">{fmtMoney(c.netCommission)} · {c.daysOverdue}d overdue</span>
+                  </Link>
+                ))}
+              </div>
             </div>
           )}
         </section>
