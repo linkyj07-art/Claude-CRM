@@ -264,19 +264,34 @@ function sleep(ms) {
 // still being up — a mistimed screenshot, a momentary redraw, etc. — so
 // retry a couple of times before concluding it's actually gone, rather than
 // failing on the first miss.
+// A synthetic click via System Events needs Quo to actually be the
+// frontmost app to register at all -- confirmed live: clicks were
+// executing with no error, computing plausible coordinates, and doing
+// nothing in Quo, with a "not allowed" cursor appearing at the moment of
+// the click. This mirrors the same activate-before-acting pattern
+// endQuoCall already uses successfully for End Call, restoring whatever
+// was frontmost before (usually the browser) afterward either way.
 async function findAndClick(side, notFoundMessage) {
   const region = await getQuoWindowRegion();
-  for (let attempt = 0; attempt < 3; attempt++) {
-    const scale = await captureRegion(region);
-    const words = await ocrWords(CAPTURE_PATH);
-    const center = findButtonRowCenter(words, side);
-    if (center) {
-      await clickInQuo(center, region, scale);
-      return;
+  const frontApp = await runOsascript([
+    'tell application "System Events" to get name of first application process whose frontmost is true'
+  ]);
+  await runOsascript([`tell application "${QUO_APP_NAME}" to activate`, 'delay 0.35']);
+  try {
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const scale = await captureRegion(region);
+      const words = await ocrWords(CAPTURE_PATH);
+      const center = findButtonRowCenter(words, side);
+      if (center) {
+        await clickInQuo(center, region, scale);
+        return;
+      }
+      if (attempt < 2) await sleep(400);
     }
-    if (attempt < 2) await sleep(400);
+    throw new Error(notFoundMessage);
+  } finally {
+    await runOsascript([`tell application "${frontApp}" to activate`]).catch(() => {});
   }
-  throw new Error(notFoundMessage);
 }
 
 // Accept is the right-hand button, Reject the left-hand one, in Quo's
