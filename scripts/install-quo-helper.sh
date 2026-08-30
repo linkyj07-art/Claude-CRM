@@ -84,6 +84,17 @@ if [[ "$AUTOSTART" -eq 1 ]]; then
   # instead. Pick them up from however this script itself was invoked, e.g.:
   #   CRM_BASE_URL="https://your-crm.example.com" QUO_WEBHOOK_TOKEN="..." \
   #     bash scripts/install-quo-helper.sh --autostart
+  # Catches the easy mistake of copy-pasting the example command without
+  # replacing the <placeholder> text — those angle brackets are also XML
+  # special characters, so left in place they'd silently corrupt the plist
+  # (a real failure mode this guards against, not a hypothetical one).
+  if [[ "${CRM_BASE_URL:-}" == *"<"* || "${CRM_BASE_URL:-}" == *">"* || "${QUO_WEBHOOK_TOKEN:-}" == *"<"* || "${QUO_WEBHOOK_TOKEN:-}" == *">"* ]]; then
+    echo "CRM_BASE_URL or QUO_WEBHOOK_TOKEN still contains < or > — looks like" >&2
+    echo "placeholder text (e.g. <your-actual-crm-domain>) wasn't replaced with" >&2
+    echo "a real value. Re-run with your actual URL/token, no angle brackets." >&2
+    exit 1
+  fi
+
   ENV_VARS_XML=""
   if [[ -n "${CRM_BASE_URL:-}" || -n "${QUO_WEBHOOK_TOKEN:-}" ]]; then
     ENV_VARS_XML="  <key>EnvironmentVariables</key>
