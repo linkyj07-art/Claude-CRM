@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
 import { getCurrentUser } from '@/lib/currentUser';
-import { isWithinCallingHours } from '@/lib/util';
+import { isWithinCallingHours, isTestLead } from '@/lib/util';
 import { DialSessionRow, serializeDialSession as serialize } from '@/lib/dialSession';
+import { fetchEligibleLeads } from '@/lib/dialQueue';
 
 type Db = ReturnType<typeof getDb>;
 
@@ -15,10 +16,13 @@ type Db = ReturnType<typeof getDb>;
 function dropOutOfHours(db: Db, ids: string[]): string[] {
   if (ids.length === 0) return ids;
   const placeholders = ids.map(() => '?').join(',');
-  const rows = db.prepare(`SELECT id, state FROM customers WHERE id IN (${placeholders})`).all(...ids) as
-    { id: string; state: string | null }[];
-  const stateById = new Map(rows.map((r) => [r.id, r.state]));
-  return ids.filter((id) => stateById.has(id) && isWithinCallingHours(stateById.get(id) ?? null));
+  const rows = db.prepare(`SELECT id, state, first_name, last_name FROM customers WHERE id IN (${placeholders})`).all(...ids) as
+    { id: string; state: string | null; first_name: string; last_name: string }[];
+  const byId = new Map(rows.map((r) => [r.id, r]));
+  return ids.filter((id) => {
+    const c = byId.get(id);
+    return !!c && (isTestLead(c) || isWithinCallingHours(c.state));
+  });
 }
 
 // A single Power Dial session per user, persisted server-side, is what lets
@@ -31,6 +35,7 @@ export async function GET() {
   if (!user) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
   const db = getDb();
   const row = db.prepare('SELECT * FROM dial_sessions WHERE user_id = ?').get(user.id) as DialSessionRow | undefined;
+  let newLeads: { id: string; firstName: string; lastName: string; phone: string | null }[] = [];
   if (row) {
     const queue = row.queue ? row.queue.split(',').filter(Boolean) : [];
     const recycle = row.recycle ? row.recycle.split(',').filter(Boolean) : [];
@@ -42,8 +47,19 @@ export async function GET() {
       row.queue = cleanQueue.join(',');
       row.recycle = cleanRecycle.join(',');
     }
+
+    // Leads that just became dialable since this session's queue was built
+    // (a fresh import/drip, or a state's calling window just opening) never
+    // show up on their own — the queue is a frozen snapshot otherwise. The
+    // client shows these as a "new lead ready" banner and lets the agent
+    // decide whether to work it in now or queue it up next, rather than
+    // silently reordering their in-progress session for them.
+    const known = new Set([row.current_lead_id, ...cleanQueue, ...cleanRecycle].filter(Boolean) as string[]);
+    newLeads = fetchEligibleLeads(db, user.id)
+      .filter((c) => !known.has(c.id))
+      .map((c) => ({ id: c.id, firstName: c.first_name, lastName: c.last_name, phone: c.phone }));
   }
-  return NextResponse.json(serialize(row));
+  return NextResponse.json({ ...serialize(row), newLeads });
 }
 
 export async function POST(req: NextRequest) {
