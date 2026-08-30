@@ -49,6 +49,14 @@ const os = require('os');
 const path = require('path');
 const { execFile } = require('child_process');
 
+// Timestamp every log line -- without this there's no way to actually
+// measure how long detection/Answer/Decline take from the log alone, only
+// guess at it.
+const origLog = console.log.bind(console);
+const origError = console.error.bind(console);
+console.log = (...args) => origLog(`[${new Date().toISOString()}]`, ...args);
+console.error = (...args) => origError(`[${new Date().toISOString()}]`, ...args);
+
 const PORT = process.env.QUO_HELPER_PORT ? Number(process.env.QUO_HELPER_PORT) : 8787;
 const QUO_APP_NAME = process.env.QUO_APP_NAME || 'Quo';
 const QUO_HANGUP_KEY = process.env.QUO_HANGUP_KEY || 'h'; // Cmd+Shift+H by default
