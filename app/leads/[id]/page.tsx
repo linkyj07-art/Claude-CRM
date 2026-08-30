@@ -2,7 +2,7 @@ import { getDb } from '@/lib/db';
 import { notFound, redirect } from 'next/navigation';
 import LeadWorkspace from '@/components/LeadWorkspace';
 import {
-  Customer, NoteVersion, CallRecord, Policy, Commission, Carrier, CarrierRule, LeadVendor
+  Customer, NoteVersion, CallRecord, Policy, Commission, Carrier, CarrierRule, LeadVendor, Referral
 } from '@/lib/types';
 import { getCurrentUser } from '@/lib/currentUser';
 
@@ -24,6 +24,7 @@ export default async function LeadPage({ params }: { params: { id: string } }) {
   const policies = db.prepare('SELECT * FROM policies WHERE customer_id = ? ORDER BY created_at DESC').all(params.id) as Policy[];
   const commissions = db.prepare('SELECT * FROM commissions WHERE customer_id = ? ORDER BY created_at DESC').all(params.id) as Commission[];
   const payments = db.prepare('SELECT * FROM payments WHERE customer_id = ? ORDER BY paid_at DESC').all(params.id);
+  const referrals = db.prepare('SELECT * FROM referrals WHERE referrer_customer_id = ? ORDER BY created_at DESC').all(params.id) as Referral[];
   const vendors = db.prepare('SELECT * FROM lead_vendors ORDER BY name').all() as LeadVendor[];
   const carriers = db.prepare('SELECT * FROM carriers ORDER BY sort_order, name').all() as Carrier[];
   const rules = db.prepare('SELECT * FROM carrier_underwriting_rules').all() as CarrierRule[];
@@ -39,6 +40,7 @@ export default async function LeadPage({ params }: { params: { id: string } }) {
       policies={policies}
       commissions={commissions}
       payments={payments as any}
+      referrals={referrals}
       vendors={vendors}
       carriers={carriers}
       rules={rules}

@@ -1,10 +1,13 @@
-# FEX CRM — Lead to Lifetime Value
+# Solace — Lead to Lifetime Value
 
-A single-agent CRM for final-expense (and similar) insurance sales: one
-permanent customer ID carries the lead all the way from first dial through
-notes, quotes, appointments, applications, policy, commission, and lifetime
-value. Built with Next.js (App Router) + TypeScript + SQLite, so it runs
-entirely on your own machine with no external services required.
+A CRM for final-expense (and similar) insurance sales, built for a solo
+agent or a small team: one permanent customer ID carries the lead all the
+way from first dial through notes, quotes, appointments, applications,
+policy, commission, and lifetime value. Each teammate gets their own login
+and only ever sees the leads they own — nobody sees anyone else's book of
+business; carriers, underwriting rules, quick links, and licensed states are
+shared by everyone. Built with Next.js (App Router) + TypeScript + SQLite,
+so it runs entirely on your own machine with no external services required.
 
 ## Quick start
 
@@ -46,12 +49,16 @@ and has a free trial.
    path `/data`. Then add a variable **DATA_DIR = /data** (service →
    **Variables**).
 
-3. **Set a login.** This CRM has no other auth, and it stores real
-   names/phone/DOB and (masked-by-default) SSN/bank info — add these two
-   variables before sharing the URL with anyone:
-   - `BASIC_AUTH_USER` — pick a username
-   - `BASIC_AUTH_PASSWORD` — pick a strong password
-   Every page will then prompt for these before loading anything.
+3. **Set a session secret and your first login.** This CRM has real
+   per-user accounts (add teammates later from Settings → Team) rather than
+   one shared password, and it stores real names/phone/DOB and
+   (masked-by-default) SSN/bank info — add these before sharing the URL
+   with anyone:
+   - `SESSION_SECRET` — any long random string, e.g. `openssl rand -hex 32`
+   - `ADMIN_USERNAME` / `ADMIN_PASSWORD` — your first login, created
+     automatically the first time the app starts with no users yet (falls
+     back to `admin` / `changeme` if left unset — don't leave it unset on
+     a real deployment)
 
 4. **Seed or don't.** By default the volume starts empty (no `data/`
    folder exists yet). If you want the demo data to poke around with
@@ -100,11 +107,24 @@ Vercel's platform — just a larger lift than the Railway/Fly.io path above.
 - **Analytics (`/analytics`)** — sales funnel with stage conversion %,
   cost-per-stage, ROI by lead vendor / lead age / state / ad+platform+vendor
   combination, and top client lifetime value.
-- **⚡ Quick Access** (top-right, every page) — FEX quoter link, carrier
-  agent-login list with eApp/claims/phone shortcuts, and resource links.
-- **Manage Quick Links (`/quick-links`)** — edit carriers & their logins,
-  the health-keyword underwriting rules that drive carrier suggestions, and
-  the quoter/resource links — all from the browser, no code changes.
+- **⚡ Quick Access** (top of the sidebar, every page) — FEX quoter link,
+  carrier agent-login list with eApp/claims/phone shortcuts, and resource
+  links.
+- **Team & Settings (`/quick-links`)** — edit carriers & their logins, the
+  health-keyword underwriting rules that drive carrier suggestions, the
+  quoter/resource links, licensed states, teammates, and the internal Do
+  Not Call registry — all from the browser, no code changes. Also where the
+  one-click "Export My Data" download lives (a multi-sheet Excel file of
+  everything you own).
+- **Do Not Call registry** — a permanent, company-wide list of numbers that
+  survives even if the lead that triggered it gets deleted. Populated
+  automatically whenever a call is dispositioned DNC, and checked against
+  every new lead — manually added, CSV-imported, or delivered by webhook —
+  so a number that already asked to stop never re-enters your dial queue
+  under a new lead.
+- **Referrals** — log who a client referred (and what it was worth once
+  they buy) right from that client's Lead Workspace; feeds the lifetime
+  value numbers on Analytics.
 
 ## The data model
 

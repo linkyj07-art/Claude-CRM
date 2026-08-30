@@ -49,7 +49,7 @@ function MiniStat({ label, value, tone = 'default', changePct }: { label: string
 
 const ACTIVITY_ICON: Record<string, string> = {
   lead_purchased: '🆕', status_change: '🔄', call: '📞', note: '📝',
-  quote: '🧮', appointment: '📅', policy_issued: '🏆', commission: '💰'
+  quote: '🧮', appointment: '📅', policy_issued: '🏆', commission: '💰', referral: '🎁'
 };
 
 function timeAgo(occurredAt: string): string {

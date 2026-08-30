@@ -88,6 +88,15 @@ export interface CallRecord {
   occurred_at: string;
 }
 
+export interface Referral {
+  id: string;
+  referrer_customer_id: string;
+  referred_customer_id: string | null;
+  referred_name: string | null;
+  value: number;
+  created_at: string;
+}
+
 export interface Policy {
   id: string;
   customer_id: string;
