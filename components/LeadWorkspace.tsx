@@ -113,7 +113,15 @@ export default function LeadWorkspace({
     currentLeadId: string | null; queue: string[]; recycle: string[]; pass: number;
     autoDial: boolean; autoDialPaceMs: number; sessionDials: number; sessionConnects: number; consecutiveNoAnswer: number;
   };
+  type NewLeadInfo = { id: string; firstName: string; lastName: string; phone: string | null };
   const [dialSession, setDialSession] = useState<DialSession | null>(null);
+  // Leads that became dialable after this session's queue was built (a
+  // fresh drip, or a state's calling window just opening) — surfaced as a
+  // banner the agent acts on deliberately, rather than silently spliced
+  // into the queue: whether a brand new lead is worth dropping the current
+  // one for depends on things only the agent watching the call can judge.
+  const [newLeads, setNewLeads] = useState<NewLeadInfo[]>([]);
+  const dismissedNewLeadIdsRef = useRef<Set<string>>(new Set());
   const [busy, setBusy] = useState(false);
   const [quoBusy, setQuoBusy] = useState(false);
   const [autoDialing, setAutoDialing] = useState(false);
@@ -378,6 +386,7 @@ export default function LeadWorkspace({
         if (!res.ok) return; // e.g. session expired mid-poll — next tick retries, no false "session ended"
         const raw = await res.json();
         if (cancelled) return;
+        const newLeadsRaw: NewLeadInfo[] = Array.isArray(raw?.newLeads) ? raw.newLeads : [];
         if (!isDialSession(raw)) {
           router.push('/leads');
           return;
@@ -387,6 +396,7 @@ export default function LeadWorkspace({
           return;
         }
         setDialSession(raw);
+        setNewLeads(newLeadsRaw.filter((l) => !dismissedNewLeadIdsRef.current.has(l.id)));
       } catch {
         // transient network error — next tick retries
       }
@@ -540,6 +550,55 @@ export default function LeadWorkspace({
     await advanceQueue();
   }
 
+  function dismissNewLead(id: string) {
+    dismissedNewLeadIdsRef.current.add(id);
+    setNewLeads((prev) => prev.filter((l) => l.id !== id));
+  }
+
+  // Queues one or more newly-eligible leads right after whoever's current,
+  // without navigating away — they'll be dialed next once the current lead
+  // is dispositioned/skipped. Safe to use mid-call, since it doesn't move
+  // anyone off what they're currently on. Takes the whole batch in one
+  // request rather than one call per lead, since firing several inserts
+  // concurrently would each read the same stale queue and clobber each
+  // other's update.
+  async function insertNewLeadsNext(ids: string[]) {
+    const session = (await currentDialSession()) || dialSession;
+    if (!session) return;
+    const nextQueue = [...ids.filter((id) => !session.queue.includes(id) && id !== session.currentLeadId), ...session.queue];
+    try {
+      const res = await fetch('/api/dial-session', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ currentLeadId: session.currentLeadId, queue: nextQueue, recycle: session.recycle, pass: session.pass })
+      });
+      const raw = await res.json().catch(() => null);
+      if (isDialSession(raw)) setDialSession(raw);
+    } catch {
+      // best-effort — the next poll reconciles either way
+    }
+    for (const id of ids) dismissNewLead(id);
+  }
+
+  // Drops whatever's current back to the front of the queue and jumps
+  // straight to this new lead instead — only offered while there's no call
+  // actually in progress (see the disabled state on the button itself).
+  async function callNewLeadNow(id: string) {
+    const session = (await currentDialSession()) || dialSession;
+    if (!session) return;
+    const requeued = session.currentLeadId && session.currentLeadId !== id ? [session.currentLeadId] : [];
+    const nextQueue = [...requeued, ...session.queue.filter((q) => q !== id)];
+    try {
+      await fetch('/api/dial-session', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ currentLeadId: id, queue: nextQueue, recycle: session.recycle, pass: session.pass })
+      });
+    } catch {
+      // best-effort — still navigate; the next poll on the new lead's page reconciles
+    }
+    dismissNewLead(id);
+    router.push(`/leads/${id}?dialing=1`);
+  }
+
   async function exitQueue() {
     if (pendingDisposition) return;
     if (dialSession && dialSession.sessionDials > 0) {
@@ -678,6 +737,30 @@ export default function LeadWorkspace({
               </span>
             )}
             {autoDialing && <span className="text-xs font-medium text-brand-600">📞 Auto-dialing…</span>}
+          </div>
+        </div>
+      )}
+      {isDialing && newLeads.length > 0 && (
+        <div className="card space-y-2 border border-amber-300 bg-amber-50 p-3 text-sm">
+          <div className="font-medium text-amber-800">
+            🔥 {newLeads.length} new lead{newLeads.length === 1 ? '' : 's'} just became ready to call
+            {newLeads.length <= 3 ? `: ${newLeads.map((l) => `${l.firstName} ${l.lastName}`).join(', ')}` : ''}
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              className="btn-good text-xs px-2 py-1.5"
+              disabled={pendingDisposition}
+              title={pendingDisposition ? "Finish this call first — won't interrupt an active call" : 'Puts this one on hold and jumps straight to the new lead'}
+              onClick={() => callNewLeadNow(newLeads[0].id)}
+            >
+              📞 Call {newLeads[0].firstName} Now
+            </button>
+            <button className="btn-secondary text-xs px-2 py-1.5" onClick={() => insertNewLeadsNext(newLeads.map((l) => l.id))}>
+              ➕ Queue Next (after this call)
+            </button>
+            <button className="text-xs text-slate-500 hover:text-ink" onClick={() => newLeads.forEach((l) => dismissNewLead(l.id))}>
+              ✕ Dismiss
+            </button>
           </div>
         </div>
       )}
