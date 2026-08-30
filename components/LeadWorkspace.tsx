@@ -113,7 +113,15 @@ export default function LeadWorkspace({
     currentLeadId: string | null; queue: string[]; recycle: string[]; pass: number;
     autoDial: boolean; autoDialPaceMs: number; sessionDials: number; sessionConnects: number; consecutiveNoAnswer: number;
   };
+  type NewLeadInfo = { id: string; firstName: string; lastName: string; phone: string | null };
   const [dialSession, setDialSession] = useState<DialSession | null>(null);
+  // Leads that became dialable after this session's queue was built (a
+  // fresh drip, or a state's calling window just opening) — surfaced as a
+  // banner the agent acts on deliberately, rather than silently spliced
+  // into the queue: whether a brand new lead is worth dropping the current
+  // one for depends on things only the agent watching the call can judge.
+  const [newLeads, setNewLeads] = useState<NewLeadInfo[]>([]);
+  const dismissedNewLeadIdsRef = useRef<Set<string>>(new Set());
   const [busy, setBusy] = useState(false);
   const [quoBusy, setQuoBusy] = useState(false);
   const [autoDialing, setAutoDialing] = useState(false);
@@ -268,16 +276,20 @@ export default function LeadWorkspace({
     }
   }
 
-  // Manual dial button: try the helper first (opens Quo AND presses Enter
-  // for you), falling back to the plain tel: link — which only opens Quo
-  // with the number filled in, same as always — if the helper isn't
-  // reachable. Never worse than the old behavior, just better when it can be.
+  // Manual dial: the real <a href="tel:"> click below is what actually
+  // opens Quo — always was, and browsers handle it safely (no navigation
+  // side effects if there's no handler). This just fires the helper
+  // alongside it as a bonus, to also press Enter for you. Deliberately NOT
+  // a location.href fallback -- assigning window.location.href to a tel:
+  // URI directly (tried previously) let Chrome treat an unresolved
+  // navigation as a search query and blow the whole CRM tab away to a
+  // Google results page when the helper wasn't reachable. Fire-and-forget:
+  // if the helper's unreachable, the anchor's own click already did
+  // everything it used to.
   async function placeManualCall() {
     await startCall();
     if (!customer.phone) return;
-    const digits = customer.phone.replace(/[^\d+]/g, '');
-    const dialed = await quoDialCall(digits);
-    if (!dialed) window.location.href = `tel:${digits}`;
+    quoDialCall(customer.phone.replace(/[^\d+]/g, ''));
   }
 
   async function cancelPendingCall() {
@@ -378,6 +390,7 @@ export default function LeadWorkspace({
         if (!res.ok) return; // e.g. session expired mid-poll — next tick retries, no false "session ended"
         const raw = await res.json();
         if (cancelled) return;
+        const newLeadsRaw: NewLeadInfo[] = Array.isArray(raw?.newLeads) ? raw.newLeads : [];
         if (!isDialSession(raw)) {
           router.push('/leads');
           return;
@@ -387,6 +400,7 @@ export default function LeadWorkspace({
           return;
         }
         setDialSession(raw);
+        setNewLeads(newLeadsRaw.filter((l) => !dismissedNewLeadIdsRef.current.has(l.id)));
       } catch {
         // transient network error — next tick retries
       }
@@ -540,6 +554,55 @@ export default function LeadWorkspace({
     await advanceQueue();
   }
 
+  function dismissNewLead(id: string) {
+    dismissedNewLeadIdsRef.current.add(id);
+    setNewLeads((prev) => prev.filter((l) => l.id !== id));
+  }
+
+  // Queues one or more newly-eligible leads right after whoever's current,
+  // without navigating away — they'll be dialed next once the current lead
+  // is dispositioned/skipped. Safe to use mid-call, since it doesn't move
+  // anyone off what they're currently on. Takes the whole batch in one
+  // request rather than one call per lead, since firing several inserts
+  // concurrently would each read the same stale queue and clobber each
+  // other's update.
+  async function insertNewLeadsNext(ids: string[]) {
+    const session = (await currentDialSession()) || dialSession;
+    if (!session) return;
+    const nextQueue = [...ids.filter((id) => !session.queue.includes(id) && id !== session.currentLeadId), ...session.queue];
+    try {
+      const res = await fetch('/api/dial-session', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ currentLeadId: session.currentLeadId, queue: nextQueue, recycle: session.recycle, pass: session.pass })
+      });
+      const raw = await res.json().catch(() => null);
+      if (isDialSession(raw)) setDialSession(raw);
+    } catch {
+      // best-effort — the next poll reconciles either way
+    }
+    for (const id of ids) dismissNewLead(id);
+  }
+
+  // Drops whatever's current back to the front of the queue and jumps
+  // straight to this new lead instead — only offered while there's no call
+  // actually in progress (see the disabled state on the button itself).
+  async function callNewLeadNow(id: string) {
+    const session = (await currentDialSession()) || dialSession;
+    if (!session) return;
+    const requeued = session.currentLeadId && session.currentLeadId !== id ? [session.currentLeadId] : [];
+    const nextQueue = [...requeued, ...session.queue.filter((q) => q !== id)];
+    try {
+      await fetch('/api/dial-session', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ currentLeadId: id, queue: nextQueue, recycle: session.recycle, pass: session.pass })
+      });
+    } catch {
+      // best-effort — still navigate; the next poll on the new lead's page reconciles
+    }
+    dismissNewLead(id);
+    router.push(`/leads/${id}?dialing=1`);
+  }
+
   async function exitQueue() {
     if (pendingDisposition) return;
     if (dialSession && dialSession.sessionDials > 0) {
@@ -681,6 +744,30 @@ export default function LeadWorkspace({
           </div>
         </div>
       )}
+      {isDialing && newLeads.length > 0 && (
+        <div className="card space-y-2 border border-amber-300 bg-amber-50 p-3 text-sm">
+          <div className="font-medium text-amber-800">
+            🔥 {newLeads.length} new lead{newLeads.length === 1 ? '' : 's'} just became ready to call
+            {newLeads.length <= 3 ? `: ${newLeads.map((l) => `${l.firstName} ${l.lastName}`).join(', ')}` : ''}
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              className="btn-good text-xs px-2 py-1.5"
+              disabled={pendingDisposition}
+              title={pendingDisposition ? "Finish this call first — won't interrupt an active call" : 'Puts this one on hold and jumps straight to the new lead'}
+              onClick={() => callNewLeadNow(newLeads[0].id)}
+            >
+              📞 Call {newLeads[0].firstName} Now
+            </button>
+            <button className="btn-secondary text-xs px-2 py-1.5" onClick={() => insertNewLeadsNext(newLeads.map((l) => l.id))}>
+              ➕ Queue Next (after this call)
+            </button>
+            <button className="text-xs text-slate-500 hover:text-ink" onClick={() => newLeads.forEach((l) => dismissNewLead(l.id))}>
+              ✕ Dismiss
+            </button>
+          </div>
+        </div>
+      )}
       {/* Header */}
       <div className="card flex flex-wrap items-center gap-3 p-4">
         <div className="flex-1 min-w-[220px]">
@@ -706,9 +793,9 @@ export default function LeadWorkspace({
         <div className="flex flex-wrap gap-2">
           <div className="relative">
             {customer.phone && (
-              <button className="btn-good" onClick={placeManualCall}>
+              <a href={`tel:${customer.phone.replace(/[^\d+]/g, '')}`} className="btn-good" onClick={placeManualCall}>
                 📞 Call {customer.phone}
-              </button>
+              </a>
             )}
             {pendingCallId && (
               <div className="absolute left-0 top-full z-30 mt-2 w-72 rounded-xl border border-line bg-panel p-3 shadow-2xl">
