@@ -62,7 +62,7 @@ const QUO_APP_NAME = process.env.QUO_APP_NAME || 'Quo';
 const QUO_HANGUP_KEY = process.env.QUO_HANGUP_KEY || 'h'; // Cmd+Shift+H by default
 const CRM_BASE_URL = process.env.CRM_BASE_URL || '';
 const QUO_WEBHOOK_TOKEN = process.env.QUO_WEBHOOK_TOKEN || '';
-const POLL_MS = process.env.QUO_POLL_MS ? Number(process.env.QUO_POLL_MS) : 1000;
+const POLL_MS = process.env.QUO_POLL_MS ? Number(process.env.QUO_POLL_MS) : 300;
 // On the Desktop (not a hidden temp folder) so it can actually be opened
 // and inspected while debugging -- one file, overwritten every capture, not
 // something that accumulates.
@@ -159,7 +159,13 @@ async function captureRegion(region) {
 // would give us the words but not where they are on screen.
 function ocrWords(imgPath) {
   return new Promise((resolve, reject) => {
-    execFile('tesseract', [imgPath, 'stdout', 'tsv'], { maxBuffer: 10 * 1024 * 1024 }, (error, stdout, stderr) => {
+    // --psm 11 (sparse text): tesseract's default page-segmentation mode
+    // assumes a normal block of paragraph text, and real logs showed it
+    // reliably reading the phone number but consistently failing to find
+    // "Accept"/"Reject" even while the call was still actively ringing --
+    // short, isolated button labels on a solid color background are exactly
+    // the case sparse-text mode is meant for.
+    execFile('tesseract', [imgPath, 'stdout', '--psm', '11', 'tsv'], { maxBuffer: 10 * 1024 * 1024 }, (error, stdout, stderr) => {
       if (error) {
         reject(new Error(stderr?.trim() || error.message));
         return;
@@ -189,18 +195,25 @@ function ocrWords(imgPath) {
 
 const PHONE_PATTERN = /\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}/;
 
-// Restricts the phone-number search to the same OCR "block" as the
-// "Incoming" text (Quo's popup renders as one contiguous block distinct
-// from the rest of the UI) so a different number elsewhere on screen — an
-// old call in the sidebar's history list, for instance — never gets
-// mistaken for the one actually ringing.
+// Prefers the same OCR "block" as the "Incoming" text (Quo's popup usually
+// renders as one contiguous block distinct from the rest of the UI), so a
+// different number elsewhere on screen — an old call in the sidebar's
+// history list, for instance — doesn't get mistaken for the one actually
+// ringing. Falls back to words within a tight vertical band of "Incoming"
+// (sorted top-to-bottom to preserve reading order) since block segmentation
+// isn't guaranteed stable across tesseract page-segmentation modes.
 function findIncomingCallPhone(words) {
   const incomingWord = words.find((w) => /incoming/i.test(w.text));
   if (!incomingWord) return null;
 
   const sameBlock = words.filter((w) => w.blockNum === incomingWord.blockNum);
-  const joined = sameBlock.map((w) => w.text).join(' ');
-  const match = joined.match(PHONE_PATTERN);
+  let match = sameBlock.map((w) => w.text).join(' ').match(PHONE_PATTERN);
+  if (match) return match[0];
+
+  const nearby = words
+    .filter((w) => Math.abs(w.top - incomingWord.top) < 150)
+    .sort((a, b) => a.top - b.top || a.left - b.left);
+  match = nearby.map((w) => w.text).join(' ').match(PHONE_PATTERN);
   return match ? match[0] : null;
 }
 
@@ -237,6 +250,9 @@ function findButtonCenter(words, labelPattern) {
 async function clickInQuo(imgLocalPoint, region, scale) {
   const screenX = Math.round(region.x + imgLocalPoint.x / scale.scaleX);
   const screenY = Math.round(region.y + imgLocalPoint.y / scale.scaleY);
+  console.log(
+    `[action] clicking at screen (${screenX}, ${screenY}) -- window region x=${region.x} y=${region.y} w=${region.w} h=${region.h}, scale ${scale.scaleX.toFixed(2)}x${scale.scaleY.toFixed(2)}, OCR point (${imgLocalPoint.x.toFixed(0)}, ${imgLocalPoint.y.toFixed(0)})`
+  );
   await runOsascript([`tell application "System Events" to click at {${screenX}, ${screenY}}`]);
 }
 
@@ -365,14 +381,19 @@ function setCors(res, origin) {
   res.setHeader('Access-Control-Allow-Private-Network', 'true');
 }
 
-function handleAction(res, action) {
+// Logs both outcomes now, not just failure -- with only failure logged
+// before, a successful-but-clicked-the-wrong-spot outcome was
+// indistinguishable in the log from the request never arriving at all.
+function handleAction(res, name, action) {
+  console.log(`[action] ${name} requested`);
   action()
     .then(() => {
+      console.log(`[action] ${name} succeeded (clicked)`);
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ ok: true }));
     })
     .catch((err) => {
-      console.error('Action failed:', err.message);
+      console.error(`[action] ${name} failed:`, err.message);
       res.writeHead(500, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ ok: false, error: err.message }));
     });
@@ -394,17 +415,17 @@ const server = http.createServer((req, res) => {
   }
 
   if (req.method === 'POST' && req.url === '/end-call') {
-    handleAction(res, endQuoCall);
+    handleAction(res, 'end-call', endQuoCall);
     return;
   }
 
   if (req.method === 'POST' && req.url === '/answer-call') {
-    handleAction(res, answerCall);
+    handleAction(res, 'answer-call', answerCall);
     return;
   }
 
   if (req.method === 'POST' && req.url === '/decline-call') {
-    handleAction(res, declineCall);
+    handleAction(res, 'decline-call', declineCall);
     return;
   }
 
