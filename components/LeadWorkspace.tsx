@@ -276,16 +276,20 @@ export default function LeadWorkspace({
     }
   }
 
-  // Manual dial button: try the helper first (opens Quo AND presses Enter
-  // for you), falling back to the plain tel: link — which only opens Quo
-  // with the number filled in, same as always — if the helper isn't
-  // reachable. Never worse than the old behavior, just better when it can be.
+  // Manual dial: the real <a href="tel:"> click below is what actually
+  // opens Quo — always was, and browsers handle it safely (no navigation
+  // side effects if there's no handler). This just fires the helper
+  // alongside it as a bonus, to also press Enter for you. Deliberately NOT
+  // a location.href fallback -- assigning window.location.href to a tel:
+  // URI directly (tried previously) let Chrome treat an unresolved
+  // navigation as a search query and blow the whole CRM tab away to a
+  // Google results page when the helper wasn't reachable. Fire-and-forget:
+  // if the helper's unreachable, the anchor's own click already did
+  // everything it used to.
   async function placeManualCall() {
     await startCall();
     if (!customer.phone) return;
-    const digits = customer.phone.replace(/[^\d+]/g, '');
-    const dialed = await quoDialCall(digits);
-    if (!dialed) window.location.href = `tel:${digits}`;
+    quoDialCall(customer.phone.replace(/[^\d+]/g, ''));
   }
 
   async function cancelPendingCall() {
@@ -789,9 +793,9 @@ export default function LeadWorkspace({
         <div className="flex flex-wrap gap-2">
           <div className="relative">
             {customer.phone && (
-              <button className="btn-good" onClick={placeManualCall}>
+              <a href={`tel:${customer.phone.replace(/[^\d+]/g, '')}`} className="btn-good" onClick={placeManualCall}>
                 📞 Call {customer.phone}
-              </button>
+              </a>
             )}
             {pendingCallId && (
               <div className="absolute left-0 top-full z-30 mt-2 w-72 rounded-xl border border-line bg-panel p-3 shadow-2xl">
