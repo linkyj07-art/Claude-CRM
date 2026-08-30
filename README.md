@@ -91,7 +91,8 @@ Vercel's platform — just a larger lift than the Railway/Fly.io path above.
   leads (youngest first within each tier) and drops you straight into the
   first one's workspace, with a "skip / next" control to move through the
   queue. Once you tap Call on a lead, you can't skip to the next one until
-  you log that call's outcome.
+  you log that call's outcome. On macOS, an **Auto-Dial** toggle can drive
+  Quo directly through the whole queue — see "Auto-Dial" below.
 - **Leads (`/leads`)** — searchable/filterable list, quick "+ Add Lead".
 - **Lead Workspace (`/leads/[id]`)** — the core screen: lead info, live
   local time for the lead's state vs. your Mountain time, call-attempt
@@ -270,6 +271,53 @@ From then on, any matching call pops a notification within a couple of
 seconds of ringing — click it (or the popup's Answer/Decline buttons, or its
 "Open lead →" link) to act on it.
 
+## Auto-Dial (macOS only)
+
+Power Dial can drive Quo directly instead of you clicking Call and pressing
+Enter for every lead. It reuses the same local helper as End Call/Incoming
+Call — no OCR needed here, since dialing always lands on exactly one
+ready-to-go number in Quo's search bar (unlike Answer/Decline, which has to
+find a button on screen), so this uses the same reliable
+activate-and-send-a-keystroke pattern as End Call.
+
+What it does, once you turn on **Auto-Dial** in the Power Dial header:
+- Dials the current lead the moment you land on it.
+- After you log a "No Answer"/"Voicemail" outcome (the first one on this
+  lead), redials the same lead automatically.
+- After any other outcome, or a second unanswered attempt, advances to the
+  next lead in the queue and dials it.
+- Turning it off never interrupts a call in progress or skips logging the
+  outcome — it only stops the *next* dial from firing. **Alt+A** toggles it
+  without needing the mouse.
+
+Safety built in:
+- **Off by default** every time you start a new Power Dial session (`/dial`)
+  — it never silently carries over from a previous session.
+- Sends a hangup shortcut before every auto-dial (harmless if nothing's
+  active), so a stale open call can never eat the next number.
+- Re-checks calling hours, the daily call cap, and DNC status right before
+  each dial — not just whatever the queue looked like when it was built.
+- Auto-pauses itself (with an alert) after 5 unanswered calls in a row —
+  catches a dead line or a bad number format before it burns through your
+  whole queue for nothing.
+- If the helper can't be reached or a dial fails, Auto-Dial turns itself
+  off and tells you, rather than sitting there doing nothing call after
+  call.
+
+A **Pace** dropdown (Instant/2s/4s/6s) sets how long it waits after you log
+an outcome before the next dial fires, and the header shows a running
+dials/connects count for the session — a summary of both prints when you
+exit the queue.
+
+Manual dialing (Auto-Dial off, or outside Power Dial entirely) also got
+better: clicking **Call** now routes through the helper first, so it opens
+Quo *and* presses Enter for you — falling back to the old plain `tel:` link
+(which only opens Quo with the number filled in) if the helper isn't
+running, so it never breaks even without it.
+
+Setup is the same helper you already have running for End Call/Incoming
+Call — nothing extra to install.
+
 ## Goat Leads webhook (auto-import)
 
 Instead of manually importing a CSV, Goat Leads can push each new lead
@@ -331,8 +379,8 @@ data/                SQLite database lives here (gitignored)
 ## Notes on scope
 
 This is a working, single-user CRM you can run today and keep extending —
-not a hosted multi-tenant product. There's no login/auth, no SMS/dialer
-integration (the Call button opens your phone's own dialer via `tel:`), and
-renewal/referral payments are entered manually rather than pulled from a
+not a hosted multi-tenant product. There's no login/auth, no SMS integration,
+and renewal/referral payments are entered manually rather than pulled from a
 carrier feed. All of those are natural next steps once the core workflow
-feels right.
+feels right. (Outbound dialing itself — the Call button and Power Dial's
+Auto-Dial — does drive Quo directly on macOS; see "Auto-Dial" above.)

@@ -2,20 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
 import { getCurrentUser } from '@/lib/currentUser';
 import { isWithinCallingHours } from '@/lib/util';
+import { DialSessionRow, serializeDialSession as serialize } from '@/lib/dialSession';
 
-type DialSessionRow = { current_lead_id: string | null; queue: string; recycle: string; pass: number; updated_at: string };
 type Db = ReturnType<typeof getDb>;
-
-function serialize(row: DialSessionRow | undefined) {
-  if (!row) return null;
-  return {
-    currentLeadId: row.current_lead_id,
-    queue: row.queue ? row.queue.split(',').filter(Boolean) : [],
-    recycle: row.recycle ? row.recycle.split(',').filter(Boolean) : [],
-    pass: row.pass,
-    updatedAt: row.updated_at
-  };
-}
 
 // A lead queued while its state was inside the calling window can age out of
 // that window before Power Dial actually reaches it (deep queue, or a state

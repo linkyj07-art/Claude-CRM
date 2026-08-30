@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
 import { getCurrentUser } from '@/lib/currentUser';
-import { isWithinCallingHours, minutesUntilCallingWindowCloses, MAX_CALLS_PER_DAY } from '@/lib/util';
+import { isWithinCallingHours, minutesUntilCallingWindowCloses, MAX_CALLS_PER_DAY, isTestLead } from '@/lib/util';
 
 // A lead whose state is closing for the day within this many minutes jumps
 // to the front of the queue — otherwise it's easy to work through fresher
@@ -40,7 +40,7 @@ export async function GET(req: NextRequest) {
 
   const allRows = db
     .prepare(
-      `SELECT id, status, state FROM customers
+      `SELECT id, status, state, first_name, last_name FROM customers
        WHERE archived = 0 AND owner_id = ? AND status IN ('fresh','working','aging_45_90','aging_90_plus')
          AND phone IS NOT NULL AND TRIM(phone) != ''
          AND id NOT IN (
@@ -49,19 +49,22 @@ export async function GET(req: NextRequest) {
          )
        ORDER BY CASE status WHEN 'fresh' THEN 0 WHEN 'working' THEN 1 WHEN 'aging_45_90' THEN 2 ELSE 3 END, purchased_at ASC`
     )
-    .all(user.id) as { id: string; status: string; state: string | null }[];
+    .all(user.id) as { id: string; status: string; state: string | null; first_name: string; last_name: string }[];
 
   // Leads whose local time is outside the 8am-9pm calling window get held
   // back rather than queued dead-on-arrival — they'll be picked up again on
-  // a later Power Dial run once their state's window opens.
-  const callable = allRows.filter((r) => isWithinCallingHours(r.state));
+  // a later Power Dial run once their state's window opens. Test leads
+  // (name contains "fake") skip this so Power Dial/Auto-Dial can be tried
+  // out any time of day.
+  const callable = allRows.filter((r) => isTestLead(r) || isWithinCallingHours(r.state));
 
   // Within the callable set, leads whose window closes soon jump ahead of
   // the normal status-based order (stable sort keeps everyone else exactly
   // where they were) — otherwise a lead an hour from closing could sit
-  // behind a hundred "fresh" leads and never get reached in time.
+  // behind a hundred "fresh" leads and never get reached in time. Test
+  // leads are always "open," so there's no closing-soon urgency for them.
   const rows = callable
-    .map((r) => ({ ...r, minutesLeft: minutesUntilCallingWindowCloses(r.state) }))
+    .map((r) => ({ ...r, minutesLeft: isTestLead(r) ? Infinity : minutesUntilCallingWindowCloses(r.state) }))
     .sort((a, b) => {
       const aUrgent = a.minutesLeft <= CLOSING_SOON_MINUTES;
       const bUrgent = b.minutesLeft <= CLOSING_SOON_MINUTES;
@@ -76,12 +79,17 @@ export async function GET(req: NextRequest) {
     return NextResponse.redirect(new URL(`/leads?empty=1${reason}`, origin));
   }
   const [first, ...rest] = rows;
+  // A brand-new session always starts Auto-Dial off and its stats at zero —
+  // even if the user's last session left it on, so Auto-Dial never carries
+  // over silently into a session the user hasn't looked at yet.
   db.prepare(
-    `INSERT INTO dial_sessions (user_id, current_lead_id, queue, recycle, pass, updated_at)
-     VALUES (?, ?, ?, '', 1, datetime('now'))
+    `INSERT INTO dial_sessions (user_id, current_lead_id, queue, recycle, pass, auto_dial, auto_dial_pace_ms, session_dials, session_connects, consecutive_no_answer, updated_at)
+     VALUES (?, ?, ?, '', 1, 0, 2000, 0, 0, 0, datetime('now'))
      ON CONFLICT(user_id) DO UPDATE SET
        current_lead_id = excluded.current_lead_id, queue = excluded.queue,
-       recycle = '', pass = 1, updated_at = excluded.updated_at`
+       recycle = '', pass = 1, auto_dial = 0, auto_dial_pace_ms = 2000,
+       session_dials = 0, session_connects = 0, consecutive_no_answer = 0,
+       updated_at = excluded.updated_at`
   ).run(user.id, first.id, rest.map((r) => r.id).join(','));
 
   return NextResponse.redirect(new URL(`/leads/${first.id}?dialing=1`, origin));
