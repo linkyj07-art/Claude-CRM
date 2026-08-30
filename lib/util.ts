@@ -409,6 +409,16 @@ function callWindowRuleFor(state: string | null): CallWindowRule {
   return (state && CALL_WINDOW_OVERRIDES[state]) || { start: CALL_WINDOW_START_HOUR, end: CALL_WINDOW_END_HOUR };
 }
 
+// A lead whose first or last name contains "fake" (case-insensitive) is
+// treated as a test lead created for trying out Power Dial/Auto-Dial —
+// exempt from the calling-hours restriction so it's queueable and dialable
+// at any time, regardless of what state it's tagged with. Real leads are
+// never affected: this only fires on an explicit "fake" marker put in the
+// name on purpose.
+export function isTestLead(lead: { first_name?: string | null; last_name?: string | null }): boolean {
+  return /fake/i.test(lead.first_name || '') || /fake/i.test(lead.last_name || '');
+}
+
 export function isWithinCallingHours(state: string | null, reference: Date = new Date()): boolean {
   const tz = (state && STATE_TIMEZONES[state]) || 'America/New_York';
   try {
