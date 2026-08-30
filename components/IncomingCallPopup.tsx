@@ -16,7 +16,7 @@ const DISMISSED_KEY = 'crm_dismissed_incoming_calls';
 // cadence appointment reminders use — Quo doesn't ring long, and Answer/
 // Decline only work while the call is still actually up on Quo's screen, so
 // slow polling here directly costs usable reaction time for those buttons.
-const POLL_MS = 1.5 * 1000;
+const POLL_MS = 800;
 
 function loadDismissed(): Set<string> {
   try {
