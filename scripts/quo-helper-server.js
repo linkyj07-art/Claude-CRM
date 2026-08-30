@@ -62,7 +62,7 @@ const QUO_APP_NAME = process.env.QUO_APP_NAME || 'Quo';
 const QUO_HANGUP_KEY = process.env.QUO_HANGUP_KEY || 'h'; // Cmd+Shift+H by default
 const CRM_BASE_URL = process.env.CRM_BASE_URL || '';
 const QUO_WEBHOOK_TOKEN = process.env.QUO_WEBHOOK_TOKEN || '';
-const POLL_MS = process.env.QUO_POLL_MS ? Number(process.env.QUO_POLL_MS) : 1000;
+const POLL_MS = process.env.QUO_POLL_MS ? Number(process.env.QUO_POLL_MS) : 500;
 // On the Desktop (not a hidden temp folder) so it can actually be opened
 // and inspected while debugging -- one file, overwritten every capture, not
 // something that accumulates.
