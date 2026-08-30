@@ -49,6 +49,14 @@ const os = require('os');
 const path = require('path');
 const { execFile } = require('child_process');
 
+// Timestamp every log line -- without this there's no way to actually
+// measure how long detection/Answer/Decline take from the log alone, only
+// guess at it.
+const origLog = console.log.bind(console);
+const origError = console.error.bind(console);
+console.log = (...args) => origLog(`[${new Date().toISOString()}]`, ...args);
+console.error = (...args) => origError(`[${new Date().toISOString()}]`, ...args);
+
 const PORT = process.env.QUO_HELPER_PORT ? Number(process.env.QUO_HELPER_PORT) : 8787;
 const QUO_APP_NAME = process.env.QUO_APP_NAME || 'Quo';
 const QUO_HANGUP_KEY = process.env.QUO_HANGUP_KEY || 'h'; // Cmd+Shift+H by default
@@ -202,12 +210,17 @@ async function findAndClick(labelPattern, notFoundMessage) {
   throw new Error(notFoundMessage);
 }
 
+// Substring match, not exact ("Accept" not "^Accept$") -- OCR on small
+// button text is noisy enough that requiring a perfectly clean word match
+// made this fail even while the button was genuinely still on screen.
+// Still scoped to the same OCR block as "Incoming call" by findButtonCenter,
+// so this can't accidentally match unrelated text elsewhere on screen.
 function answerCall() {
-  return findAndClick(/^Accept$/i, 'Could not find an "Accept" button on screen right now — is a call actually ringing?');
+  return findAndClick(/Accept/i, 'Could not find an "Accept" button on screen right now — is a call actually ringing?');
 }
 
 function declineCall() {
-  return findAndClick(/^Reject$/i, 'Could not find a "Reject" button on screen right now — is a call actually ringing?');
+  return findAndClick(/Reject/i, 'Could not find a "Reject" button on screen right now — is a call actually ringing?');
 }
 
 // --- Incoming-call polling -------------------------------------------
