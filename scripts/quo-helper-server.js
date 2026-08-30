@@ -236,18 +236,23 @@ async function pollOnce() {
     await captureRegion(region);
     const words = await ocrWords(CAPTURE_PATH);
     const phone = findIncomingCallPhone(words);
+    // Compare digits only, not the raw OCR string — formatting can come out
+    // slightly differently between polls (spacing, etc.) even for the exact
+    // same still-ringing call, which would otherwise look like a new call.
+    const normalized = phone ? phone.replace(/\D/g, '') : null;
 
-    if (phone && phone !== currentRingingPhone) {
-      currentRingingPhone = phone;
+    if (normalized && normalized !== currentRingingPhone) {
+      currentRingingPhone = normalized;
       console.log(`[incoming-call] Detected: ${phone}`);
       await notifyIncomingCall(phone);
-    } else if (!phone) {
+    } else if (!normalized) {
       currentRingingPhone = null;
     }
-  } catch (err) {
-    // Quo minimized, window covered, OCR hiccup, etc. — not fatal, just
-    // skip this tick and try again on the next one.
-    currentRingingPhone = null;
+  } catch {
+    // Quo minimized, window covered, OCR hiccup, etc. — deliberately NOT
+    // resetting currentRingingPhone here: a single bad tick during an
+    // otherwise still-ringing call would otherwise make the next good tick
+    // look like a "new" call and re-notify for the same one.
   } finally {
     pollBusy = false;
   }
