@@ -12,9 +12,11 @@ type IncomingCall = {
 };
 
 const DISMISSED_KEY = 'crm_dismissed_incoming_calls';
-// Calls need to be noticed within a few seconds of ringing, not the 30s
-// cadence appointment reminders use — the call itself is often over by then.
-const POLL_MS = 5 * 1000;
+// Calls need to be noticed within a second or two of ringing, not the 30s
+// cadence appointment reminders use — Quo doesn't ring long, and Answer/
+// Decline only work while the call is still actually up on Quo's screen, so
+// slow polling here directly costs usable reaction time for those buttons.
+const POLL_MS = 1.5 * 1000;
 
 function loadDismissed(): Set<string> {
   try {

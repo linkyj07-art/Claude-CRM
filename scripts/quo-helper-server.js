@@ -54,7 +54,7 @@ const QUO_APP_NAME = process.env.QUO_APP_NAME || 'Quo';
 const QUO_HANGUP_KEY = process.env.QUO_HANGUP_KEY || 'h'; // Cmd+Shift+H by default
 const CRM_BASE_URL = process.env.CRM_BASE_URL || '';
 const QUO_WEBHOOK_TOKEN = process.env.QUO_WEBHOOK_TOKEN || '';
-const POLL_MS = process.env.QUO_POLL_MS ? Number(process.env.QUO_POLL_MS) : 2000;
+const POLL_MS = process.env.QUO_POLL_MS ? Number(process.env.QUO_POLL_MS) : 1000;
 const CAPTURE_PATH = path.join(os.tmpdir(), 'quo-helper-capture.png');
 
 if (process.platform !== 'darwin') {
@@ -179,13 +179,27 @@ async function clickInQuo(imgLocalPoint, region) {
   await runOsascript([`tell application "System Events" to click at {${screenX}, ${screenY}}`]);
 }
 
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+// A single OCR pass can miss the button through no fault of the call still
+// being up — a mistimed screenshot, a momentary redraw, etc. — so retry a
+// couple of times before concluding it's actually gone, rather than failing
+// on the first miss.
 async function findAndClick(labelPattern, notFoundMessage) {
   const region = await getQuoWindowRegion();
-  await captureRegion(region);
-  const words = await ocrWords(CAPTURE_PATH);
-  const center = findButtonCenter(words, labelPattern);
-  if (!center) throw new Error(notFoundMessage);
-  await clickInQuo(center, region);
+  for (let attempt = 0; attempt < 3; attempt++) {
+    await captureRegion(region);
+    const words = await ocrWords(CAPTURE_PATH);
+    const center = findButtonCenter(words, labelPattern);
+    if (center) {
+      await clickInQuo(center, region);
+      return;
+    }
+    if (attempt < 2) await sleep(400);
+  }
+  throw new Error(notFoundMessage);
 }
 
 function answerCall() {
@@ -222,18 +236,23 @@ async function pollOnce() {
     await captureRegion(region);
     const words = await ocrWords(CAPTURE_PATH);
     const phone = findIncomingCallPhone(words);
+    // Compare digits only, not the raw OCR string — formatting can come out
+    // slightly differently between polls (spacing, etc.) even for the exact
+    // same still-ringing call, which would otherwise look like a new call.
+    const normalized = phone ? phone.replace(/\D/g, '') : null;
 
-    if (phone && phone !== currentRingingPhone) {
-      currentRingingPhone = phone;
+    if (normalized && normalized !== currentRingingPhone) {
+      currentRingingPhone = normalized;
       console.log(`[incoming-call] Detected: ${phone}`);
       await notifyIncomingCall(phone);
-    } else if (!phone) {
+    } else if (!normalized) {
       currentRingingPhone = null;
     }
-  } catch (err) {
-    // Quo minimized, window covered, OCR hiccup, etc. — not fatal, just
-    // skip this tick and try again on the next one.
-    currentRingingPhone = null;
+  } catch {
+    // Quo minimized, window covered, OCR hiccup, etc. — deliberately NOT
+    // resetting currentRingingPhone here: a single bad tick during an
+    // otherwise still-ringing call would otherwise make the next good tick
+    // look like a "new" call and re-notify for the same one.
   } finally {
     pollBusy = false;
   }
