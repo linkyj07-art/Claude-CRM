@@ -207,34 +207,48 @@ not reachable from outside your machine. See the comments in
 `scripts/quo-helper-server.js` for the full detail, including why it has no
 auth token (the only thing it can do is hang up a call).
 
-## Incoming call popup
+## Incoming call popup (macOS only)
 
 When a call rings in on Quo from a number that matches an existing lead, the
-CRM can pop up that lead's name — as a real OS-level notification you'll see
-even if the CRM tab isn't in front — with a click-through straight to their
-Lead Workspace. Unmatched numbers are silently ignored.
+CRM pops up that lead's name — as a real OS-level notification you'll see
+even if the CRM tab isn't in front — with **Answer**/**Decline** buttons that
+control the actual call in Quo, plus a click-through to their Lead
+Workspace. Unmatched numbers are silently ignored.
 
-This works through Quo's own **Zapier** integration (Quo → Settings →
-Connect other platforms → Zapier), since Quo doesn't expose incoming-call
-events to outside tools directly. Set it up once:
+Quo doesn't expose a "call is ringing" event to outside tools (its Zapier
+integration only fires *after* a call completes, too late for a live popup),
+so this works by having the same local helper from "Ending Quo calls" watch
+Quo's window directly: it periodically screenshots Quo (without stealing
+focus — Quo doesn't need to be the frontmost app) and reads the "Incoming
+call" popup via OCR, since Quo's call screen is a web view that hides its
+real content from accessibility tools. Answer/Decline work the same way in
+reverse — the helper finds "Accept"/"Reject" on screen and clicks it.
 
-1. **Generate a secret token** for the webhook — any long random string works:
+**Known limitation:** since this reads actual screen pixels, Quo's window
+needs to be visible somewhere on screen (not minimized, not fully hidden
+behind another window) for detection to work.
+
+### Setup
+
+1. **Install OCR support** (one-time, on the Mac running Quo):
+   ```bash
+   brew install tesseract
+   ```
+2. **Generate a shared secret token:**
    ```bash
    openssl rand -hex 24
    ```
-2. **Add it as an environment variable** on your deployment: `QUO_WEBHOOK_TOKEN=<the value from step 1>` (Railway: your service → **Variables**).
-3. **In Zapier**, create a new Zap:
-   - **Trigger:** Quo → an incoming/new call event (Zapier will show whatever call events Quo's integration exposes — pick the one that fires when a call rings in).
-   - **Action:** *Webhooks by Zapier* → **POST**.
-     - **URL:** `https://<your-crm-domain>/api/webhooks/incoming-call?token=<the same token from step 1>`
-     - **Payload type:** JSON
-     - **Data:** one field, key `phone`, value set to whichever field from the Quo trigger holds the caller's phone number.
-4. Turn the Zap on.
+3. **Add it to your deployment:** `QUO_WEBHOOK_TOKEN=<that value>` (Railway: your service → **Variables**).
+4. **Add these to your Mac's environment** before starting the helper — same token as step 3, plus your CRM's URL:
+   ```bash
+   CRM_BASE_URL="https://<your-crm-domain>" QUO_WEBHOOK_TOKEN="<same token as step 3>" npm run quo-helper
+   ```
+   If you're using `scripts/install-quo-helper.sh --autostart` instead of running `npm run quo-helper` by hand, add both variables to your shell profile (e.g. `~/.zshrc`) with `export CRM_BASE_URL=...` / `export QUO_WEBHOOK_TOKEN=...` so the background service picks them up, then re-run the installer.
+5. The first time it detects a call, your browser will ask permission for notifications — allow it.
 
-The first time it fires, your browser will ask permission for notifications —
-allow it. From then on, any matching call pops a notification within a few
-seconds; click it (or its "Open lead →" link if you're already looking at
-the CRM) to jump to that lead.
+From then on, any matching call pops a notification within a couple of
+seconds of ringing — click it (or the popup's Answer/Decline buttons, or its
+"Open lead →" link) to act on it.
 
 ## Protected fields & login
 
