@@ -122,6 +122,14 @@ export default function LeadWorkspace({
   // one for depends on things only the agent watching the call can judge.
   const [newLeads, setNewLeads] = useState<NewLeadInfo[]>([]);
   const dismissedNewLeadIdsRef = useRef<Set<string>>(new Set());
+  // Flips false the instant this lead's workspace unmounts (navigated away
+  // via Skip/Exit/advance) — checked by fireAutoDial after its pace delay
+  // so a queued auto-dial can't fire against a lead the agent already left.
+  const mountedRef = useRef(true);
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => { mountedRef.current = false; };
+  }, []);
   const [busy, setBusy] = useState(false);
   const [quoBusy, setQuoBusy] = useState(false);
   const [autoDialing, setAutoDialing] = useState(false);
@@ -233,19 +241,28 @@ export default function LeadWorkspace({
   // if the helper can't be reached, Auto-Dial turns itself back off and
   // says so, rather than silently sitting there doing nothing call after
   // call.
+  //
+  // The pace delay is a real window where the agent can navigate away on
+  // their own (Skip This Lead, Exit Queue) before this actually fires --
+  // without the mountedRef check below, it would still go ahead and dial
+  // whatever lead this closure was created for, log a "pending" call
+  // against it, and leave that call orphaned (no disposition buttons
+  // visible anywhere, since the agent's now looking at a different lead).
   async function fireAutoDial(phone: string, paceMs: number) {
     setAutoDialing(true);
     try {
       if (paceMs > 0) await new Promise((resolve) => setTimeout(resolve, paceMs));
+      if (!mountedRef.current) return;
       if (!withinCallingHours || dailyLimitReached || customer.status === 'dnc' || !customer.phone) return;
       await startCall();
+      if (!mountedRef.current) return;
       const dialed = await quoDialCall(phone);
       if (!dialed) {
         await patchDialSession({ autoDial: false });
         alert('Auto-Dial could not reach the Quo helper, so it turned itself off. Make sure the helper is running on this Mac (`npm run quo-helper`), then turn Auto-Dial back on.');
       }
     } finally {
-      setAutoDialing(false);
+      if (mountedRef.current) setAutoDialing(false);
     }
   }
 
