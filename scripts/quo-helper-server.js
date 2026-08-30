@@ -301,12 +301,16 @@ async function findAndClick(side, notFoundMessage) {
   actionInFlight = true;
   try {
     const region = await getQuoWindowRegion();
+    // One osascript call instead of two separate ones (get frontApp, then
+    // activate) -- each spawns its own process, so merging saves a full
+    // process-spawn round trip off every click.
     const frontApp = await runOsascript([
-      'tell application "System Events" to get name of first application process whose frontmost is true'
+      'tell application "System Events" to set frontApp to name of first application process whose frontmost is true',
+      `tell application "${QUO_APP_NAME}" to activate`,
+      'delay 0.2',
+      'return frontApp'
     ]);
-    console.log(`[action] activating "${QUO_APP_NAME}" (was: "${frontApp}")`);
-    await runOsascript([`tell application "${QUO_APP_NAME}" to activate`, 'delay 0.35']);
-    console.log(`[action] activated -- proceeding to locate and click`);
+    console.log(`[action] activated "${QUO_APP_NAME}" (was: "${frontApp}")`);
     try {
       for (let attempt = 0; attempt < 3; attempt++) {
         const scale = await captureRegion(region);
@@ -316,7 +320,7 @@ async function findAndClick(side, notFoundMessage) {
           await clickInQuo(center, region, scale);
           return;
         }
-        if (attempt < 2) await sleep(400);
+        if (attempt < 2) await sleep(250);
       }
       throw new Error(notFoundMessage);
     } finally {
