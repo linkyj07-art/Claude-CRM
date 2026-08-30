@@ -366,5 +366,10 @@ CREATE TABLE IF NOT EXISTS dial_sessions (
   queue TEXT NOT NULL DEFAULT '', -- comma-separated customer ids, in order
   recycle TEXT NOT NULL DEFAULT '', -- comma-separated ids held for a 2nd pass
   pass INTEGER NOT NULL DEFAULT 1,
+  auto_dial INTEGER NOT NULL DEFAULT 0, -- 1 while Auto-Dial is driving the queue via the Quo helper
+  auto_dial_pace_ms INTEGER NOT NULL DEFAULT 2000, -- pause before each auto-fired dial
+  session_dials INTEGER NOT NULL DEFAULT 0, -- dials placed this Power Dial session (manual + auto)
+  session_connects INTEGER NOT NULL DEFAULT 0,
+  consecutive_no_answer INTEGER NOT NULL DEFAULT 0, -- resets on any other outcome; auto-pauses Auto-Dial past a threshold
   updated_at TEXT NOT NULL DEFAULT (datetime('now'))
 );

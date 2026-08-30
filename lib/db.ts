@@ -63,6 +63,11 @@ function migrate(db: Database.Database) {
   addColumnIfMissing(db, 'customers', 'owner_id', 'TEXT REFERENCES users(id)');
   addColumnIfMissing(db, 'customers', 'last_followed_up_at', 'TEXT');
   addColumnIfMissing(db, 'note_versions', 'selected_plan', 'TEXT'); // bronze | silver | gold
+  addColumnIfMissing(db, 'dial_sessions', 'auto_dial', 'INTEGER NOT NULL DEFAULT 0');
+  addColumnIfMissing(db, 'dial_sessions', 'auto_dial_pace_ms', 'INTEGER NOT NULL DEFAULT 2000');
+  addColumnIfMissing(db, 'dial_sessions', 'session_dials', 'INTEGER NOT NULL DEFAULT 0');
+  addColumnIfMissing(db, 'dial_sessions', 'session_connects', 'INTEGER NOT NULL DEFAULT 0');
+  addColumnIfMissing(db, 'dial_sessions', 'consecutive_no_answer', 'INTEGER NOT NULL DEFAULT 0');
   db.exec('CREATE INDEX IF NOT EXISTS idx_customers_owner ON customers(owner_id);');
 
   const defaultUserId = seedDefaultUser(db);
