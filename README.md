@@ -252,6 +252,41 @@ From then on, any matching call pops a notification within a couple of
 seconds of ringing — click it (or the popup's Answer/Decline buttons, or its
 "Open lead →" link) to act on it.
 
+## Goat Leads webhook (auto-import)
+
+Instead of manually importing a CSV, Goat Leads can push each new lead
+straight into the CRM the moment it's delivered — it lands as a normal lead
+(`fresh` status, tagged with a "Goat Leads" vendor for the existing
+cost/ROI reporting) within a few seconds, and a phone number that already
+matches one of your leads goes to the **Review Queue** instead of creating a
+duplicate.
+
+Goat's exact field names for their webhook aren't publicly documented, so
+this maps a wide set of common aliases rather than one exact key per field.
+It also echoes back what it received/mapped in every response, so if the
+mapping needs adjusting after a real lead comes through, that response is
+what to send back for a fix — no guessing needed.
+
+### Setup
+
+1. **Generate a shared secret token:**
+   ```bash
+   openssl rand -hex 24
+   ```
+2. **Add it to your deployment** (Railway: your service → **Variables**):
+   - `GOAT_LEADS_WEBHOOK_TOKEN=<that value>`
+   - `GOAT_LEADS_OWNER_USERNAME=<the username new leads should belong to>`
+     (the login username, not the display name — check Settings → Team if
+     you're not sure)
+3. **In Goat Leads' dashboard**, find the webhook/integration/CRM-connection
+   setting for your order and paste in:
+   ```
+   https://<your-crm-domain>/api/webhooks/leads/goat?token=<same token as step 2>
+   ```
+4. **Send a test lead** from Goat's dashboard if it offers one. Whatever it
+   shows you as the response — success or error — paste it back here so the
+   field mapping can be tightened if anything came through blank.
+
 ## Protected fields & login
 
 SSN, bank name/state, routing number, and account number live in
