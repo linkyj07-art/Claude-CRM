@@ -78,7 +78,10 @@ export default async function LeadsPage({ searchParams }: { searchParams: { stat
       <form className="card flex flex-wrap items-end gap-2 p-3" action="/leads">
         <div>
           <label className="label mb-1 block">Search</label>
-          <input className="input w-56" name="q" defaultValue={searchParams.q || ''} placeholder="Name, phone, email…" />
+          <div className="flex gap-1">
+            <input className="input w-56" name="q" defaultValue={searchParams.q || ''} placeholder="Name, phone, email…" />
+            <button className="btn-secondary shrink-0 px-2.5" type="submit" aria-label="Search" title="Search">🔍</button>
+          </div>
         </div>
         <div>
           <label className="label mb-1 block">Status</label>

@@ -1,6 +1,6 @@
 'use client';
 
-// Catches errors thrown from the root layout itself (TopNav, IncomingCallPopup,
+// Catches errors thrown from the root layout itself (Sidebar, IncomingCallPopup,
 // etc.) — app/error.tsx alone can't, since it renders inside that layout.
 // Next.js requires this file to render its own <html>/<body>.
 export default function GlobalError({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {

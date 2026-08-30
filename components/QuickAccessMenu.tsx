@@ -6,10 +6,12 @@ import { Carrier, QuickLink } from '@/lib/types';
 
 export default function QuickAccessMenu({
   carriers,
-  quickLinks
+  quickLinks,
+  align = 'right'
 }: {
   carriers: Carrier[];
   quickLinks: QuickLink[];
+  align?: 'left' | 'right';
 }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -36,7 +38,7 @@ export default function QuickAccessMenu({
         ⚡ Quick Access <span className={`transition-transform ${open ? 'rotate-180' : ''}`}>▾</span>
       </button>
       {open && (
-        <div className="absolute right-0 z-50 mt-2 w-[min(92vw,380px)] overflow-hidden rounded-xl border border-line bg-panel shadow-2xl">
+        <div className={`absolute ${align === 'left' ? 'left-0' : 'right-0'} z-50 mt-2 w-[min(92vw,380px)] overflow-hidden rounded-xl border border-line bg-panel shadow-2xl`}>
           <div className="max-h-[75vh] overflow-y-auto p-2">
             {quoterLinks.length > 0 && (
               <div className="mb-1">
