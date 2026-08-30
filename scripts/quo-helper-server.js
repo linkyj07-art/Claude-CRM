@@ -271,26 +271,39 @@ function sleep(ms) {
 // the click. This mirrors the same activate-before-acting pattern
 // endQuoCall already uses successfully for End Call, restoring whatever
 // was frontmost before (usually the browser) afterward either way.
+let actionInFlight = false;
+
 async function findAndClick(side, notFoundMessage) {
-  const region = await getQuoWindowRegion();
-  const frontApp = await runOsascript([
-    'tell application "System Events" to get name of first application process whose frontmost is true'
-  ]);
-  await runOsascript([`tell application "${QUO_APP_NAME}" to activate`, 'delay 0.35']);
+  if (actionInFlight) {
+    throw new Error('Another Answer/Decline click is already in progress -- wait for it to finish before trying again.');
+  }
+  actionInFlight = true;
   try {
-    for (let attempt = 0; attempt < 3; attempt++) {
-      const scale = await captureRegion(region);
-      const words = await ocrWords(CAPTURE_PATH);
-      const center = findButtonRowCenter(words, side);
-      if (center) {
-        await clickInQuo(center, region, scale);
-        return;
+    const region = await getQuoWindowRegion();
+    const frontApp = await runOsascript([
+      'tell application "System Events" to get name of first application process whose frontmost is true'
+    ]);
+    console.log(`[action] activating "${QUO_APP_NAME}" (was: "${frontApp}")`);
+    await runOsascript([`tell application "${QUO_APP_NAME}" to activate`, 'delay 0.35']);
+    console.log(`[action] activated -- proceeding to locate and click`);
+    try {
+      for (let attempt = 0; attempt < 3; attempt++) {
+        const scale = await captureRegion(region);
+        const words = await ocrWords(CAPTURE_PATH);
+        const center = findButtonRowCenter(words, side);
+        if (center) {
+          await clickInQuo(center, region, scale);
+          return;
+        }
+        if (attempt < 2) await sleep(400);
       }
-      if (attempt < 2) await sleep(400);
+      throw new Error(notFoundMessage);
+    } finally {
+      await runOsascript([`tell application "${frontApp}" to activate`]).catch(() => {});
+      console.log(`[action] restored focus to "${frontApp}"`);
     }
-    throw new Error(notFoundMessage);
   } finally {
-    await runOsascript([`tell application "${frontApp}" to activate`]).catch(() => {});
+    actionInFlight = false;
   }
 }
 
