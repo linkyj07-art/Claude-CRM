@@ -22,8 +22,26 @@ OUT_DIR="$HOME/Desktop"
 IMG_PATH="$OUT_DIR/quo-capture.png"
 OCR_BASE="$OUT_DIR/quo-ocr"
 
+if ! osascript -e 'tell application "System Events" to exists process "Quo"' | grep -q true; then
+  echo "Quo isn't running. Open it, get a call ringing, then try again." >&2
+  exit 1
+fi
+
+# Bring Quo to front first and give it a beat to actually have a window —
+# grabbing "window 1" of a backgrounded/just-launched app can otherwise race
+# with the window not existing yet, which is the "Can't get id of window 1"
+# error this replaces with a clearer message.
+osascript -e 'tell application "Quo" to activate' >/dev/null
+sleep 0.5
+
+WINDOW_COUNT=$(osascript -e 'tell application "System Events" to tell process "Quo" to count of windows')
+if [ "$WINDOW_COUNT" -eq 0 ]; then
+  echo "Quo is running but has no open window right now. Make sure the incoming-call popup is actually visible on screen, then try again." >&2
+  exit 1
+fi
+
 WINDOW_ID=$(osascript -e 'tell application "System Events" to tell process "Quo" to id of window 1' 2>&1) || {
-  echo "Couldn't get Quo's window id. Is Quo open? Error was:" >&2
+  echo "Couldn't get Quo's window id even though it reports $WINDOW_COUNT window(s). Error was:" >&2
   echo "$WINDOW_ID" >&2
   exit 1
 }
