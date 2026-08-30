@@ -63,7 +63,10 @@ const QUO_HANGUP_KEY = process.env.QUO_HANGUP_KEY || 'h'; // Cmd+Shift+H by defa
 const CRM_BASE_URL = process.env.CRM_BASE_URL || '';
 const QUO_WEBHOOK_TOKEN = process.env.QUO_WEBHOOK_TOKEN || '';
 const POLL_MS = process.env.QUO_POLL_MS ? Number(process.env.QUO_POLL_MS) : 1000;
-const CAPTURE_PATH = path.join(os.tmpdir(), 'quo-helper-capture.png');
+// On the Desktop (not a hidden temp folder) so it can actually be opened
+// and inspected while debugging -- one file, overwritten every capture, not
+// something that accumulates.
+const CAPTURE_PATH = path.join(os.homedir(), 'Desktop', 'quo-helper-capture.png');
 
 if (process.platform !== 'darwin') {
   console.error('quo-helper only works on macOS (it relies on AppleScript/System Events).');
@@ -110,14 +113,44 @@ async function getQuoWindowRegion() {
   return { x: parts[0], y: parts[1], w: parts[2], h: parts[3] };
 }
 
-function captureRegion(region) {
+function getImagePixelSize(imgPath) {
   return new Promise((resolve, reject) => {
+    execFile('sips', ['-g', 'pixelWidth', '-g', 'pixelHeight', imgPath], (error, stdout, stderr) => {
+      if (error) {
+        reject(new Error(stderr?.trim() || error.message));
+        return;
+      }
+      const w = /pixelWidth:\s*(\d+)/.exec(stdout);
+      const h = /pixelHeight:\s*(\d+)/.exec(stdout);
+      if (!w || !h) {
+        reject(new Error(`Could not parse sips output: ${stdout}`));
+        return;
+      }
+      resolve({ width: Number(w[1]), height: Number(h[1]) });
+    });
+  });
+}
+
+// On a Retina display, screencapture -R (which takes the same point-based
+// coordinates System Events uses for window position/size) produces an
+// image at roughly 2x that many actual pixels. Tesseract's OCR bounding
+// boxes are in those image pixels, not points -- so converting an OCR
+// coordinate straight into a click point without correcting for this would
+// click at roughly double the intended offset from the window's origin.
+// scaleX/scaleY (image pixels per point) let callers convert back.
+async function captureRegion(region) {
+  await new Promise((resolve, reject) => {
     const arg = `${region.x},${region.y},${region.w},${region.h}`;
     execFile('screencapture', ['-R', arg, '-o', '-x', CAPTURE_PATH], (error, _stdout, stderr) => {
       if (error) reject(new Error(stderr?.trim() || error.message));
-      else resolve(CAPTURE_PATH);
+      else resolve();
     });
   });
+  const pixelSize = await getImagePixelSize(CAPTURE_PATH);
+  return {
+    scaleX: pixelSize.width / region.w,
+    scaleY: pixelSize.height / region.h
+  };
 }
 
 // Tesseract's TSV output gives per-word bounding boxes (image-local
@@ -201,9 +234,9 @@ function findButtonCenter(words, labelPattern) {
   return { x: target.left + target.width / 2, y: target.top + target.height / 2 };
 }
 
-async function clickInQuo(imgLocalPoint, region) {
-  const screenX = Math.round(region.x + imgLocalPoint.x);
-  const screenY = Math.round(region.y + imgLocalPoint.y);
+async function clickInQuo(imgLocalPoint, region, scale) {
+  const screenX = Math.round(region.x + imgLocalPoint.x / scale.scaleX);
+  const screenY = Math.round(region.y + imgLocalPoint.y / scale.scaleY);
   await runOsascript([`tell application "System Events" to click at {${screenX}, ${screenY}}`]);
 }
 
@@ -218,11 +251,11 @@ function sleep(ms) {
 async function findAndClick(labelPattern, notFoundMessage) {
   const region = await getQuoWindowRegion();
   for (let attempt = 0; attempt < 3; attempt++) {
-    await captureRegion(region);
+    const scale = await captureRegion(region);
     const words = await ocrWords(CAPTURE_PATH);
     const center = findButtonCenter(words, labelPattern);
     if (center) {
-      await clickInQuo(center, region);
+      await clickInQuo(center, region, scale);
       return;
     }
     if (attempt < 2) await sleep(400);
