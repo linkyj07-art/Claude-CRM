@@ -191,7 +191,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: { 
           <div>
             <div className="label mb-1">💰 This Month</div>
             <div className="flex items-baseline gap-1">
-              <div className="text-4xl font-bold leading-none tracking-tight text-ink">{fmtMoney(money.month)}</div>
+              <div className="glow-figure text-4xl font-bold leading-none tracking-tight">{fmtMoney(money.month)}</div>
               <ChangeBadge pct={moneyComparison.monthChangePct} />
             </div>
             <div className="mt-1.5 text-xs text-slate-500">Net commission booked this month · vs. prior 30 days</div>
