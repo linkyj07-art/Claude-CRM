@@ -217,34 +217,43 @@ function findIncomingCallPhone(words) {
   return match ? match[0] : null;
 }
 
-// Real captures showed buttons often end up in a DIFFERENT tesseract
-// "block" than the "Incoming call" text -- block_num is tesseract's own
-// visual layout guess, not the popup's actual DOM structure, and it
-// frequently segments a row of buttons separately from the text above them.
-// So: prefer the same block, but fall back to the closest vertical match to
-// "Incoming" (buttons are always a bit below it, never far) instead of
-// failing outright, and only fall back further to a bare global match as a
-// last resort.
-function findButtonCenter(words, labelPattern) {
-  const incomingWord = words.find((w) => /incoming/i.test(w.text));
-  const allMatches = words.filter((w) => labelPattern.test(w.text));
-  if (allMatches.length === 0) return null;
+// Real captures proved text-matching Accept/Reject can never work: white
+// bold text on a solid red/green background gets detected as a text region
+// by tesseract (right size, right place, real bounding box) but read as
+// pure garbage ("'ee", "a") at ~35% confidence -- not a near-miss, nothing
+// resembling the real word. So instead of matching text at all, anchor off
+// "is calling you" (read correctly, ~96% confidence, every single test) and
+// use the *position* of whatever text tesseract detects in the band right
+// below it -- garbled or not -- as "the button row", splitting that
+// detected region's bounding box left/right for Reject/Accept.
+function findButtonRowCenter(words, side) {
+  const callingWord = words.find((w) => /calling/i.test(w.text));
+  if (!callingWord) return null;
 
-  let target;
-  if (incomingWord) {
-    target =
-      allMatches.find((w) => w.blockNum === incomingWord.blockNum) ||
-      allMatches.reduce((closest, w) => {
-        const dist = Math.abs(w.top - incomingWord.top);
-        const closestDist = closest ? Math.abs(closest.top - incomingWord.top) : Infinity;
-        return dist < closestDist ? w : closest;
-      }, null);
+  const bandTop = callingWord.top + callingWord.height + 10;
+  const bandBottom = callingWord.top + callingWord.height + 160;
+  const rowWords = words.filter((w) => w.top >= bandTop && w.top <= bandBottom);
+
+  let left, right, top, bottom;
+  if (rowWords.length > 0) {
+    left = Math.min(...rowWords.map((w) => w.left));
+    right = Math.max(...rowWords.map((w) => w.left + w.width));
+    top = Math.min(...rowWords.map((w) => w.top));
+    bottom = Math.max(...rowWords.map((w) => w.top + w.height));
   } else {
-    target = allMatches[0];
+    // Nothing detected at all in that band this attempt (rare, but a real
+    // capture-to-capture OCR miss is possible) -- fall back to a fixed
+    // offset from "calling", measured from real captures of this exact popup.
+    left = callingWord.left - 122;
+    right = callingWord.left + 300;
+    top = callingWord.top + 77;
+    bottom = callingWord.top + 157;
   }
 
-  if (!target) return null;
-  return { x: target.left + target.width / 2, y: target.top + target.height / 2 };
+  const width = right - left;
+  const x = side === 'left' ? left + width * 0.25 : left + width * 0.75;
+  const y = (top + bottom) / 2;
+  return { x, y };
 }
 
 async function clickInQuo(imgLocalPoint, region, scale) {
@@ -260,16 +269,16 @@ function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-// A single OCR pass can miss the button through no fault of the call still
-// being up — a mistimed screenshot, a momentary redraw, etc. — so retry a
-// couple of times before concluding it's actually gone, rather than failing
-// on the first miss.
-async function findAndClick(labelPattern, notFoundMessage) {
+// A single OCR pass can miss "is calling you" through no fault of the call
+// still being up — a mistimed screenshot, a momentary redraw, etc. — so
+// retry a couple of times before concluding it's actually gone, rather than
+// failing on the first miss.
+async function findAndClick(side, notFoundMessage) {
   const region = await getQuoWindowRegion();
   for (let attempt = 0; attempt < 3; attempt++) {
     const scale = await captureRegion(region);
     const words = await ocrWords(CAPTURE_PATH);
-    const center = findButtonCenter(words, labelPattern);
+    const center = findButtonRowCenter(words, side);
     if (center) {
       await clickInQuo(center, region, scale);
       return;
@@ -279,17 +288,15 @@ async function findAndClick(labelPattern, notFoundMessage) {
   throw new Error(notFoundMessage);
 }
 
-// Substring match, not exact ("Accept" not "^Accept$") -- OCR on small
-// button text is noisy enough that requiring a perfectly clean word match
-// made this fail even while the button was genuinely still on screen.
-// Still scoped to the same OCR block as "Incoming call" by findButtonCenter,
-// so this can't accidentally match unrelated text elsewhere on screen.
+// Accept is the right-hand button, Reject the left-hand one, in Quo's
+// popup layout -- see findButtonRowCenter for why this clicks by position
+// instead of matching "Accept"/"Reject" text.
 function answerCall() {
-  return findAndClick(/Accept/i, 'Could not find an "Accept" button on screen right now — is a call actually ringing?');
+  return findAndClick('right', 'Could not find "is calling you" on screen right now — is a call actually ringing?');
 }
 
 function declineCall() {
-  return findAndClick(/Reject/i, 'Could not find a "Reject" button on screen right now — is a call actually ringing?');
+  return findAndClick('left', 'Could not find "is calling you" on screen right now — is a call actually ringing?');
 }
 
 // --- Incoming-call polling -------------------------------------------
