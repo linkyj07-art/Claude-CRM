@@ -40,13 +40,26 @@ if [ "$WINDOW_COUNT" -eq 0 ]; then
   exit 1
 fi
 
-WINDOW_ID=$(osascript -e 'tell application "System Events" to tell process "Quo" to id of window 1' 2>&1) || {
-  echo "Couldn't get Quo's window id even though it reports $WINDOW_COUNT window(s). Error was:" >&2
-  echo "$WINDOW_ID" >&2
+# Some apps' windows don't expose a proper AXWindowID even when they clearly
+# have a window (this is what "Can't get id of window 1" meant — not that
+# nothing was open), so capture by on-screen position/size instead, which is
+# a more universally-supported property. Building the final "x,y,w,h" string
+# inside the AppleScript itself avoids any ambiguity in how a nested list of
+# lists would otherwise print when coerced to text.
+REGION=$(osascript <<'APPLESCRIPT' 2>&1
+tell application "System Events" to tell process "Quo"
+	set {px, py} to position of window 1
+	set {sw, sh} to size of window 1
+end tell
+return (px as string) & "," & (py as string) & "," & (sw as string) & "," & (sh as string)
+APPLESCRIPT
+) || {
+  echo "Couldn't get Quo's window position/size. Error was:" >&2
+  echo "$REGION" >&2
   exit 1
 }
 
-screencapture -l "$WINDOW_ID" -o -x "$IMG_PATH"
+screencapture -R "$REGION" -o -x "$IMG_PATH"
 echo "Screenshot saved to $IMG_PATH"
 
 tesseract "$IMG_PATH" "$OCR_BASE" 2>/dev/null
