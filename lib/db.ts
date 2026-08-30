@@ -61,6 +61,8 @@ function migrate(db: Database.Database) {
   addColumnIfMissing(db, 'customers', 'trusted_form_url', 'TEXT');
   addColumnIfMissing(db, 'note_versions', 'beneficiary_dob', 'TEXT');
   addColumnIfMissing(db, 'customers', 'owner_id', 'TEXT REFERENCES users(id)');
+  addColumnIfMissing(db, 'customers', 'last_followed_up_at', 'TEXT');
+  addColumnIfMissing(db, 'note_versions', 'selected_plan', 'TEXT'); // bronze | silver | gold
   db.exec('CREATE INDEX IF NOT EXISTS idx_customers_owner ON customers(owner_id);');
 
   const defaultUserId = seedDefaultUser(db);

@@ -39,7 +39,8 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   const allowed = [
     'status', 'archived', 'first_name', 'last_name', 'phone', 'email', 'dob', 'gender',
     'marital_status', 'military', 'military_branch', 'coverage_wanted', 'address', 'city',
-    'state', 'postal_code', 'timezone', 'ad_type', 'platform', 'lead_vendor_id', 'best_time', 'lead_cost', 'trusted_form_url'
+    'state', 'postal_code', 'timezone', 'ad_type', 'platform', 'lead_vendor_id', 'best_time', 'lead_cost',
+    'trusted_form_url', 'last_followed_up_at'
   ];
   for (const key of allowed) {
     if (key in body) {

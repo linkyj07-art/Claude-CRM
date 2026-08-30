@@ -17,7 +17,11 @@ const STATUS_OPTIONS = [
   ['sold', 'Sold'], ['lost', 'Lost'], ['archived', 'Archived']
 ];
 
-export default async function LeadsPage({ searchParams }: { searchParams: { status?: string; q?: string; state?: string; vendor?: string; empty?: string; closed?: string } }) {
+const ISSUE_OPTIONS = [
+  ['', 'Any'], ['missing_phone', 'Missing phone number'], ['incomplete', 'Missing phone, state, or name']
+];
+
+export default async function LeadsPage({ searchParams }: { searchParams: { status?: string; q?: string; state?: string; vendor?: string; issue?: string; empty?: string; closed?: string } }) {
   const user = await getCurrentUser();
   if (!user) redirect('/login');
 
@@ -29,6 +33,11 @@ export default async function LeadsPage({ searchParams }: { searchParams: { stat
   if (searchParams.status) { sql += ' AND c.status = ?'; params.push(searchParams.status); }
   if (searchParams.state) { sql += ' AND c.state = ?'; params.push(searchParams.state); }
   if (searchParams.vendor) { sql += ' AND c.lead_vendor_id = ?'; params.push(searchParams.vendor); }
+  if (searchParams.issue === 'missing_phone') {
+    sql += ` AND (c.phone IS NULL OR TRIM(c.phone) = '')`;
+  } else if (searchParams.issue === 'incomplete') {
+    sql += ` AND (c.phone IS NULL OR TRIM(c.phone) = '' OR c.state IS NULL OR TRIM(c.state) = '' OR (c.first_name = 'New' AND c.last_name = 'Lead'))`;
+  }
   if (searchParams.q) {
     sql += ` AND (c.first_name || ' ' || c.last_name LIKE ? OR c.phone LIKE ? OR c.email LIKE ?)`;
     const term = `%${searchParams.q}%`;
@@ -89,6 +98,12 @@ export default async function LeadsPage({ searchParams }: { searchParams: { stat
           <select className="input w-48" name="vendor" defaultValue={searchParams.vendor || ''}>
             <option value="">All vendors</option>
             {vendors.map((v) => <option key={v.id} value={v.id}>{v.name}</option>)}
+          </select>
+        </div>
+        <div>
+          <label className="label mb-1 block">Data Issues</label>
+          <select className="input w-52" name="issue" defaultValue={searchParams.issue || ''}>
+            {ISSUE_OPTIONS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
           </select>
         </div>
         <button className="btn-secondary" type="submit">Filter</button>

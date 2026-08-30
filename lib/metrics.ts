@@ -643,21 +643,27 @@ export interface FollowUpLead {
 export function getNeedsFollowUp(db: Database.Database, ownerId: string, quietDays = 7, limit = 8): FollowUpLead[] {
   const rows = db
     .prepare(
-      `SELECT c.id, c.first_name, c.last_name, c.phone, c.status, c.purchased_at,
+      `SELECT c.id, c.first_name, c.last_name, c.phone, c.status, c.purchased_at, c.last_followed_up_at,
               (SELECT MAX(occurred_at) FROM calls WHERE customer_id = c.id) as last_call_at
        FROM customers c
        WHERE c.owner_id = ? AND c.archived = 0
          AND c.status IN ('fresh','working','aging_45_90','aging_90_plus')
        ORDER BY c.purchased_at ASC`
     )
-    .all(ownerId) as { id: string; first_name: string; last_name: string; phone: string | null; status: string; purchased_at: string; last_call_at: string | null }[];
+    .all(ownerId) as {
+      id: string; first_name: string; last_name: string; phone: string | null; status: string;
+      purchased_at: string; last_followed_up_at: string | null; last_call_at: string | null;
+    }[];
 
   const now = Date.now();
   const parseTs = (s: string) => new Date(s.replace(' ', 'T') + (s.includes('Z') ? '' : 'Z')).getTime();
 
   return rows
     .map((r) => {
-      const lastActivityAt = r.last_call_at || r.purchased_at;
+      // The most recent of: a logged call, a manual "mark followed up", or
+      // (if neither ever happened) when the lead was purchased.
+      const candidates = [r.last_call_at, r.last_followed_up_at, r.purchased_at].filter(Boolean) as string[];
+      const lastActivityAt = candidates.reduce((latest, c) => (parseTs(c) > parseTs(latest) ? c : latest));
       const daysQuiet = Math.floor((now - parseTs(lastActivityAt)) / (1000 * 60 * 60 * 24));
       return { id: r.id, name: `${r.first_name} ${r.last_name}`, phone: r.phone, status: r.status, lastActivityAt: r.last_call_at, daysQuiet };
     })

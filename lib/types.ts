@@ -33,6 +33,7 @@ export interface Customer {
   best_time: string | null;
   lead_cost: number;
   trusted_form_url: string | null;
+  last_followed_up_at: string | null;
   status: CustomerStatus;
   purchased_at: string;
   sold_at: string | null;
@@ -67,6 +68,7 @@ export interface NoteVersion {
   plan_silver_price: string | null;
   plan_gold_coverage: string | null;
   plan_gold_price: string | null;
+  selected_plan: string | null;
   draft_date: string | null;
   code_word: string | null;
   free_text: string | null;

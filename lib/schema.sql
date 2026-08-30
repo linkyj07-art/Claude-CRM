@@ -45,6 +45,7 @@ CREATE TABLE IF NOT EXISTS customers (
   best_time TEXT,
   lead_cost REAL DEFAULT 0,
   trusted_form_url TEXT,
+  last_followed_up_at TEXT,
   status TEXT NOT NULL DEFAULT 'fresh',
     -- fresh | working | aging_45_90 | aging_90_plus | invalid | disputed | dnc | sold | lost | archived
   purchased_at TEXT NOT NULL DEFAULT (datetime('now')),
@@ -92,6 +93,7 @@ CREATE TABLE IF NOT EXISTS note_versions (
   plan_silver_price TEXT,
   plan_gold_coverage TEXT,
   plan_gold_price TEXT,
+  selected_plan TEXT, -- bronze | silver | gold | null (which packet the client actually chose)
   draft_date TEXT,
   code_word TEXT,
   free_text TEXT,

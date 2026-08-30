@@ -45,7 +45,7 @@ function emptyNoteForm(customer: Customer): AnyRow {
     bank_name: '', bank_state: customer.state || '', routing_number: '', account_number: '',
     mailing_address: '', email: customer.email || '', born_in: '', ssn: '',
     plan_bronze_coverage: '', plan_bronze_price: '', plan_silver_coverage: '', plan_silver_price: '',
-    plan_gold_coverage: '', plan_gold_price: '', draft_date: '', code_word: '', free_text: ''
+    plan_gold_coverage: '', plan_gold_price: '', selected_plan: '', draft_date: '', code_word: '', free_text: ''
   };
 }
 
@@ -79,7 +79,7 @@ const NOTE_FORM_KEYS = [
   'label', 'name', 'note_date', 'phone', 'beneficiary', 'beneficiary_dob', 'budget', 'health', 'discount',
   'bank_name', 'bank_state', 'routing_number', 'account_number', 'mailing_address', 'email',
   'born_in', 'ssn', 'plan_bronze_coverage', 'plan_bronze_price', 'plan_silver_coverage', 'plan_silver_price',
-  'plan_gold_coverage', 'plan_gold_price', 'draft_date', 'code_word', 'free_text'
+  'plan_gold_coverage', 'plan_gold_price', 'selected_plan', 'draft_date', 'code_word', 'free_text'
 ] as const;
 
 function noteFormFromNote(note: NoteVersion | undefined, customer: Customer): AnyRow {
@@ -198,6 +198,15 @@ export default function LeadWorkspace({
     } finally { setBusy(false); }
   }
 
+  // A 401 (session cookie expired mid-poll) or any other non-2xx response
+  // still comes back as parseable JSON (e.g. {error: "Not authenticated"}),
+  // which is NOT a DialSession — treating it as one crashed the render the
+  // first time something read .queue.length off of it. Validate the actual
+  // shape rather than trusting res.json()'s inferred type.
+  function isDialSession(x: unknown): x is DialSession {
+    return !!x && typeof x === 'object' && Array.isArray((x as DialSession).queue) && Array.isArray((x as DialSession).recycle);
+  }
+
   // Picks up the latest known session, fetching fresh if this device hasn't
   // loaded it yet (e.g. the calling-hours effect below can fire before the
   // first poll resolves) — never falls back to an empty queue just because
@@ -207,7 +216,9 @@ export default function LeadWorkspace({
     if (dialSession) return dialSession;
     try {
       const res = await fetch('/api/dial-session');
-      return await res.json();
+      if (!res.ok) return null;
+      const data = await res.json();
+      return isDialSession(data) ? data : null;
     } catch {
       return null;
     }
@@ -272,17 +283,18 @@ export default function LeadWorkspace({
     async function poll() {
       try {
         const res = await fetch('/api/dial-session');
-        const data: DialSession | null = await res.json();
+        if (!res.ok) return; // e.g. session expired mid-poll — next tick retries, no false "session ended"
+        const raw = await res.json();
         if (cancelled) return;
-        if (!data) {
+        if (!isDialSession(raw)) {
           router.push('/leads');
           return;
         }
-        if (data.currentLeadId && data.currentLeadId !== customer.id) {
-          router.push(`/leads/${data.currentLeadId}?dialing=1`);
+        if (raw.currentLeadId && raw.currentLeadId !== customer.id) {
+          router.push(`/leads/${raw.currentLeadId}?dialing=1`);
           return;
         }
-        setDialSession(data);
+        setDialSession(raw);
       } catch {
         // transient network error — next tick retries
       }
@@ -384,6 +396,16 @@ export default function LeadWorkspace({
     try {
       await fetch(`/api/leads/${customer.id}`, {
         method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status })
+      });
+      await refresh();
+    } finally { setBusy(false); }
+  }
+
+  async function markFollowedUp() {
+    setBusy(true);
+    try {
+      await fetch(`/api/leads/${customer.id}`, {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ last_followed_up_at: new Date().toISOString() })
       });
       await refresh();
     } finally { setBusy(false); }
@@ -513,6 +535,9 @@ export default function LeadWorkspace({
           </button>
           <button className="btn-secondary" onClick={() => setShowQuote(true)}>🧮 Run Quote</button>
           <button className="btn-secondary" onClick={() => setShowAppt(true)}>📅 Appointment</button>
+          <button className="btn-secondary" disabled={busy} onClick={markFollowedUp} title={customer.last_followed_up_at ? `Last marked followed up: ${customer.last_followed_up_at}` : 'Clears this lead from the Needs Follow-Up list'}>
+            ✅ Mark Followed Up
+          </button>
           {customer.status !== 'sold' && (
             <button className="btn-primary" onClick={() => setShowSell(true)}>💰 Sold</button>
           )}
@@ -546,6 +571,7 @@ export default function LeadWorkspace({
             <InfoRow label="🎂 DOB" value={customer.dob} />
             <InfoRow label="♂ Gender" value={customer.gender} />
             <InfoRow label="💰 Coverage" value={customer.coverage_wanted ? fmtMoney0(customer.coverage_wanted) : null} />
+            <InfoRow label="📦 Plan Chosen" value={lastNote?.selected_plan ? lastNote.selected_plan.charAt(0).toUpperCase() + lastNote.selected_plan.slice(1) : null} />
             <InfoRow label="💍 Marital" value={customer.marital_status} />
             <InfoRow label="📢 Ad" value={customer.ad_type} />
             <InfoRow label="📱 Platform" value={customer.platform} />
@@ -646,27 +672,39 @@ export default function LeadWorkspace({
           <div className="mt-3">
             <label className="label mb-1 block">Plan Options</label>
             <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-              {PLAN_TIERS.map(({ tier, coverageKey, priceKey }) => (
-                <div key={tier} className="rounded-lg border border-line p-2.5">
-                  <div className="mb-1.5 text-xs font-semibold text-slate-500">{tier}</div>
-                  <div className="space-y-1.5">
-                    <input
-                      className="input disabled:bg-slate-50 disabled:text-slate-500"
-                      disabled={!editingNote}
-                      placeholder="Coverage amount"
-                      value={noteForm[coverageKey] || ''}
-                      onChange={(e) => setNoteForm((s) => ({ ...s, [coverageKey]: e.target.value }))}
-                    />
-                    <input
-                      className="input disabled:bg-slate-50 disabled:text-slate-500"
-                      disabled={!editingNote}
-                      placeholder="Price / month"
-                      value={noteForm[priceKey] || ''}
-                      onChange={(e) => setNoteForm((s) => ({ ...s, [priceKey]: e.target.value }))}
-                    />
+              {PLAN_TIERS.map(({ tier, coverageKey, priceKey }) => {
+                const planKey = tier.toLowerCase();
+                const isChosen = noteForm.selected_plan === planKey;
+                return (
+                  <div key={tier} className={`rounded-lg border p-2.5 ${isChosen ? 'border-brand-500 bg-brand-50/40' : 'border-line'}`}>
+                    <label className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold text-slate-500">
+                      <input
+                        type="checkbox"
+                        disabled={!editingNote}
+                        checked={isChosen}
+                        onChange={() => setNoteForm((s) => ({ ...s, selected_plan: isChosen ? '' : planKey }))}
+                      />
+                      {tier}{isChosen && <span className="text-brand-600">✓ Chosen</span>}
+                    </label>
+                    <div className="space-y-1.5">
+                      <input
+                        className="input disabled:bg-slate-50 disabled:text-slate-500"
+                        disabled={!editingNote}
+                        placeholder="Coverage amount"
+                        value={noteForm[coverageKey] || ''}
+                        onChange={(e) => setNoteForm((s) => ({ ...s, [coverageKey]: e.target.value }))}
+                      />
+                      <input
+                        className="input disabled:bg-slate-50 disabled:text-slate-500"
+                        disabled={!editingNote}
+                        placeholder="Price / month"
+                        value={noteForm[priceKey] || ''}
+                        onChange={(e) => setNoteForm((s) => ({ ...s, [priceKey]: e.target.value }))}
+                      />
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
 
