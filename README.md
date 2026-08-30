@@ -239,11 +239,13 @@ behind another window) for detection to work.
    openssl rand -hex 24
    ```
 3. **Add it to your deployment:** `QUO_WEBHOOK_TOKEN=<that value>` (Railway: your service → **Variables**).
-4. **Add these to your Mac's environment** before starting the helper — same token as step 3, plus your CRM's URL:
-   ```bash
-   CRM_BASE_URL="https://<your-crm-domain>" QUO_WEBHOOK_TOKEN="<same token as step 3>" npm run quo-helper
-   ```
-   If you're using `scripts/install-quo-helper.sh --autostart` instead of running `npm run quo-helper` by hand, add both variables to your shell profile (e.g. `~/.zshrc`) with `export CRM_BASE_URL=...` / `export QUO_WEBHOOK_TOKEN=...` so the background service picks them up, then re-run the installer.
+4. **Start (or restart) the helper with those two values set** — same token as step 3, plus your CRM's URL:
+   - Running it manually: `CRM_BASE_URL="https://<your-crm-domain>" QUO_WEBHOOK_TOKEN="<same token as step 3>" npm run quo-helper`
+   - Using the `--autostart` launchd version: `launchd` agents don't read `~/.zshrc`/shell profiles, so put the values directly on the installer command instead of trying to export them separately:
+     ```bash
+     CRM_BASE_URL="https://<your-crm-domain>" QUO_WEBHOOK_TOKEN="<same token as step 3>" bash scripts/install-quo-helper.sh --autostart
+     ```
+     This bakes them straight into the launchd agent. Re-run it any time you need to change either value.
 5. The first time it detects a call, your browser will ask permission for notifications — allow it.
 
 From then on, any matching call pops a notification within a couple of

@@ -78,6 +78,28 @@ if [[ "$AUTOSTART" -eq 1 ]]; then
   LOG_DIR="$REPO_ROOT/data"
   mkdir -p "$LOG_DIR"
 
+  # launchd agents run in a clean environment — they do NOT read
+  # ~/.zshrc or any shell profile, so CRM_BASE_URL/QUO_WEBHOOK_TOKEN (needed
+  # for incoming-call detection) have to be baked directly into the plist
+  # instead. Pick them up from however this script itself was invoked, e.g.:
+  #   CRM_BASE_URL="https://your-crm.example.com" QUO_WEBHOOK_TOKEN="..." \
+  #     bash scripts/install-quo-helper.sh --autostart
+  ENV_VARS_XML=""
+  if [[ -n "${CRM_BASE_URL:-}" || -n "${QUO_WEBHOOK_TOKEN:-}" ]]; then
+    ENV_VARS_XML="  <key>EnvironmentVariables</key>
+  <dict>
+    <key>CRM_BASE_URL</key>
+    <string>${CRM_BASE_URL:-}</string>
+    <key>QUO_WEBHOOK_TOKEN</key>
+    <string>${QUO_WEBHOOK_TOKEN:-}</string>
+  </dict>
+"
+    echo "Baking CRM_BASE_URL/QUO_WEBHOOK_TOKEN into the launchd agent for incoming-call detection."
+  else
+    echo "CRM_BASE_URL/QUO_WEBHOOK_TOKEN not set — incoming-call detection will be off (End Call still works)."
+    echo "Re-run with both set, e.g.: CRM_BASE_URL=... QUO_WEBHOOK_TOKEN=... bash scripts/install-quo-helper.sh --autostart"
+  fi
+
   cat > "$PLIST_PATH" <<EOF
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -94,7 +116,7 @@ if [[ "$AUTOSTART" -eq 1 ]]; then
   <true/>
   <key>KeepAlive</key>
   <true/>
-  <key>StandardOutPath</key>
+${ENV_VARS_XML}  <key>StandardOutPath</key>
   <string>$LOG_DIR/quo-helper.log</string>
   <key>StandardErrorPath</key>
   <string>$LOG_DIR/quo-helper.log</string>
