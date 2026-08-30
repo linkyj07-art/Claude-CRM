@@ -217,79 +217,138 @@ function findIncomingCallPhone(words) {
   return match ? match[0] : null;
 }
 
-// Real captures showed buttons often end up in a DIFFERENT tesseract
-// "block" than the "Incoming call" text -- block_num is tesseract's own
-// visual layout guess, not the popup's actual DOM structure, and it
-// frequently segments a row of buttons separately from the text above them.
-// So: prefer the same block, but fall back to the closest vertical match to
-// "Incoming" (buttons are always a bit below it, never far) instead of
-// failing outright, and only fall back further to a bare global match as a
-// last resort.
-function findButtonCenter(words, labelPattern) {
-  const incomingWord = words.find((w) => /incoming/i.test(w.text));
-  const allMatches = words.filter((w) => labelPattern.test(w.text));
-  if (allMatches.length === 0) return null;
+// Real captures proved text-matching Accept/Reject can never work: white
+// bold text on a solid red/green background gets detected as a text region
+// by tesseract (right size, right place, real bounding box) but read as
+// pure garbage ("'ee", "a") at ~35% confidence -- not a near-miss, nothing
+// resembling the real word. Tried clicking based on the position of
+// whatever tesseract detected in the band below "is calling you" next, but
+// that detected region's extent varied between captures enough to click
+// the wrong spot (confirmed live -- the click executed with no error, but
+// didn't actually land on the button in Quo). So: use a FIXED offset from
+// "is calling you" (read correctly at ~96% confidence in every real capture
+// so far) instead, measured directly from a real capture confirmed via
+// screenshot to show the popup with Reject/Accept -- not tesseract's
+// per-capture guess at where the button row's text extends.
+//
+// The real OCR data actually showed TWO separate garbled text regions in
+// that capture, one per button, with a real gap between them -- not one
+// contiguous block. An earlier version treated it as one combined box split
+// 25%/75%, which was reasonably close for Reject but notably off for Accept
+// (the gap isn't centered, so an even split undershoots the right button).
+// This uses each button's own measured region directly instead.
+const REJECT_OFFSET = { x: -124, y: 130.5 };
+const ACCEPT_OFFSET = { x: 202, y: 117 };
 
-  let target;
-  if (incomingWord) {
-    target =
-      allMatches.find((w) => w.blockNum === incomingWord.blockNum) ||
-      allMatches.reduce((closest, w) => {
-        const dist = Math.abs(w.top - incomingWord.top);
-        const closestDist = closest ? Math.abs(closest.top - incomingWord.top) : Infinity;
-        return dist < closestDist ? w : closest;
-      }, null);
-  } else {
-    target = allMatches[0];
-  }
+function findButtonRowCenter(words, side) {
+  const callingWord = words.find((w) => /calling/i.test(w.text));
+  if (!callingWord) return null;
 
-  if (!target) return null;
-  return { x: target.left + target.width / 2, y: target.top + target.height / 2 };
+  const offset = side === 'left' ? REJECT_OFFSET : ACCEPT_OFFSET;
+  return { x: callingWord.left + offset.x, y: callingWord.top + offset.y };
 }
 
+// AppleScript's "click at" runs with no error and computes a plausible
+// coordinate, but real testing showed zero effect on Quo even with
+// confirmed-correct activation and recalibrated coordinates -- consistent
+// with "click at" resolving through the same accessibility layer that's
+// blocked for Quo's Chromium content without VoiceOver (the reason reading
+// its text never worked either). cliclick performs a real, low-level
+// CGEvent mouse click, independent of the accessibility tree -- the same
+// class of tool used to interact with games/web content that don't expose
+// accessible elements. Requires `brew install cliclick` (one-time).
 async function clickInQuo(imgLocalPoint, region, scale) {
   const screenX = Math.round(region.x + imgLocalPoint.x / scale.scaleX);
   const screenY = Math.round(region.y + imgLocalPoint.y / scale.scaleY);
   console.log(
     `[action] clicking at screen (${screenX}, ${screenY}) -- window region x=${region.x} y=${region.y} w=${region.w} h=${region.h}, scale ${scale.scaleX.toFixed(2)}x${scale.scaleY.toFixed(2)}, OCR point (${imgLocalPoint.x.toFixed(0)}, ${imgLocalPoint.y.toFixed(0)})`
   );
-  await runOsascript([`tell application "System Events" to click at {${screenX}, ${screenY}}`]);
+  await new Promise((resolve, reject) => {
+    execFile('cliclick', [`c:${screenX},${screenY}`], (error, _stdout, stderr) => {
+      if (error) {
+        const hint = /not found|ENOENT/i.test(error.message)
+          ? ' (cliclick not installed -- run: brew install cliclick)'
+          : '';
+        reject(new Error((stderr?.trim() || error.message) + hint));
+      } else {
+        resolve();
+      }
+    });
+  });
 }
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-// A single OCR pass can miss the button through no fault of the call still
-// being up — a mistimed screenshot, a momentary redraw, etc. — so retry a
-// couple of times before concluding it's actually gone, rather than failing
-// on the first miss.
-async function findAndClick(labelPattern, notFoundMessage) {
-  const region = await getQuoWindowRegion();
-  for (let attempt = 0; attempt < 3; attempt++) {
-    const scale = await captureRegion(region);
-    const words = await ocrWords(CAPTURE_PATH);
-    const center = findButtonCenter(words, labelPattern);
-    if (center) {
-      await clickInQuo(center, region, scale);
-      return;
-    }
-    if (attempt < 2) await sleep(400);
+// A single OCR pass can miss "is calling you" through no fault of the call
+// still being up — a mistimed screenshot, a momentary redraw, etc. — so
+// retry a couple of times before concluding it's actually gone, rather than
+// failing on the first miss.
+// A synthetic click via System Events needs Quo to actually be the
+// frontmost app to register at all -- confirmed live: clicks were
+// executing with no error, computing plausible coordinates, and doing
+// nothing in Quo, with a "not allowed" cursor appearing at the moment of
+// the click. This mirrors the same activate-before-acting pattern
+// endQuoCall already uses successfully for End Call, restoring whatever
+// was frontmost before (usually the browser) afterward either way.
+let actionInFlight = false;
+
+async function findAndClick(side, notFoundMessage) {
+  if (actionInFlight) {
+    throw new Error('Another Answer/Decline click is already in progress -- wait for it to finish before trying again.');
   }
-  throw new Error(notFoundMessage);
+  actionInFlight = true;
+  try {
+    const region = await getQuoWindowRegion();
+    // One osascript call instead of two separate ones (get frontApp, then
+    // activate) -- each spawns its own process, so merging saves a full
+    // process-spawn round trip off every click.
+    const frontApp = await runOsascript([
+      'tell application "System Events" to set frontApp to name of first application process whose frontmost is true',
+      `tell application "${QUO_APP_NAME}" to activate`,
+      'delay 0.2',
+      'return frontApp'
+    ]);
+    console.log(`[action] activated "${QUO_APP_NAME}" (was: "${frontApp}")`);
+    try {
+      for (let attempt = 0; attempt < 3; attempt++) {
+        const scale = await captureRegion(region);
+        const words = await ocrWords(CAPTURE_PATH);
+        const center = findButtonRowCenter(words, side);
+        if (center) {
+          await clickInQuo(center, region, scale);
+          // We know for certain this call just ended (answered or
+          // declined) -- reset the polling debounce immediately rather
+          // than waiting for it to notice on its own. Without this, a new
+          // call from the same number arriving before the next couple of
+          // poll ticks catch up can look like "the same call still
+          // ringing" and silently not notify.
+          currentRingingPhone = null;
+          consecutiveMisses = 0;
+          return;
+        }
+        if (attempt < 2) await sleep(250);
+      }
+      throw new Error(notFoundMessage);
+    } finally {
+      await runOsascript([`tell application "${frontApp}" to activate`]).catch(() => {});
+      console.log(`[action] restored focus to "${frontApp}"`);
+    }
+  } finally {
+    actionInFlight = false;
+  }
 }
 
-// Substring match, not exact ("Accept" not "^Accept$") -- OCR on small
-// button text is noisy enough that requiring a perfectly clean word match
-// made this fail even while the button was genuinely still on screen.
-// Still scoped to the same OCR block as "Incoming call" by findButtonCenter,
-// so this can't accidentally match unrelated text elsewhere on screen.
+// Accept is the right-hand button, Reject the left-hand one, in Quo's
+// popup layout -- see findButtonRowCenter for why this clicks by position
+// instead of matching "Accept"/"Reject" text.
 function answerCall() {
-  return findAndClick(/Accept/i, 'Could not find an "Accept" button on screen right now — is a call actually ringing?');
+  return findAndClick('right', 'Could not find "is calling you" on screen right now — is a call actually ringing?');
 }
 
 function declineCall() {
-  return findAndClick(/Reject/i, 'Could not find a "Reject" button on screen right now — is a call actually ringing?');
+  return findAndClick('left', 'Could not find "is calling you" on screen right now — is a call actually ringing?');
 }
 
 // --- Incoming-call polling -------------------------------------------

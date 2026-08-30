@@ -230,10 +230,11 @@ behind another window) for detection to work.
 
 ### Setup
 
-1. **Install OCR support** (one-time, on the Mac running Quo):
+1. **Install OCR support and a click tool** (one-time, on the Mac running Quo):
    ```bash
-   brew install tesseract
+   brew install tesseract cliclick
    ```
+   (`cliclick` performs the actual Answer/Decline click — it's a real low-level click, unlike AppleScript's `click at`, which turned out not to work on Quo's web-based UI.)
 2. **Generate a shared secret token:**
    ```bash
    openssl rand -hex 24
