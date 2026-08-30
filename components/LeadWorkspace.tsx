@@ -6,7 +6,7 @@ import Badge from './Badge';
 import {
   Customer, NoteVersion, CallRecord, Policy, Commission, Carrier, CarrierRule, LeadVendor
 } from '@/lib/types';
-import { fmtMoney, fmtMoney0, leadAgeLabel, localTimeForState, agentLocalTime, statusBadge, isValidRoutingNumber, callsToday, MAX_CALLS_PER_DAY, isWithinCallingHours, callingWindowStatus } from '@/lib/util';
+import { fmtMoney, fmtMoney0, leadAgeLabel, localTimeForState, agentLocalTime, statusBadge, isValidRoutingNumber, callsToday, MAX_CALLS_PER_DAY, isWithinCallingHours, callingWindowStatus, isTestLead } from '@/lib/util';
 import { suggestCarriers } from '@/lib/underwriting';
 import RoutingLookup from './RoutingLookup';
 import SellModal from './SellModal';
@@ -100,7 +100,10 @@ export default function LeadWorkspace({
   const router = useRouter();
   const searchParams = useSearchParams();
   const isDialing = searchParams.get('dialing') === '1';
-  const withinCallingHours = isWithinCallingHours(customer.state);
+  // A lead with "fake" in its name (test data for trying out Power
+  // Dial/Auto-Dial) is always treated as callable, regardless of state or
+  // time of day.
+  const withinCallingHours = isTestLead(customer) || isWithinCallingHours(customer.state);
   const marketWindow = callingWindowStatus(customer.state);
   // The Power Dial queue lives server-side (dial_sessions, one row per user)
   // instead of in the URL, specifically so a second device (phone alongside
@@ -671,7 +674,9 @@ export default function LeadWorkspace({
             <span>📍 {customer.city ? `${customer.city}, ` : ''}{customer.state}</span>
             <span>🕐 {localTimeForState(customer.state)} local</span>
             <span>🕐 {agentLocalTime()} your time (Mountain)</span>
-            {marketWindow.label && (
+            {isTestLead(customer) ? (
+              <span className="font-medium text-brand-600">🧪 Test lead — always callable</span>
+            ) : marketWindow.label && (
               <span className={marketWindow.isOpen ? 'font-medium text-green-600' : 'font-medium text-red-500'}>
                 {marketWindow.isOpen ? '🟢' : '🔴'} {marketWindow.label}
               </span>
