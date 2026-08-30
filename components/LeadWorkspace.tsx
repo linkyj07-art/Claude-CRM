@@ -10,6 +10,7 @@ import { fmtMoney, fmtMoney0, leadAgeLabel, localTimeForState, agentLocalTime, s
 import { suggestCarriers } from '@/lib/underwriting';
 import RoutingLookup from './RoutingLookup';
 import SellModal from './SellModal';
+import AddressAutocomplete from './AddressAutocomplete';
 
 type AnyRow = Record<string, any>;
 
@@ -655,6 +656,13 @@ export default function LeadWorkspace({
                     value={noteForm[f.key] || ''}
                     onChange={(e) => setNoteForm((s) => ({ ...s, [f.key]: e.target.value }))}
                     placeholder="e.g. controlled diabetes, non-smoker, high blood pressure..."
+                  />
+                ) : f.key === 'mailing_address' ? (
+                  <AddressAutocomplete
+                    disabled={!editingNote}
+                    value={noteForm[f.key] || ''}
+                    onChange={(v) => setNoteForm((s) => ({ ...s, [f.key]: v }))}
+                    placeholder="Start typing an address…"
                   />
                 ) : (
                   <input
