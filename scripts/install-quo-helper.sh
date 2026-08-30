@@ -95,21 +95,28 @@ if [[ "$AUTOSTART" -eq 1 ]]; then
     exit 1
   fi
 
-  ENV_VARS_XML=""
   if [[ -n "${CRM_BASE_URL:-}" || -n "${QUO_WEBHOOK_TOKEN:-}" ]]; then
-    ENV_VARS_XML="  <key>EnvironmentVariables</key>
+    echo "Baking CRM_BASE_URL/QUO_WEBHOOK_TOKEN into the launchd agent for incoming-call detection."
+  else
+    echo "CRM_BASE_URL/QUO_WEBHOOK_TOKEN not set — incoming-call detection will be off (End Call still works)."
+    echo "Re-run with both set, e.g.: CRM_BASE_URL=... QUO_WEBHOOK_TOKEN=... bash scripts/install-quo-helper.sh --autostart"
+  fi
+
+  # launchd also runs with a stripped-down PATH that doesn't include
+  # Homebrew's bin directory — so `tesseract` (needed for incoming-call
+  # detection) is invisible to the helper even though it works fine when you
+  # run it yourself in Terminal. Always bake a PATH that covers both Intel
+  # and Apple Silicon Homebrew locations plus the standard system dirs.
+  ENV_VARS_XML="  <key>EnvironmentVariables</key>
   <dict>
+    <key>PATH</key>
+    <string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
     <key>CRM_BASE_URL</key>
     <string>${CRM_BASE_URL:-}</string>
     <key>QUO_WEBHOOK_TOKEN</key>
     <string>${QUO_WEBHOOK_TOKEN:-}</string>
   </dict>
 "
-    echo "Baking CRM_BASE_URL/QUO_WEBHOOK_TOKEN into the launchd agent for incoming-call detection."
-  else
-    echo "CRM_BASE_URL/QUO_WEBHOOK_TOKEN not set — incoming-call detection will be off (End Call still works)."
-    echo "Re-run with both set, e.g.: CRM_BASE_URL=... QUO_WEBHOOK_TOKEN=... bash scripts/install-quo-helper.sh --autostart"
-  fi
 
   cat > "$PLIST_PATH" <<EOF
 <?xml version="1.0" encoding="UTF-8"?>
