@@ -482,19 +482,22 @@ export default function LeadWorkspace({
               <div className="absolute left-0 top-full z-30 mt-2 w-72 rounded-xl border border-line bg-panel p-3 shadow-2xl">
                 <div className="mb-2 text-xs font-semibold text-brand-400">📞 In progress — what happened?</div>
                 {callError && <div className="mb-2 rounded bg-red-50 p-2 text-xs text-red-700">{callError}</div>}
+                {quoBusy && (
+                  <div className="mb-2 rounded bg-amber-50 p-2 text-xs text-amber-700">⏳ Ending the Quo call — one second before you can pick an outcome…</div>
+                )}
                 <div className="grid grid-cols-2 gap-1.5">
-                  <button disabled={busy} onClick={() => logCall('no_answer')} className="btn-secondary text-xs px-2 py-1.5">No Answer</button>
-                  <button disabled={busy} onClick={() => logCall('voicemail')} className="btn-secondary text-xs px-2 py-1.5">Voicemail</button>
-                  <button disabled={busy} onClick={() => logCall('google_voice')} className="btn-secondary text-xs px-2 py-1.5">Google Voice</button>
-                  <button disabled={busy} onClick={() => logCall('busy')} className="btn-secondary text-xs px-2 py-1.5">Busy</button>
-                  <button disabled={busy} onClick={() => logCall('wrong_number')} className="btn-secondary text-xs px-2 py-1.5">Wrong #</button>
-                  <button disabled={busy} onClick={() => logCall('disconnected')} className="btn-secondary text-xs px-2 py-1.5">📵 Disconnected</button>
-                  <button disabled={busy} onClick={() => logCall('connected', 'interested')} className="btn-good text-xs px-2 py-1.5">Connected</button>
-                  <button disabled={busy} onClick={() => logCall('connected', 'sold')} className="btn-good text-xs px-2 py-1.5">💰 Sold</button>
-                  <button disabled={busy} onClick={() => logCall('connected', 'not_interested')} className="btn-secondary text-xs px-2 py-1.5">Not Interested</button>
-                  <button disabled={busy} onClick={() => logCall('dnc')} className="btn-danger text-xs px-2 py-1.5">DNC</button>
+                  <button disabled={busy || quoBusy} onClick={() => logCall('no_answer')} className="btn-secondary text-xs px-2 py-1.5">No Answer</button>
+                  <button disabled={busy || quoBusy} onClick={() => logCall('voicemail')} className="btn-secondary text-xs px-2 py-1.5">Voicemail</button>
+                  <button disabled={busy || quoBusy} onClick={() => logCall('google_voice')} className="btn-secondary text-xs px-2 py-1.5">Google Voice</button>
+                  <button disabled={busy || quoBusy} onClick={() => logCall('busy')} className="btn-secondary text-xs px-2 py-1.5">Busy</button>
+                  <button disabled={busy || quoBusy} onClick={() => logCall('wrong_number')} className="btn-secondary text-xs px-2 py-1.5">Wrong #</button>
+                  <button disabled={busy || quoBusy} onClick={() => logCall('disconnected')} className="btn-secondary text-xs px-2 py-1.5">📵 Disconnected</button>
+                  <button disabled={busy || quoBusy} onClick={() => logCall('connected', 'interested')} className="btn-good text-xs px-2 py-1.5">Connected</button>
+                  <button disabled={busy || quoBusy} onClick={() => logCall('connected', 'sold')} className="btn-good text-xs px-2 py-1.5">💰 Sold</button>
+                  <button disabled={busy || quoBusy} onClick={() => logCall('connected', 'not_interested')} className="btn-secondary text-xs px-2 py-1.5">Not Interested</button>
+                  <button disabled={busy || quoBusy} onClick={() => logCall('dnc')} className="btn-danger text-xs px-2 py-1.5">DNC</button>
                 </div>
-                <button className="mt-2 w-full text-center text-xs text-slate-400 hover:text-ink" disabled={busy} onClick={cancelPendingCall}>
+                <button className="mt-2 w-full text-center text-xs text-slate-400 hover:text-ink" disabled={busy || quoBusy} onClick={cancelPendingCall}>
                   ↩️ Didn&apos;t mean to dial
                 </button>
               </div>
