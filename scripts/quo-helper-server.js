@@ -221,34 +221,25 @@ function findIncomingCallPhone(words) {
 // bold text on a solid red/green background gets detected as a text region
 // by tesseract (right size, right place, real bounding box) but read as
 // pure garbage ("'ee", "a") at ~35% confidence -- not a near-miss, nothing
-// resembling the real word. So instead of matching text at all, anchor off
-// "is calling you" (read correctly, ~96% confidence, every single test) and
-// use the *position* of whatever text tesseract detects in the band right
-// below it -- garbled or not -- as "the button row", splitting that
-// detected region's bounding box left/right for Reject/Accept.
+// resembling the real word. Tried clicking based on the position of
+// whatever tesseract detected in the band below "is calling you" next, but
+// that detected region's extent varied between captures enough to click
+// the wrong spot (confirmed live -- the click executed with no error, but
+// didn't actually land on the button in Quo). So: use a FIXED offset from
+// "is calling you" (read correctly at ~96% confidence in every real capture
+// so far) instead, measured directly from a real capture confirmed via
+// screenshot to show the popup with Reject/Accept -- not tesseract's
+// per-capture guess at where the button row's text extends.
+const BUTTON_ROW_OFFSET = { left: -266, right: 310, top: 73, bottom: 188 };
+
 function findButtonRowCenter(words, side) {
   const callingWord = words.find((w) => /calling/i.test(w.text));
   if (!callingWord) return null;
 
-  const bandTop = callingWord.top + callingWord.height + 10;
-  const bandBottom = callingWord.top + callingWord.height + 160;
-  const rowWords = words.filter((w) => w.top >= bandTop && w.top <= bandBottom);
-
-  let left, right, top, bottom;
-  if (rowWords.length > 0) {
-    left = Math.min(...rowWords.map((w) => w.left));
-    right = Math.max(...rowWords.map((w) => w.left + w.width));
-    top = Math.min(...rowWords.map((w) => w.top));
-    bottom = Math.max(...rowWords.map((w) => w.top + w.height));
-  } else {
-    // Nothing detected at all in that band this attempt (rare, but a real
-    // capture-to-capture OCR miss is possible) -- fall back to a fixed
-    // offset from "calling", measured from real captures of this exact popup.
-    left = callingWord.left - 122;
-    right = callingWord.left + 300;
-    top = callingWord.top + 77;
-    bottom = callingWord.top + 157;
-  }
+  const left = callingWord.left + BUTTON_ROW_OFFSET.left;
+  const right = callingWord.left + BUTTON_ROW_OFFSET.right;
+  const top = callingWord.top + BUTTON_ROW_OFFSET.top;
+  const bottom = callingWord.top + BUTTON_ROW_OFFSET.bottom;
 
   const width = right - left;
   const x = side === 'left' ? left + width * 0.25 : left + width * 0.75;
