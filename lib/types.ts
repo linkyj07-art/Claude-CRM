@@ -124,6 +124,7 @@ export interface LeadVendor {
   id: string;
   name: string;
   notes: string | null;
+  default_lead_cost: number | null;
   created_at: string;
 }
 

@@ -207,8 +207,9 @@ export async function POST(req: NextRequest) {
   const headerMap = buildHeaderMap(headers);
   const db = getDb();
 
-  const vendors = db.prepare('SELECT id, name FROM lead_vendors').all() as { id: string; name: string }[];
+  const vendors = db.prepare('SELECT id, name, default_lead_cost FROM lead_vendors').all() as { id: string; name: string; default_lead_cost: number | null }[];
   const vendorByName = new Map(vendors.map((v) => [v.name.trim().toLowerCase(), v.id]));
+  const vendorDefaultCost = new Map(vendors.map((v) => [v.id, v.default_lead_cost]));
   const insertVendor = db.prepare(`INSERT INTO lead_vendors (id, name) VALUES (?, ?)`);
   function resolveVendorId(name: string): string | null {
     const key = name.trim().toLowerCase();
@@ -304,6 +305,14 @@ export async function POST(req: NextRequest) {
       const militaryStatus = get('military_status');
       const rowCostDigits = get('lead_cost').replace(/[^0-9.]/g, '');
       const batchCostDigits = batchLeadCost.replace(/[^0-9.]/g, '');
+      const vendorId = rowVendorId || batchVendorId || null;
+      // Cost precedence: the row's own cost column, then the cost typed on
+      // the import form for this batch, then the vendor's default cost.
+      const leadCost = rowCostDigits
+        ? Number(rowCostDigits)
+        : batchCostDigits
+          ? Number(batchCostDigits)
+          : (vendorId && vendorDefaultCost.get(vendorId)) || 0;
 
       const data = {
         first_name: first_name || 'New',
@@ -322,9 +331,9 @@ export async function POST(req: NextRequest) {
         postal_code: get('postal_code') || null,
         ad_type: get('ad_type') || 'Final Expense',
         platform: get('platform') || null,
-        lead_vendor_id: rowVendorId || batchVendorId || null,
+        lead_vendor_id: vendorId,
         best_time: get('best_time') || null,
-        lead_cost: rowCostDigits ? Number(rowCostDigits) : (batchCostDigits ? Number(batchCostDigits) : 0),
+        lead_cost: leadCost,
         trusted_form_url: get('trusted_form_url') || null,
         status: rowStatus || batchStatus || 'fresh',
         purchased_at: rowPurchasedAt || batchPurchasedAt || nowStr

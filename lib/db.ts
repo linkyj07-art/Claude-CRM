@@ -68,6 +68,7 @@ function migrate(db: Database.Database) {
   addColumnIfMissing(db, 'dial_sessions', 'session_dials', 'INTEGER NOT NULL DEFAULT 0');
   addColumnIfMissing(db, 'dial_sessions', 'session_connects', 'INTEGER NOT NULL DEFAULT 0');
   addColumnIfMissing(db, 'dial_sessions', 'consecutive_no_answer', 'INTEGER NOT NULL DEFAULT 0');
+  addColumnIfMissing(db, 'lead_vendors', 'default_lead_cost', 'REAL');
   db.exec('CREATE INDEX IF NOT EXISTS idx_customers_owner ON customers(owner_id);');
 
   const defaultUserId = seedDefaultUser(db);

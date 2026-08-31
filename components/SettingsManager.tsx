@@ -15,7 +15,7 @@ export default function SettingsManager({
   carriers: Carrier[]; rules: CarrierRule[]; quickLinks: QuickLink[]; licensedStates: string[]; users: TeamUser[]; currentUserId: string;
 }) {
   const router = useRouter();
-  const [tab, setTab] = useState<'carriers' | 'rules' | 'links' | 'licensing' | 'team' | 'dnc'>('carriers');
+  const [tab, setTab] = useState<'carriers' | 'rules' | 'links' | 'vendors' | 'licensing' | 'team' | 'dnc'>('carriers');
 
   async function refresh() { router.refresh(); }
 
@@ -23,13 +23,13 @@ export default function SettingsManager({
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line">
         <div className="flex flex-wrap gap-1">
-          {(['carriers', 'rules', 'links', 'licensing', 'team', 'dnc'] as const).map((t) => (
+          {(['carriers', 'rules', 'links', 'vendors', 'licensing', 'team', 'dnc'] as const).map((t) => (
             <button
               key={t}
               onClick={() => setTab(t)}
               className={`px-3 py-2 text-sm font-medium border-b-2 -mb-px ${tab === t ? 'border-brand-500 text-brand-600' : 'border-transparent text-slate-500 hover:text-ink'}`}
             >
-              {t === 'carriers' ? '🏢 Carriers & Logins' : t === 'rules' ? '💡 Underwriting Rules' : t === 'links' ? '🔗 Quick Links' : t === 'licensing' ? '🪪 Licensed States' : t === 'team' ? '👥 Team' : '🚫 DNC List'}
+              {t === 'carriers' ? '🏢 Carriers & Logins' : t === 'rules' ? '💡 Underwriting Rules' : t === 'links' ? '🔗 Quick Links' : t === 'vendors' ? '💰 Lead Vendors' : t === 'licensing' ? '🪪 Licensed States' : t === 'team' ? '👥 Team' : '🚫 DNC List'}
             </button>
           ))}
         </div>
@@ -39,9 +39,144 @@ export default function SettingsManager({
       {tab === 'carriers' && <CarriersTab carriers={carriers} onChanged={refresh} />}
       {tab === 'rules' && <RulesTab carriers={carriers} rules={rules} onChanged={refresh} />}
       {tab === 'links' && <LinksTab quickLinks={quickLinks} onChanged={refresh} />}
+      {tab === 'vendors' && <VendorsTab />}
       {tab === 'licensing' && <LicensingTab licensedStates={licensedStates} onChanged={refresh} />}
       {tab === 'team' && <TeamTab users={users} currentUserId={currentUserId} onChanged={refresh} />}
       {tab === 'dnc' && <DncTab />}
+    </div>
+  );
+}
+
+type VendorRow = {
+  id: string; name: string; notes: string | null; default_lead_cost: number | null; created_at: string;
+  lead_count: number; total_spend: number; uncosted_count: number;
+};
+
+const fmtVendorMoney = (n: number) => `$${n.toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
+
+// Manage lead vendors (Orion AI, Goat Leads, …) and what their leads cost.
+// The default cost auto-fills every new lead from that vendor — manual add,
+// spreadsheet import, or webhook — whenever no explicit cost comes with it,
+// and "Apply" backfills it onto the vendor's existing $0-cost leads so the
+// spend and ROI numbers on Analytics reflect what was actually paid.
+function VendorsTab() {
+  const [vendors, setVendors] = useState<VendorRow[] | null>(null);
+  const [form, setForm] = useState({ name: '', default_lead_cost: '' });
+  const [busy, setBusy] = useState(false);
+
+  async function load() {
+    const res = await fetch('/api/vendors');
+    const data = res.ok ? await res.json() : [];
+    setVendors(Array.isArray(data) ? data : []);
+  }
+
+  useEffect(() => { load(); }, []);
+
+  async function addVendor() {
+    setBusy(true);
+    try {
+      const res = await fetch('/api/vendors', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(form)
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        alert(data.error || 'Could not add that vendor — please try again.');
+        return;
+      }
+      setForm({ name: '', default_lead_cost: '' });
+      load();
+    } finally { setBusy(false); }
+  }
+
+  async function saveVendor(id: string, e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const fd = new FormData(e.currentTarget);
+    const res = await fetch(`/api/vendors/${id}`, {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: fd.get('name'), default_lead_cost: fd.get('default_lead_cost') })
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      alert(data.error || 'Could not save that vendor — please try again.');
+      return;
+    }
+    load();
+  }
+
+  async function applyToUncosted(v: VendorRow) {
+    if (!v.default_lead_cost) return;
+    if (!confirm(`Set ${fmtVendorMoney(v.default_lead_cost)} as the cost on your ${v.uncosted_count} ${v.name} lead${v.uncosted_count === 1 ? '' : 's'} that currently have no cost? Leads that already have a cost aren't touched.`)) return;
+    const res = await fetch(`/api/vendors/${v.id}`, {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ apply_to_uncosted: true })
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      alert(data.error || 'Could not apply the cost — please try again.');
+      return;
+    }
+    alert(`Updated ${data.applied} lead${data.applied === 1 ? '' : 's'}.`);
+    load();
+  }
+
+  async function removeVendor(v: VendorRow) {
+    if (!confirm(`Remove ${v.name}? Its leads keep their recorded costs but show as "Unassigned" on Analytics from now on — for every teammate, not just you.`)) return;
+    const res = await fetch(`/api/vendors/${v.id}`, { method: 'DELETE' });
+    if (!res.ok) {
+      alert('Could not remove that vendor — please try again.');
+      return;
+    }
+    load();
+  }
+
+  return (
+    <div className="card p-4">
+      <div className="mb-3 text-sm text-slate-600">
+        Set what each vendor&apos;s leads cost you. The <strong>default cost</strong> is applied automatically to every new
+        lead from that vendor — added by hand, imported from a sheet, or delivered by webhook — unless the lead comes in
+        with its own cost. Use <strong>Apply</strong> to backfill it onto your existing leads that have no cost recorded, so
+        the spend and ROI numbers on <strong>Analytics</strong> match what you actually paid. Vendors are shared with your
+        team, but counts, spend, and backfills only touch your own leads.
+      </div>
+
+      <div className="mb-3 grid grid-cols-1 gap-2 rounded-lg border border-line bg-slate-50 p-3 sm:grid-cols-[1fr_180px_auto]">
+        <input className="input" placeholder="Vendor name (e.g. Orion AI)" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+        <input className="input" type="number" min="0" step="0.01" placeholder="Cost per lead $" value={form.default_lead_cost} onChange={(e) => setForm({ ...form, default_lead_cost: e.target.value })} />
+        <button className="btn-primary" disabled={busy || !form.name.trim()} onClick={addVendor}>+ Add Vendor</button>
+      </div>
+
+      <div className="space-y-2">
+        {vendors === null && <div className="text-sm text-slate-400">Loading…</div>}
+        {vendors?.map((v) => (
+          <form key={v.id} onSubmit={(e) => saveVendor(v.id, e)} className="rounded-lg border border-line p-3">
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-[1fr_180px_auto]">
+              <input className="input" name="name" defaultValue={v.name} placeholder="Vendor name" />
+              <input className="input" name="default_lead_cost" type="number" min="0" step="0.01" defaultValue={v.default_lead_cost ?? ''} placeholder="Cost per lead $" />
+              <div className="flex gap-1">
+                <button type="submit" className="btn-secondary text-xs">Save</button>
+                <button type="button" className="btn-danger text-xs" onClick={() => removeVendor(v)}>✕</button>
+              </div>
+            </div>
+            <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-500">
+              <span>{v.lead_count} lead{v.lead_count === 1 ? '' : 's'}</span>
+              <span>{fmtVendorMoney(v.total_spend)} recorded spend</span>
+              {v.uncosted_count > 0 && <span className="text-amber-600">{v.uncosted_count} with no cost recorded</span>}
+              {v.uncosted_count > 0 && !!v.default_lead_cost && (
+                <button type="button" className="btn-secondary text-xs" onClick={() => applyToUncosted(v)}>
+                  Apply {fmtVendorMoney(v.default_lead_cost)} to {v.uncosted_count} lead{v.uncosted_count === 1 ? '' : 's'}
+                </button>
+              )}
+            </div>
+          </form>
+        ))}
+        {vendors?.length === 0 && (
+          <div className="text-sm text-slate-400">
+            No vendors yet — add your first one above. (Vendors also get created automatically when a lead import or
+            webhook names one.)
+          </div>
+        )}
+      </div>
     </div>
   );
 }

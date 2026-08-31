@@ -58,7 +58,14 @@ export default function NewLeadButton({ vendors }: { vendors: LeadVendor[] }) {
                 <option value="">Vendor</option>
                 {vendors.map((v) => <option key={v.id} value={v.id}>{v.name}</option>)}
               </select>
-              <input className="input" type="number" placeholder="Lead cost $" value={form.lead_cost} onChange={(e) => setForm({ ...form, lead_cost: e.target.value })} />
+              <input
+                className="input" type="number" value={form.lead_cost}
+                placeholder={(() => {
+                  const cost = vendors.find((v) => v.id === form.lead_vendor_id)?.default_lead_cost;
+                  return cost ? `Lead cost $ (blank = $${cost})` : 'Lead cost $';
+                })()}
+                onChange={(e) => setForm({ ...form, lead_cost: e.target.value })}
+              />
               <select className="input" value={form.best_time} onChange={(e) => setForm({ ...form, best_time: e.target.value })}>
                 {['Morning', 'Afternoon', 'Evening'].map((t) => <option key={t} value={t}>{t}</option>)}
               </select>

@@ -137,12 +137,15 @@ export async function POST(req: NextRequest) {
 
   // Always tag these as a "Goat Leads" vendor so the existing per-vendor
   // cost/ROI reporting groups them without any extra setup.
-  let vendor = db.prepare(`SELECT id FROM lead_vendors WHERE name = 'Goat Leads' COLLATE NOCASE`).get() as { id: string } | undefined;
+  let vendor = db.prepare(`SELECT id, default_lead_cost FROM lead_vendors WHERE name = 'Goat Leads' COLLATE NOCASE`).get() as
+    { id: string; default_lead_cost: number | null } | undefined;
   const vendorId = vendor ? vendor.id : newId();
   if (!vendor) db.prepare('INSERT INTO lead_vendors (id, name) VALUES (?, ?)').run(vendorId, 'Goat Leads');
 
+  // Payload cost wins; otherwise fall back to the vendor's default cost
+  // (settable under Settings → Lead Vendors).
   const leadCostRaw = str(body, map.lead_cost).replace(/[^0-9.]/g, '');
-  const leadCost = leadCostRaw ? parseFloat(leadCostRaw) || 0 : 0;
+  const leadCost = leadCostRaw ? parseFloat(leadCostRaw) || 0 : (vendor?.default_lead_cost || 0);
 
   const dncMatch = findDncMatch(rawPhone);
 

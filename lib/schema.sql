@@ -18,6 +18,7 @@ CREATE TABLE IF NOT EXISTS lead_vendors (
   id TEXT PRIMARY KEY,
   name TEXT NOT NULL,
   notes TEXT,
+  default_lead_cost REAL, -- auto-applied to this vendor's new leads when no explicit cost is given
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 

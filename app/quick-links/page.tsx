@@ -20,8 +20,9 @@ export default async function QuickLinksPage() {
       <div>
         <h1 className="text-xl font-bold">⚙️ Manage Quick Links &amp; Carriers</h1>
         <p className="text-sm text-slate-500">
-          These carrier logins, quoter/resource links, health-keyword rules, and licensed states power the ⚡ Quick Access
-          menu, the Suggested Carrier Order, and the Review Queue on every lead. Add, edit, or remove your own — no code changes needed.
+          These carrier logins, quoter/resource links, health-keyword rules, lead vendors, and licensed states power the
+          ⚡ Quick Access menu, the Suggested Carrier Order, vendor spend on Analytics, and the Review Queue on every lead.
+          Add, edit, or remove your own — no code changes needed.
         </p>
       </div>
       <SettingsManager carriers={carriers} rules={rules} quickLinks={quickLinks} licensedStates={licensedStates} users={users} currentUserId={user?.id || ''} />

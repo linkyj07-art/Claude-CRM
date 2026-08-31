@@ -37,6 +37,17 @@ export async function POST(req: NextRequest) {
   const db = getDb();
   const id = newId();
   const dncMatch = findDncMatch(body.phone);
+
+  // No explicit cost entered but the vendor has a default — use it, so
+  // per-vendor spend/ROI stays accurate without retyping the price each time.
+  // A typed 0 counts as explicit (a free/credited lead), only blank falls back.
+  const hasExplicitCost = body.lead_cost !== undefined && body.lead_cost !== null && String(body.lead_cost).trim() !== '';
+  let leadCost = hasExplicitCost ? Number(body.lead_cost) || 0 : 0;
+  if (!hasExplicitCost && body.lead_vendor_id) {
+    const vendor = db.prepare('SELECT default_lead_cost FROM lead_vendors WHERE id = ?').get(body.lead_vendor_id) as
+      { default_lead_cost: number | null } | undefined;
+    if (vendor?.default_lead_cost) leadCost = vendor.default_lead_cost;
+  }
   db.prepare(
     `INSERT INTO customers (id, owner_id, first_name, last_name, phone, email, dob, gender, marital_status,
       military, military_branch, coverage_wanted, address, city, state, postal_code, timezone,
@@ -67,7 +78,7 @@ export async function POST(req: NextRequest) {
     platform: body.platform || null,
     lead_vendor_id: body.lead_vendor_id || null,
     best_time: body.best_time || null,
-    lead_cost: body.lead_cost ? Number(body.lead_cost) : 0
+    lead_cost: leadCost
   });
   logAudit(id, 'lead_purchased', `Lead added — ${body.ad_type || 'Final Expense'} / ${body.platform || 'manual entry'}`);
   if (dncMatch) {
