@@ -1289,9 +1289,14 @@ export default function LeadWorkspace({
 
       {/* Tabs: calls / notes history -- split in half with the disposition
           panel while a call's in progress, so logging an outcome doesn't
-          need a floating popup at all. Full width otherwise. */}
+          need a floating popup at all. Full width otherwise. Below the lg
+          breakpoint the columns stack -- order-2/order-1 puts the
+          disposition panel FIRST when stacked (immediately visible,
+          nothing to log an outcome without scrolling past a potentially
+          long call history list first) while keeping Call History on the
+          left / disposition on the right at lg+ where there's room for both. */}
       <div className={`grid gap-4 ${pendingCallId ? 'lg:grid-cols-2' : ''}`}>
-      <div className="card p-4">
+      <div className={`card p-4 ${pendingCallId ? 'order-2 lg:order-1' : ''}`}>
         <div className="mb-3 flex gap-1 border-b border-line">
           {(['calls', 'notes'] as const).map((t) => (
             <button
@@ -1347,7 +1352,7 @@ export default function LeadWorkspace({
       </div>
 
       {pendingCallId && (
-        <div className="card p-4">
+        <div className="card order-1 p-4 lg:order-2">
           <div className="mb-2 flex items-center gap-1 text-sm font-semibold text-brand-400">
             📞 In progress — what happened?
           </div>
