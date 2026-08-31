@@ -20,11 +20,13 @@ export async function POST(_req: NextRequest, { params }: { params: { id: string
   db.prepare(
     `INSERT INTO customers (id, owner_id, first_name, last_name, phone, email, dob, gender, marital_status,
       military, military_branch, coverage_wanted, address, city, state, postal_code, timezone,
-      ad_type, platform, lead_vendor_id, best_time, lead_cost, trusted_form_url, status, purchased_at, created_at, updated_at)
+      ad_type, platform, lead_vendor_id, best_time, lead_cost, trusted_form_url, status, purchased_at,
+      was_import_duplicate, duplicate_of_customer_id, created_at, updated_at)
      VALUES (@id, @owner_id, @first_name, @last_name, @phone, @email, @dob, @gender, @marital_status,
       @military, @military_branch, @coverage_wanted, @address, @city, @state, @postal_code, NULL,
-      @ad_type, @platform, @lead_vendor_id, @best_time, @lead_cost, @trusted_form_url, @status, @purchased_at, datetime('now'), datetime('now'))`
-  ).run({ ...data, id, owner_id: user.id });
+      @ad_type, @platform, @lead_vendor_id, @best_time, @lead_cost, @trusted_form_url, @status, @purchased_at,
+      1, @duplicate_of_customer_id, datetime('now'), datetime('now'))`
+  ).run({ ...data, id, owner_id: user.id, duplicate_of_customer_id: dupe.customer_id });
 
   logAudit(id, 'lead_purchased', `Lead added — confirmed not a duplicate (was flagged against ${dupe.customer_id})`);
   db.prepare('DELETE FROM duplicate_leads WHERE id = ?').run(params.id);

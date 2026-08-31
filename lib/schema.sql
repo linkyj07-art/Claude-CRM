@@ -54,6 +54,8 @@ CREATE TABLE IF NOT EXISTS customers (
   lead_cost REAL DEFAULT 0,
   trusted_form_url TEXT,
   last_followed_up_at TEXT,
+  was_import_duplicate INTEGER NOT NULL DEFAULT 0,
+  duplicate_of_customer_id TEXT,
   status TEXT NOT NULL DEFAULT 'fresh',
     -- fresh | working | aging_45_90 | aging_90_plus | invalid | disputed | dnc | sold | lost | archived
   purchased_at TEXT NOT NULL DEFAULT (datetime('now')),

@@ -71,6 +71,14 @@ function migrate(db: Database.Database) {
   addColumnIfMissing(db, 'users', 'role', "TEXT NOT NULL DEFAULT 'agent'");
   addColumnIfMissing(db, 'users', 'helper_connected', 'INTEGER NOT NULL DEFAULT 0');
   addColumnIfMissing(db, 'users', 'helper_last_seen', 'TEXT');
+  // Set when a lead is created via the Review Queue's "Not a duplicate --
+  // Add" button -- the duplicate_leads row that flagged it is deleted the
+  // moment it's added (see app/api/duplicate-leads/[id]/add/route.ts), so
+  // without persisting this onto the new customer row itself, there'd be
+  // no way to filter for "disputes that started as an import duplicate"
+  // later on the Dispute Log.
+  addColumnIfMissing(db, 'customers', 'was_import_duplicate', 'INTEGER NOT NULL DEFAULT 0');
+  addColumnIfMissing(db, 'customers', 'duplicate_of_customer_id', 'TEXT');
   db.exec('CREATE INDEX IF NOT EXISTS idx_customers_owner ON customers(owner_id);');
 
   const defaultUserId = seedDefaultUser(db);
