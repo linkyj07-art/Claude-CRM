@@ -510,10 +510,11 @@ export default function LeadWorkspace({
   // Single place that knows how to move to the next lead in a Power Dial
   // session: pull from the live queue first, and once that's empty fall back
   // to the recycled (maxed-out) leads for one more pass before finally
-  // ending the session. Pass maxedOutId when this lead just hit its 2nd
-  // unanswered dial so it rejoins the queue instead of disappearing. Writes
-  // the new position to the server (not just this device's own URL) so
-  // every device sharing this session follows along within one poll.
+  // ending the session. Pass maxedOutId when this lead just hit its 3rd
+  // unanswered dial (MAX_REDIAL_ATTEMPTS in logCall) so it rejoins the
+  // queue instead of disappearing. Writes the new position to the server
+  // (not just this device's own URL) so every device sharing this session
+  // follows along within one poll.
   async function advanceQueue(maxedOutId?: string) {
     const session = (await currentDialSession()) || {
       currentLeadId: customer.id, queue: [], recycle: [], pass: 1,
@@ -665,18 +666,19 @@ export default function LeadWorkspace({
       // the next one instead of making the agent click Skip / Next Lead too —
       // relying on the just-cleared pendingCallId here rather than the
       // (still-stale-until-re-render) pendingDisposition flag. No Answer,
-      // Voicemail, and Google Voice are the exception, but only once: after
-      // the FIRST such outcome on this lead, stay put for an immediate
-      // redial; once a SECOND one lands (this lead has now gone unanswered
-      // twice), it's "maxed out" — move on now, but let advanceQueue hold
-      // onto it for a second pass once the rest of the queue is worked
-      // through.
+      // Voicemail, and Google Voice are the exception, up to MAX_REDIAL_
+      // ATTEMPTS in a row: after each one short of that limit, stay put for
+      // an immediate redial; once the limit's hit (this lead has now gone
+      // unanswered that many times), it's "maxed out" — move on now, but
+      // let advanceQueue hold onto it for a second pass once the rest of
+      // the queue is worked through.
+      const MAX_REDIAL_ATTEMPTS = 3;
       const isRedialOutcome = outcome === 'no_answer' || outcome === 'voicemail' || outcome === 'google_voice';
       const priorRedialAttempts = calls.filter(
         (c) => c.id !== pendingCallId && (c.outcome === 'no_answer' || c.outcome === 'voicemail' || c.outcome === 'google_voice')
       ).length;
       const redialAttemptsSoFar = priorRedialAttempts + (isRedialOutcome ? 1 : 0);
-      const shouldRedial = isRedialOutcome && redialAttemptsSoFar < 2;
+      const shouldRedial = isRedialOutcome && redialAttemptsSoFar < MAX_REDIAL_ATTEMPTS;
 
       // Session stats — tracked for every disposition made while dialing,
       // regardless of whether Auto-Dial is even on, so the connect count
@@ -690,7 +692,7 @@ export default function LeadWorkspace({
       }
 
       if (isDialing && !shouldRedial) {
-        const maxedOutId = isRedialOutcome && redialAttemptsSoFar >= 2 ? customer.id : undefined;
+        const maxedOutId = isRedialOutcome && redialAttemptsSoFar >= MAX_REDIAL_ATTEMPTS ? customer.id : undefined;
         if (hangupPromise) await hangupPromise;
         // The lead advanceQueue navigates to fires its own auto-dial (if
         // enabled) from its mount effect once it lands.
