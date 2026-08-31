@@ -4,7 +4,7 @@ import ExcelJS from 'exceljs';
 import { getDb } from '@/lib/db';
 import { newId, normalizeState, parseCoverageRange, stateFromAreaCode, reconcileContactFields } from '@/lib/util';
 import { logAudit } from '@/lib/audit';
-import { findDncMatch } from '@/lib/dnc';
+import { findDncMatch, addToDncRegistry } from '@/lib/dnc';
 import { CustomerStatus } from '@/lib/types';
 import { getCurrentUser } from '@/lib/currentUser';
 
@@ -119,6 +119,14 @@ function cellToString(value: ExcelJS.CellValue): string {
   return String(value);
 }
 
+// A column with no header text at all -- common on these lead sheets for a
+// leading "scratch" column an agent free-types short tags into (3x, Cooked,
+// Hung up, DC #, ...) -- used to get silently dropped entirely (its cells
+// have no header to key the row object by). Keeping it under a synthetic
+// per-column key instead is what lets tagColumnKeys() below actually find
+// it, so a "DC" tag scribbled in that column can be detected at all.
+const UNLABELED_COL_PREFIX = '__unlabeled_col_';
+
 async function rowsFromXlsx(buffer: Buffer): Promise<{ headers: string[]; rows: Record<string, string>[] }> {
   const workbook = new ExcelJS.Workbook();
   // exceljs's type defs predate @types/node's ArrayBufferLike-generic Buffer;
@@ -129,7 +137,8 @@ async function rowsFromXlsx(buffer: Buffer): Promise<{ headers: string[]; rows: 
 
   const headers: string[] = [];
   sheet.getRow(1).eachCell({ includeEmpty: true }, (cell, colNumber) => {
-    headers[colNumber - 1] = cellToString(cell.value).trim();
+    const text = cellToString(cell.value).trim();
+    headers[colNumber - 1] = text || `${UNLABELED_COL_PREFIX}${colNumber}`;
   });
 
   const rows: Record<string, string>[] = [];
@@ -147,6 +156,23 @@ async function rowsFromXlsx(buffer: Buffer): Promise<{ headers: string[]; rows: 
     if (hasValue) rows.push(obj);
   });
   return { headers, rows };
+}
+
+// Which columns to scan a row for a "DC"/"DNC" tag: any unlabeled column
+// (the common pattern above) plus anything explicitly headed like a tag/
+// notes/disposition field. Deliberately NOT every column -- a blind
+// whole-row text search would misfire on a legitimate "State" value of DC
+// (Washington, D.C. is a real state code in this data).
+const TAG_HEADER_ALIASES = ['tag', 'tags', 'disposition', 'call notes', 'notes', 'status notes', 'agent notes'];
+
+function tagColumnKeys(headers: string[]): string[] {
+  return headers.filter((h) => h.startsWith(UNLABELED_COL_PREFIX) || TAG_HEADER_ALIASES.includes(normalize(h)));
+}
+
+const DC_TAG_PATTERN = /\b(DC|DNC)\b/i;
+
+function rowHasDcTag(row: Record<string, string>, tagKeys: string[]): boolean {
+  return tagKeys.some((k) => DC_TAG_PATTERN.test(row[k] || ''));
 }
 
 export async function POST(req: NextRequest) {
@@ -193,8 +219,19 @@ export async function POST(req: NextRequest) {
         { status: 400 }
       );
     }
-    headers = parsed.meta.fields || [];
-    rows = parsed.data.filter((r) => Object.keys(r).length > 0);
+    const rawHeaders = parsed.meta.fields || [];
+    // Same treatment as the xlsx path: Papaparse keys a blank-header column
+    // as '' (and collapses more than one of them onto the same '' key), so
+    // give each one its own synthetic key rather than leave it undetectable.
+    let blankSeen = 0;
+    headers = rawHeaders.map((h) => (h.trim() ? h : `${UNLABELED_COL_PREFIX}${++blankSeen}`));
+    rows = parsed.data
+      .filter((r) => Object.keys(r).length > 0)
+      .map((r) => {
+        if (!('' in r)) return r;
+        const { '': blank, ...rest } = r;
+        return { ...rest, [`${UNLABELED_COL_PREFIX}1`]: blank };
+      });
   }
 
   if (rows.length === 0) {
@@ -205,6 +242,7 @@ export async function POST(req: NextRequest) {
   }
 
   const headerMap = buildHeaderMap(headers);
+  const dcTagKeys = tagColumnKeys(headers);
   const db = getDb();
 
   const vendors = db.prepare('SELECT id, name FROM lead_vendors').all() as { id: string; name: string }[];
@@ -333,6 +371,15 @@ export async function POST(req: NextRequest) {
       if (findDncMatch(phone)) {
         data.status = 'dnc';
         dncCount++;
+      } else if (rowHasDcTag(row, dcTagKeys)) {
+        // The sheet itself carries a "DC"/"DNC" tag for this lead (an
+        // agent's own scratch note from working it before, not yet in our
+        // registry) -- honor it the same as an already-registered number:
+        // import as dnc, and register the number now so it's caught on
+        // every future import/webhook from here on, not just this one.
+        data.status = 'dnc';
+        dncCount++;
+        addToDncRegistry(phone, first_name, last_name, 'Tagged "DC" on import', user.id);
       }
 
       const dupeKey = normalizeDupeKey(first_name, last_name, phone, dob);
