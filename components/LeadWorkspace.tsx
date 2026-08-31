@@ -629,21 +629,13 @@ export default function LeadWorkspace({
         return;
       }
       setPendingCallId(null);
-      if (outcome === 'dnc' && confirm('Marked Do Not Call. Delete this lead entirely too?')) {
-        await fetch(`/api/leads/${customer.id}`, { method: 'DELETE' });
-        // Deleting used to always bounce out to the full leads list, even
-        // mid-Power-Dial -- dumping the agent out of their whole session
-        // over one disposition instead of just moving on like every other
-        // outcome does. advanceQueue already handles "session's actually
-        // over" (empty queue and recycle) by landing on /leads itself, so
-        // this only needs to defer to it while dialing.
-        if (isDialing) {
-          advanceQueue();
-        } else {
-          router.push('/leads');
-        }
-        return;
-      }
+      // DNC used to ask (via a blocking confirm()) whether to delete the
+      // lead entirely -- a popup on every single DNC disposition. It just
+      // marks the lead 'dnc' (already done by the outcome POST above) and
+      // falls through to the normal advance logic below like any other
+      // outcome now; deleting a lead outright is still available from the
+      // lead's own page for whoever wants it, just not forced into this
+      // flow on every DNC.
       // A "Sold" disposition needs the full Sell modal (policy/commission
       // details) before this lead is really done — open it and stay put
       // instead of auto-advancing Power Dial out from under the agent.
@@ -731,7 +723,10 @@ export default function LeadWorkspace({
   }
 
   async function setStatus(status: string) {
-    if (!confirm(`Set lead status to "${status}"?`)) return;
+    // Dispute is a routine one-click disposition during dialing, not a
+    // destructive/hard-to-undo action like Archive still is below -- no
+    // popup needed to slow that down.
+    if (status !== 'disputed' && !confirm(`Set lead status to "${status}"?`)) return;
     setBusy(true);
     try {
       const res = await fetch(`/api/leads/${customer.id}`, {
