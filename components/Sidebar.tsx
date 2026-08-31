@@ -39,7 +39,7 @@ export default function Sidebar({ user }: { user: SessionUser | null }) {
         <QuickAccessMenu carriers={carriers} quickLinks={quickLinks} align="left" />
       </div>
 
-      <SidebarNav />
+      <SidebarNav isAdmin={user.role === 'admin'} />
 
       <div className="mt-auto border-t border-line p-3">
         <div className="flex items-center gap-2 rounded-lg px-1 py-1.5">

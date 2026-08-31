@@ -8,6 +8,7 @@ import { redirect } from 'next/navigation';
 import LineChart from '@/components/charts/LineChart';
 import DonutChart from '@/components/charts/DonutChart';
 import BarChart from '@/components/charts/BarChart';
+import AnalyticsViewAsSelector from '@/components/AnalyticsViewAsSelector';
 
 export const dynamic = 'force-dynamic';
 
@@ -21,26 +22,33 @@ const OUTCOME_COLORS: Record<string, string> = {
   busy: '#fbbf24', wrong_number: '#fb7185', disconnected: '#ef4444', dnc: '#f87171'
 };
 
-export default async function AnalyticsPage() {
+export default async function AnalyticsPage({ searchParams }: { searchParams: { asUser?: string } }) {
   const user = await getCurrentUser();
   if (!user) redirect('/login');
 
   const db = getDb();
-  const funnel = getFunnel(db, user.id);
-  const vendorRoi = getRoiByVendor(db, user.id);
-  const ageRoi = getRoiByAge(db, user.id);
-  const stateRoi = getRoiByState(db, user.id).slice(0, 12);
-  const sourceRoi = getRoiBySource(db, user.id).slice(0, 12);
-  const ltv = getTopLifetimeValue(db, user.id, 8);
-  const trend = getDailyTrend(db, user.id, 30);
-  const statusBreakdown = getStatusBreakdown(db, user.id);
+  const isAdmin = user.role === 'admin';
+  const allUsers = isAdmin ? (db.prepare('SELECT id, name FROM users ORDER BY name').all() as { id: string; name: string }[]) : [];
+  // Admins can view any teammate's own analytics by picking them from the
+  // selector below — everyone else always sees their own, same as always.
+  const viewingAs = isAdmin && searchParams.asUser ? allUsers.find((u) => u.id === searchParams.asUser) : undefined;
+  const ownerId = viewingAs?.id || user.id;
+
+  const funnel = getFunnel(db, ownerId);
+  const vendorRoi = getRoiByVendor(db, ownerId);
+  const ageRoi = getRoiByAge(db, ownerId);
+  const stateRoi = getRoiByState(db, ownerId).slice(0, 12);
+  const sourceRoi = getRoiBySource(db, ownerId).slice(0, 12);
+  const ltv = getTopLifetimeValue(db, ownerId, 8);
+  const trend = getDailyTrend(db, ownerId, 30);
+  const statusBreakdown = getStatusBreakdown(db, ownerId);
   const totalActiveLeads = statusBreakdown.reduce((s, x) => s + x.count, 0);
-  const outcomeBreakdown = getCallOutcomeBreakdown(db, user.id);
+  const outcomeBreakdown = getCallOutcomeBreakdown(db, ownerId);
   const totalOutcomes = outcomeBreakdown.reduce((s, x) => s + x.count, 0);
 
-  const leadSpendTotal = (db.prepare(`SELECT COALESCE(SUM(lead_cost),0) s FROM customers WHERE owner_id = ?`).get(user.id) as { s: number }).s;
+  const leadSpendTotal = (db.prepare(`SELECT COALESCE(SUM(lead_cost),0) s FROM customers WHERE owner_id = ?`).get(ownerId) as { s: number }).s;
   const netCommissionTotal = (
-    db.prepare(`SELECT COALESCE(SUM(cm.net_commission),0) s FROM commissions cm JOIN customers c ON c.id = cm.customer_id WHERE c.owner_id = ?`).get(user.id) as { s: number }
+    db.prepare(`SELECT COALESCE(SUM(cm.net_commission),0) s FROM commissions cm JOIN customers c ON c.id = cm.customer_id WHERE c.owner_id = ?`).get(ownerId) as { s: number }
   ).s;
   const overallRoi = leadSpendTotal > 0 ? ((netCommissionTotal - leadSpendTotal) / leadSpendTotal) * 100 : null;
 
@@ -53,9 +61,14 @@ export default async function AnalyticsPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-xl font-bold">Analytics</h1>
-        <p className="text-sm text-slate-500">Full pipeline, cost-per-stage, and ROI by vendor / lead age / state / source — all-time.</p>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h1 className="text-xl font-bold">Analytics{viewingAs ? ` — ${viewingAs.name}` : ''}</h1>
+          <p className="text-sm text-slate-500">Full pipeline, cost-per-stage, and ROI by vendor / lead age / state / source — all-time.</p>
+        </div>
+        {isAdmin && allUsers.length > 1 && (
+          <AnalyticsViewAsSelector users={allUsers} currentUserId={user.id} selectedId={viewingAs?.id || user.id} />
+        )}
       </div>
 
       {/* Overall ROI */}

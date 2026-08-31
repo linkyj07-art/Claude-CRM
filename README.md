@@ -353,6 +353,24 @@ what to send back for a fix — no guessing needed.
    shows you as the response — success or error — paste it back here so the
    field mapping can be tightened if anything came through blank.
 
+## Admin
+
+Whoever's account is oldest (the original login) is automatically the
+admin — no setup needed, and it never changes on its own afterward. Admins
+get a **🛡️ Admin** link in the sidebar with:
+
+- **Team Status** — every user's role, whether their Quo helper is
+  currently connected, and whether Auto-Dial is on. The helper status is
+  self-reported by each person's own browser every 30s (there's no way for
+  the server, or anyone else's browser, to reach across to another
+  person's Mac) — it's visibility only, not a permission switch; it
+  doesn't grant or block anyone's access to either feature.
+- **All Leads** and **Recent Calls** across every user, not just their own
+  — including opening any lead's full workspace (normal users are still
+  limited to their own).
+- On **Analytics**, admins get a "Viewing as" selector to see any
+  teammate's own numbers.
+
 ## Protected fields & login
 
 SSN, bank name/state, routing number, and account number live in

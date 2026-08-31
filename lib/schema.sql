@@ -11,6 +11,14 @@ CREATE TABLE IF NOT EXISTS users (
   username TEXT NOT NULL UNIQUE,
   password_hash TEXT NOT NULL,
   name TEXT NOT NULL,
+  role TEXT NOT NULL DEFAULT 'agent', -- agent | admin
+  -- Self-reported by each user's own browser (it can only ever check ITS
+  -- OWN machine's 127.0.0.1 helper — there's no way for the server or
+  -- another user's browser to probe it) via a periodic heartbeat. Lets an
+  -- admin see who currently has the Quo helper reachable and Auto-Dial on,
+  -- without granting/revoking any actual access.
+  helper_connected INTEGER NOT NULL DEFAULT 0,
+  helper_last_seen TEXT,
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
