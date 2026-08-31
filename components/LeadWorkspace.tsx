@@ -254,7 +254,22 @@ export default function LeadWorkspace({
   async function endQuoCall(silent = false) {
     setQuoBusy(true);
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_QUO_HELPER_URL || 'http://127.0.0.1:8787'}/end-call`, { method: 'POST' });
+      // The silent (auto-hangup) call site awaits this promise before
+      // letting Auto-Dial fire the next dial -- if the helper's /end-call
+      // ever hangs instead of failing fast (a stuck AppleScript call, a
+      // permission prompt it's silently waiting on, anything not
+      // returning cleanly), that await would otherwise block forever and
+      // Auto-Dial would just stop dead. A timeout caps how long this can
+      // ever hold things up, so a stuck helper degrades to "this one
+      // hangup didn't confirm" instead of "the whole session is frozen."
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 5000);
+      let res: Response;
+      try {
+        res = await fetch(`${process.env.NEXT_PUBLIC_QUO_HELPER_URL || 'http://127.0.0.1:8787'}/end-call`, { method: 'POST', signal: controller.signal });
+      } finally {
+        clearTimeout(timeout);
+      }
       if (!res.ok) throw new Error(await res.text());
     } catch {
       if (!silent) alert('Could not reach the Quo helper. Make sure it\'s running on this Mac (`npm run quo-helper`) and try again.');
@@ -326,6 +341,15 @@ export default function LeadWorkspace({
       if (paceMs > 0) await new Promise((resolve) => setTimeout(resolve, paceMs));
       if (!mountedRef.current) return;
       if (!withinCallingHours || dailyLimitReached || customer.status === 'dnc' || !customer.phone) return;
+      // This dial was scheduled paceMs ago, when there was no active call --
+      // but the agent (or another auto-dial) may well have already started
+      // a new one manually in the meantime, faster than this was waiting to
+      // fire. Firing anyway would send the helper's safety hangup flush
+      // straight into whatever call is now actually live -- mid-ring or
+      // mid-conversation, whichever it catches -- before redialing over it.
+      // Re-checking right here, as late as possible before actually
+      // dialing, means only a genuinely still-idle lead ever gets auto-fired.
+      if (pendingCallIdRef.current) return;
       // Logging the pending call and actually dialing via the helper don't
       // depend on each other -- running them together instead of one after
       // the other cuts real latency off every auto-fired dial.
