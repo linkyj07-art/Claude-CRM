@@ -51,7 +51,16 @@ export async function GET(req: NextRequest) {
          (SELECT COUNT(*) FROM calls WHERE customer_id = customers.id AND occurred_at >= @todayStart) AS calls_today,
          (SELECT COUNT(*) FROM calls WHERE customer_id = customers.id) AS calls_ever
        FROM customers
-       WHERE archived = 0 AND owner_id = @ownerId AND status IN ('fresh','working','aging_45_90','aging_90_plus')
+       WHERE archived = 0 AND owner_id = @ownerId
+         AND (
+           status IN ('fresh','working','aging_45_90','aging_90_plus')
+           -- A Not Interested disposition sets status='lost' with a
+           -- 3-day retry_after (lib/audit.ts) instead of dropping the
+           -- lead for good like other 'lost' reasons (Broke, Connected
+           -- HU) -- once that date passes, it's eligible again same as
+           -- any other status, no manual reset needed.
+           OR (status = 'lost' AND retry_after IS NOT NULL AND retry_after <= datetime('now'))
+         )
          AND phone IS NOT NULL AND TRIM(phone) != ''
          AND id NOT IN (
            SELECT customer_id FROM calls WHERE occurred_at >= @todayStart

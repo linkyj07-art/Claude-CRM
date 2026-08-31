@@ -36,6 +36,7 @@ export interface Customer {
   last_followed_up_at: string | null;
   was_import_duplicate: number;
   duplicate_of_customer_id: string | null;
+  retry_after: string | null;
   status: CustomerStatus;
   purchased_at: string;
   sold_at: string | null;

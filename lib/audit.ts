@@ -51,15 +51,15 @@ export function applyCallOutcome(customerId: string, outcome: string, dispositio
   logAudit(customerId, 'call', `Call attempt #${attempt} — ${outcomeLabel}${disposition ? ` (${disposition})` : ''}`);
 
   if (outcome === 'dnc') {
-    db.prepare(`UPDATE customers SET status = 'dnc' WHERE id = ?`).run(customerId);
+    db.prepare(`UPDATE customers SET status = 'dnc', retry_after = NULL WHERE id = ?`).run(customerId);
     const customer = db.prepare('SELECT phone, first_name, last_name FROM customers WHERE id = ?').get(customerId) as
       { phone: string | null; first_name: string; last_name: string } | undefined;
     if (customer) addToDncRegistry(customer.phone, customer.first_name, customer.last_name, 'Requested DNC on a call', userId);
   } else if (outcome === 'disconnected') {
-    db.prepare(`UPDATE customers SET status = 'disputed' WHERE id = ?`).run(customerId);
+    db.prepare(`UPDATE customers SET status = 'disputed', retry_after = NULL WHERE id = ?`).run(customerId);
     openDispute(customerId, 'Disconnected number');
   } else if (outcome === 'wrong_number' && attempt >= 2) {
-    db.prepare(`UPDATE customers SET status = 'invalid' WHERE id = ?`).run(customerId);
+    db.prepare(`UPDATE customers SET status = 'invalid', retry_after = NULL WHERE id = ?`).run(customerId);
   } else if (outcome === 'connected' && disposition) {
     const map: Record<string, string> = {
       // hung_up ("Connected (HU)") means they picked up and hung up on the
@@ -74,7 +74,18 @@ export function applyCallOutcome(customerId: string, outcome: string, dispositio
       interested: 'working', callback: 'working', sold: 'sold'
     };
     if (map[disposition]) {
-      db.prepare(`UPDATE customers SET status = ? WHERE id = ?`).run(map[disposition], customerId);
+      // Not Interested specifically gets a 3-day cooldown instead of
+      // being dropped for good like the other 'lost' dispositions
+      // (Broke, Connected HU) -- "not interested today" is often just
+      // "bad timing," worth one more shot in a few days rather than
+      // requiring the agent to manually reset status. The queue's
+      // eligibility check (app/dial/route.ts, lib/dialQueue.ts) treats a
+      // 'lost' lead whose retry_after has passed the same as any other
+      // eligible status. Any OTHER disposition clears retry_after so a
+      // stale cooldown can't linger once the lead's situation has
+      // actually changed.
+      const retryAfter = disposition === 'not_interested' ? `datetime('now', '+3 days')` : 'NULL';
+      db.prepare(`UPDATE customers SET status = ?, retry_after = ${retryAfter} WHERE id = ?`).run(map[disposition], customerId);
     }
   }
   touchCustomer(customerId);
