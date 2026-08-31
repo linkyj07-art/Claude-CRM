@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
-import { newId } from '@/lib/util';
-import { logAudit } from '@/lib/audit';
+import { newId, normalizePhone } from '@/lib/util';
+import { logAudit, openDispute } from '@/lib/audit';
 import { getCurrentUser } from '@/lib/currentUser';
 import { findDncMatch } from '@/lib/dnc';
 
@@ -35,6 +35,31 @@ export async function POST(req: NextRequest) {
 
   const body = await req.json();
   const db = getDb();
+
+  // Same phone-based duplicate check as the CSV import and Goat webhook
+  // paths: catch a re-entered lead before it becomes a second customer
+  // record, and open the vendor dispute immediately instead of losing track
+  // of it.
+  const phoneDigits = normalizePhone(body.phone);
+  if (phoneDigits) {
+    const existingCustomers = db
+      .prepare('SELECT id, phone FROM customers WHERE owner_id = ? AND phone IS NOT NULL')
+      .all(user.id) as { id: string; phone: string }[];
+    const dupeMatch = existingCustomers.find((c) => normalizePhone(c.phone) === phoneDigits);
+    if (dupeMatch) {
+      const dupeId = newId();
+      db.prepare(
+        `INSERT INTO duplicate_leads (id, customer_id, first_name, last_name, phone, email, dob, state, raw_data, source, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))`
+      ).run(
+        dupeId, dupeMatch.id, body.first_name || null, body.last_name || null, body.phone || null,
+        body.email || null, body.dob || null, body.state || null, JSON.stringify(body), 'Manual entry'
+      );
+      openDispute(dupeMatch.id, 'Duplicate lead — same phone number added again');
+      return NextResponse.json({ duplicate: true, matchedCustomerId: dupeMatch.id, duplicateId: dupeId });
+    }
+  }
+
   const id = newId();
   const dncMatch = findDncMatch(body.phone);
   db.prepare(

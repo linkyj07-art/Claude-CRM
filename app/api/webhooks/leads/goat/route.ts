@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
 import { newId, normalizeState, normalizePhone, parseCoverageRange, stateFromAreaCode } from '@/lib/util';
-import { logAudit } from '@/lib/audit';
+import { logAudit, openDispute } from '@/lib/audit';
 import { findDncMatch } from '@/lib/dnc';
 
 // Fed by Goat Leads' own webhook delivery (their dashboard POSTs a new lead
@@ -191,6 +191,9 @@ export async function POST(req: NextRequest) {
       dupeId, dupeMatch.id, customerData.first_name, customerData.last_name, customerData.phone,
       customerData.email, customerData.dob, customerData.state, JSON.stringify(customerData), 'Goat Leads webhook'
     );
+    // Same phone sold to us again by the vendor — open the credit dispute
+    // immediately rather than leaving it to sit unactioned in the Review Queue.
+    openDispute(dupeMatch.id, 'Duplicate lead — Goat Leads sent this phone number again');
     return NextResponse.json({ ok: true, duplicate: true, matchedCustomerId: dupeMatch.id, duplicateId: dupeId, receivedFields, mappedFields: map });
   }
 

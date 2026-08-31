@@ -3,7 +3,7 @@ import Papa from 'papaparse';
 import ExcelJS from 'exceljs';
 import { getDb } from '@/lib/db';
 import { newId, normalizeState, parseCoverageRange, stateFromAreaCode, reconcileContactFields } from '@/lib/util';
-import { logAudit } from '@/lib/audit';
+import { logAudit, openDispute } from '@/lib/audit';
 import { findDncMatch } from '@/lib/dnc';
 import { CustomerStatus } from '@/lib/types';
 import { getCurrentUser } from '@/lib/currentUser';
@@ -340,6 +340,7 @@ export async function POST(req: NextRequest) {
       if (matchId) {
         const dupeId = newId();
         insertDupe.run(dupeId, matchId, first_name || null, last_name || null, phone || null, email || null, dob || null, data.state, JSON.stringify(data), fileName);
+        openDispute(matchId, `Duplicate lead — reappeared in import (${fileName})`);
         duplicateCount++;
         return;
       }
@@ -362,6 +363,9 @@ export async function POST(req: NextRequest) {
           updateBackfill.run({ id: existingByPhoneMatch.id, dob: dob || null, email: email || null, gender: gender || null, state: data.state || null });
           backfilledCount++;
         } else {
+          const dupeId = newId();
+          insertDupe.run(dupeId, existingByPhoneMatch.id, first_name || null, last_name || null, phone || null, email || null, dob || null, data.state, JSON.stringify(data), fileName);
+          openDispute(existingByPhoneMatch.id, `Duplicate lead — reappeared in import (${fileName})`);
           duplicateCount++;
         }
         return;

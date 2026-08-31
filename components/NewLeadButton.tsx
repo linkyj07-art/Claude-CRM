@@ -21,6 +21,13 @@ export default function NewLeadButton({ vendors }: { vendors: LeadVendor[] }) {
     try {
       const res = await fetch('/api/leads', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form) });
       const data = await res.json().catch(() => ({}));
+      if (data.duplicate) {
+        alert('That phone number already belongs to an existing lead — a dispute has been opened automatically instead of creating a duplicate. Opening the existing lead.');
+        setOpen(false);
+        router.push(`/leads/${data.matchedCustomerId}`);
+        router.refresh();
+        return;
+      }
       if (!res.ok || !data.id) {
         alert(data.error || 'Could not add that lead — please try again.');
         return;

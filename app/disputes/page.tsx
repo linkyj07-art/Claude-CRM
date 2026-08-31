@@ -32,7 +32,7 @@ export default async function DisputesPage() {
     <div className="space-y-4">
       <div>
         <h1 className="text-xl font-bold">🧾 Dispute Log</h1>
-        <p className="text-sm text-slate-500">Bad leads (disconnected numbers, invalid data, etc.) tracked from open through vendor resolution.</p>
+        <p className="text-sm text-slate-500">Bad leads (disconnected numbers, duplicates, invalid data, etc.) tracked from open through vendor resolution.</p>
       </div>
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
