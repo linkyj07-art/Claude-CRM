@@ -1057,7 +1057,7 @@ export default function LeadWorkspace({
           <dl className="space-y-2 text-sm">
             <InfoRow label="📞 Phone" value={customer.phone} />
             <InfoRow label="✉️ Email" value={customer.email} />
-            <InfoRow label="🎂 DOB" value={customer.dob} />
+            <InfoRow label="🎂 DOB" value={fmtDob(customer.dob)} />
             <InfoRow label="♂ Gender" value={customer.gender} />
             <InfoRow label="💰 Coverage" value={customer.coverage_wanted ? fmtMoney0(customer.coverage_wanted) : null} />
             <InfoRow label="📦 Plan Chosen" value={lastNote?.selected_plan ? lastNote.selected_plan.charAt(0).toUpperCase() + lastNote.selected_plan.slice(1) : null} />
@@ -1388,6 +1388,18 @@ function Modal({ title, onClose, children }: { title: string; onClose: () => voi
       </div>
     </div>
   );
+}
+
+// Shows the lead's DOB as "Mar 15, 1958" instead of the raw stored
+// "1958-03-15" -- easier to read/say out loud on a call than a numeric
+// month. Formatted in UTC on purpose: a date-only string parses as UTC
+// midnight, and formatting that in the agent's local (Mountain) time would
+// roll it back to the previous day.
+function fmtDob(dob: string | null): string | null {
+  if (!dob) return null;
+  const d = new Date(dob);
+  if (isNaN(d.getTime())) return dob;
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' });
 }
 
 function calcAge(dob: string | null): number | null {
