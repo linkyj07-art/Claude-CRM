@@ -47,7 +47,14 @@ export async function GET(req: NextRequest) {
            SELECT customer_id FROM calls WHERE date(occurred_at) = date('now')
            GROUP BY customer_id HAVING COUNT(*) >= ${MAX_CALLS_PER_DAY}
          )
-       ORDER BY CASE status WHEN 'fresh' THEN 0 WHEN 'working' THEN 1 WHEN 'aging_45_90' THEN 2 ELSE 3 END, purchased_at ASC`
+       ORDER BY CASE status WHEN 'fresh' THEN 0 WHEN 'working' THEN 1 WHEN 'aging_45_90' THEN 2 ELSE 3 END,
+         -- Within "fresh" specifically: newest purchase first, so a lead
+         -- that just got imported (or dripped in live) gets dialed ahead of
+         -- ones sitting from an earlier import -- and if an even newer
+         -- batch lands after that, IT jumps ahead in turn. The aging tiers
+         -- keep the opposite (oldest first) on purpose: those are backlog
+         -- to clear before it ages further, not new arrivals to rush to.
+         CASE WHEN status = 'fresh' THEN -CAST(strftime('%s', purchased_at) AS INTEGER) ELSE CAST(strftime('%s', purchased_at) AS INTEGER) END`
     )
     .all(user.id) as { id: string; status: string; state: string | null; first_name: string; last_name: string }[];
 
