@@ -147,6 +147,7 @@ export default function LeadWorkspace({
   // call, not just the current one.
   const [popupPos, setPopupPos] = useState<{ x: number; y: number } | null>(null);
   const dragRef = useRef<{ dx: number; dy: number } | null>(null);
+  const popupRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     try {
@@ -261,6 +262,35 @@ export default function LeadWorkspace({
     pendingCallIdRef.current = id;
     setPendingCallIdState(id);
   }
+
+  // A guessed popup height/width (tried previously) can't account for every
+  // window size this actually renders in -- narrow browser panels included,
+  // which is exactly where it was still measured wrong. Measuring the real
+  // rendered element instead, right after the popup actually appears, is
+  // accurate regardless of how many disposition buttons it currently has or
+  // how narrow the window is. If any part of it is off-screen, snaps the
+  // whole thing fully into view -- this is what makes an already-bad saved
+  // position self-correct instead of staying stuck with no visible way to
+  // drag it back.
+  useEffect(() => {
+    if (!pendingCallId) return;
+    const el = popupRef.current;
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    const maxX = Math.max(0, window.innerWidth - rect.width);
+    const maxY = Math.max(0, window.innerHeight - rect.height);
+    const clampedX = Math.min(Math.max(0, rect.left), maxX);
+    const clampedY = Math.min(Math.max(0, rect.top), maxY);
+    if (clampedX !== rect.left || clampedY !== rect.top) {
+      setPopupPos({ x: clampedX, y: clampedY });
+      try {
+        localStorage.setItem('crm_disposition_popup_pos', JSON.stringify({ x: clampedX, y: clampedY }));
+      } catch {
+        // best-effort
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingCallId]);
 
   async function refresh() {
     router.refresh();
@@ -1091,6 +1121,7 @@ export default function LeadWorkspace({
             // be covered by anything else on the page, in any browser,
             // regardless of layout/scroll position.
             <div
+              ref={popupRef}
               data-drag-popup
               onMouseDown={startDragPopup}
               className={`fixed z-50 max-h-[80vh] w-72 cursor-move overflow-y-auto rounded-xl border border-line bg-panel p-3 shadow-2xl ${popupPos ? '' : 'bottom-4 right-4'}`}
