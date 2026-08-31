@@ -489,7 +489,10 @@ export default function LeadWorkspace({
   const AUTO_HANGUP_OUTCOMES = ['no_answer', 'voicemail', 'google_voice'];
 
   async function logCall(outcome: string, disposition?: string) {
-    if (AUTO_HANGUP_OUTCOMES.includes(outcome)) {
+    // "Connected (HU)" -- they picked up, then hung up -- is also
+    // definitely over the instant it's logged, same as the no-answer-like
+    // outcomes above, even though the outcome itself is 'connected'.
+    if (AUTO_HANGUP_OUTCOMES.includes(outcome) || (outcome === 'connected' && disposition === 'hung_up')) {
       endQuoCall(); // fire-and-forget, runs alongside logging the disposition below
     }
     setBusy(true);
@@ -910,6 +913,7 @@ export default function LeadWorkspace({
                 <button disabled={busy || quoBusy} onClick={() => logCall('wrong_number')} className="btn-secondary text-xs px-2 py-1.5">Wrong #</button>
                 <button disabled={busy || quoBusy} onClick={() => logCall('disconnected')} className="btn-secondary text-xs px-2 py-1.5">📵 Disconnected</button>
                 <button disabled={busy || quoBusy} onClick={() => logCall('connected', 'interested')} className="btn-good text-xs px-2 py-1.5">Connected</button>
+                <button disabled={busy || quoBusy} onClick={() => logCall('connected', 'hung_up')} className="btn-secondary text-xs px-2 py-1.5">Connected (HU)</button>
                 <button disabled={busy || quoBusy} onClick={() => logCall('connected', 'sold')} className="btn-good text-xs px-2 py-1.5">💰 Sold</button>
                 <button disabled={busy || quoBusy} onClick={() => logCall('connected', 'not_interested')} className="btn-secondary text-xs px-2 py-1.5">Not Interested</button>
                 <button disabled={busy || quoBusy} onClick={() => logCall('dnc')} className="btn-danger text-xs px-2 py-1.5">DNC</button>
