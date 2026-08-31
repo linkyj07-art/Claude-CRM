@@ -13,7 +13,13 @@ export default async function LeadPage({ params }: { params: { id: string } }) {
   if (!user) redirect('/login');
 
   const db = getDb();
-  const customer = db.prepare('SELECT * FROM customers WHERE id = ? AND owner_id = ?').get(params.id, user.id) as Customer | undefined;
+  // Admins can open any lead, not just their own — everyone else is scoped
+  // to what they own, same as always.
+  const customer = (
+    user.role === 'admin'
+      ? db.prepare('SELECT * FROM customers WHERE id = ?').get(params.id)
+      : db.prepare('SELECT * FROM customers WHERE id = ? AND owner_id = ?').get(params.id, user.id)
+  ) as Customer | undefined;
   if (!customer) notFound();
 
   const notes = db.prepare('SELECT * FROM note_versions WHERE customer_id = ? ORDER BY created_at DESC').all(params.id) as NoteVersion[];

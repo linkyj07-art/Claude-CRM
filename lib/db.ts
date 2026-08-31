@@ -68,11 +68,15 @@ function migrate(db: Database.Database) {
   addColumnIfMissing(db, 'dial_sessions', 'session_dials', 'INTEGER NOT NULL DEFAULT 0');
   addColumnIfMissing(db, 'dial_sessions', 'session_connects', 'INTEGER NOT NULL DEFAULT 0');
   addColumnIfMissing(db, 'dial_sessions', 'consecutive_no_answer', 'INTEGER NOT NULL DEFAULT 0');
+  addColumnIfMissing(db, 'users', 'role', "TEXT NOT NULL DEFAULT 'agent'");
+  addColumnIfMissing(db, 'users', 'helper_connected', 'INTEGER NOT NULL DEFAULT 0');
+  addColumnIfMissing(db, 'users', 'helper_last_seen', 'TEXT');
   db.exec('CREATE INDEX IF NOT EXISTS idx_customers_owner ON customers(owner_id);');
 
   const defaultUserId = seedDefaultUser(db);
   db.prepare('UPDATE customers SET owner_id = ? WHERE owner_id IS NULL').run(defaultUserId);
   migrateGoalsTables(db, defaultUserId);
+  ensureAdminRole(db);
 
   seedStarterUnderwriting(db);
   ensureRecoveryAccount(db);
@@ -187,6 +191,20 @@ function seedDefaultUser(db: Database.Database): string {
 
   const row = db.prepare('SELECT id FROM users WHERE username = ?').get(username) as { id: string };
   return row.id;
+}
+
+// First run after the `role` column lands: whoever's the oldest account
+// (the same "primary account" every other one-time migration here already
+// treats as canonical — see seedDefaultUser/ensureRecoveryAccount) becomes
+// admin. Never touches role again after that — a teammate added later via
+// Settings -> Team stays a plain agent, and an existing admin's role isn't
+// reset back by a later deploy.
+function ensureAdminRole(db: Database.Database) {
+  const hasAdmin = db.prepare(`SELECT id FROM users WHERE role = 'admin' LIMIT 1`).get();
+  if (hasAdmin) return;
+  db.prepare(
+    `UPDATE users SET role = 'admin' WHERE id = (SELECT id FROM users ORDER BY created_at ASC LIMIT 1)`
+  ).run();
 }
 
 // daily_goals/weekly_goals originally shipped with a single-column primary

@@ -5,6 +5,7 @@ import Sidebar from '@/components/Sidebar';
 import AppointmentReminder from '@/components/AppointmentReminder';
 import IncomingCallPopup from '@/components/IncomingCallPopup';
 import GoalsManager from '@/components/GoalsManager';
+import HelperStatusReporter from '@/components/HelperStatusReporter';
 import { getCurrentUser } from '@/lib/currentUser';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
@@ -26,6 +27,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         {user && <AppointmentReminder />}
         {user && <IncomingCallPopup />}
         {user && <GoalsManager />}
+        {user && <HelperStatusReporter />}
       </body>
     </html>
   );

@@ -6,6 +6,7 @@ export interface SessionUser {
   id: string;
   username: string;
   name: string;
+  role: string;
 }
 
 // middleware.ts already blocks any request without a valid session cookie
@@ -18,6 +19,6 @@ export async function getCurrentUser(): Promise<SessionUser | null> {
   const uid = await verifySessionToken(token);
   if (!uid) return null;
   const db = getDb();
-  const user = db.prepare('SELECT id, username, name FROM users WHERE id = ?').get(uid) as SessionUser | undefined;
+  const user = db.prepare('SELECT id, username, name, role FROM users WHERE id = ?').get(uid) as SessionUser | undefined;
   return user || null;
 }
