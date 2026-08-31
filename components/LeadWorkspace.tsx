@@ -1056,7 +1056,7 @@ export default function LeadWorkspace({
           <dl className="space-y-2 text-sm">
             <InfoRow label="📞 Phone" value={customer.phone} />
             <InfoRow label="✉️ Email" value={customer.email} />
-            <InfoRow label="🎂 DOB" value={fmtDob(customer.dob)} />
+            <InfoRow label="🎂 DOB" value={fmtDobWithAge(customer.dob)} />
             <InfoRow label="♂ Gender" value={customer.gender} />
             <InfoRow label="💰 Coverage" value={customer.coverage_wanted ? fmtMoney0(customer.coverage_wanted) : null} />
             <InfoRow label="📦 Plan Chosen" value={lastNote?.selected_plan ? lastNote.selected_plan.charAt(0).toUpperCase() + lastNote.selected_plan.slice(1) : null} />
@@ -1445,6 +1445,16 @@ function fmtDob(dob: string | null): string | null {
   const d = new Date(dob);
   if (isNaN(d.getTime())) return dob;
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' });
+}
+
+// Shows the DOB with the lead's current age right next to it, e.g.
+// "Mar 15, 1958 (Age 68)" -- calcAge is already computed for the Quote
+// Modal's age field, just not surfaced anywhere on the lead page itself.
+function fmtDobWithAge(dob: string | null): string | null {
+  const formatted = fmtDob(dob);
+  if (!formatted) return null;
+  const age = calcAge(dob);
+  return age === null ? formatted : `${formatted} (Age ${age})`;
 }
 
 function calcAge(dob: string | null): number | null {
