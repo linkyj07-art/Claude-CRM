@@ -42,6 +42,14 @@ export default function IncomingCallPopup() {
   // Tracks which ids have already fired a native OS notification, so a
   // re-poll of the same still-undismissed call doesn't notify twice.
   const notifiedRef = useRef<Set<string>>(new Set());
+  // The server only reports calls from the last few minutes (see
+  // app/api/incoming-calls/recent/route.ts) so old rows don't pile up
+  // there forever -- but that meant a shown popup would silently vanish
+  // once its call aged out of that window, even though the agent never
+  // dismissed it. Once a call has been shown here, it's remembered
+  // client-side and kept displayed regardless of whether the server still
+  // reports it as "recent" -- the only way it goes away now is the X.
+  const shownRef = useRef<Map<string, IncomingCall>>(new Map());
 
   useEffect(() => {
     if ('Notification' in window && Notification.permission === 'default') {
@@ -58,7 +66,16 @@ export default function IncomingCallPopup() {
         if (!res.ok) return;
         const all: IncomingCall[] = await res.json();
         const dismissed = loadDismissed();
-        const dueNow = all.filter((c) => !dismissed.has(c.id));
+        // Merge into what's already been shown rather than replacing it --
+        // a call that's aged out of the server's "recent" window but was
+        // never dismissed stays visible using the copy already captured
+        // here, instead of disappearing the moment the server stops
+        // reporting it.
+        for (const c of all) {
+          if (!dismissed.has(c.id)) shownRef.current.set(c.id, c);
+        }
+        for (const id of dismissed) shownRef.current.delete(id);
+        const dueNow = Array.from(shownRef.current.values());
         if (cancelled) return;
         setDue(dueNow);
 
