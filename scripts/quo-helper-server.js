@@ -123,10 +123,12 @@ function focusQuoOrThrowLines() {
     `tell application "${QUO_APP_NAME}" to activate`,
     'set _quoFocused to false',
     'repeat 20 times',
+    'tell application "System Events"',
     `if (name of first application process whose frontmost is true) is "${QUO_APP_NAME}" then`,
     'set _quoFocused to true',
-    'exit repeat',
     'end if',
+    'end tell',
+    'if _quoFocused then exit repeat',
     'delay 0.03',
     'end repeat',
     `if _quoFocused is false then error "${QUO_APP_NAME} did not come to the foreground in time -- not sending a keystroke to whatever window actually has focus"`
