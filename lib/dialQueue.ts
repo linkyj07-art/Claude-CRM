@@ -1,5 +1,5 @@
 import Database from 'better-sqlite3';
-import { isWithinCallingHours, isTestLead, MAX_CALLS_PER_DAY } from './util';
+import { isWithinCallingHours, isTestLead, MAX_CALLS_PER_DAY, agentMidnightUTC } from './util';
 
 export type EligibleLead = {
   id: string;
@@ -16,13 +16,20 @@ export type EligibleLead = {
 // in /api/dial-session (does a lead exist that isn't in this session yet?)
 // can't drift out of sync with what a rebuilt queue would actually contain.
 export function fetchEligibleLeads(db: Database.Database, ownerId: string): EligibleLead[] {
+  // Was `date(occurred_at) = date('now')` -- a UTC calendar day, while the
+  // actual per-call cap check (app/api/leads/[id]/calls/route.ts) and every
+  // other "today" in this app use the agent's own Mountain-time day. During
+  // the ~6 hour gap between UTC midnight and real Mountain midnight, that
+  // mismatch let an already-maxed-out lead look freshly eligible again here
+  // only to have the real dial rejected by the per-call check moments later.
+  const todayStart = agentMidnightUTC(0).toISOString().slice(0, 19).replace('T', ' ');
   const allRows = db
     .prepare(
       `SELECT id, status, state, first_name, last_name, phone FROM customers
        WHERE archived = 0 AND owner_id = ? AND status IN ('fresh','working','aging_45_90','aging_90_plus')
          AND phone IS NOT NULL AND TRIM(phone) != ''
          AND id NOT IN (
-           SELECT customer_id FROM calls WHERE date(occurred_at) = date('now')
+           SELECT customer_id FROM calls WHERE occurred_at >= ?
            GROUP BY customer_id HAVING COUNT(*) >= ${MAX_CALLS_PER_DAY}
          )
        ORDER BY CASE status WHEN 'fresh' THEN 0 WHEN 'working' THEN 1 WHEN 'aging_45_90' THEN 2 ELSE 3 END,
@@ -31,7 +38,7 @@ export function fetchEligibleLeads(db: Database.Database, ownerId: string): Elig
          -- banner, the freshest of them is the one offered/queued first.
          CASE WHEN status = 'fresh' THEN -CAST(strftime('%s', purchased_at) AS INTEGER) ELSE CAST(strftime('%s', purchased_at) AS INTEGER) END`
     )
-    .all(ownerId) as EligibleLead[];
+    .all(ownerId, todayStart) as EligibleLead[];
 
   return allRows.filter((r) => isTestLead(r) || isWithinCallingHours(r.state));
 }

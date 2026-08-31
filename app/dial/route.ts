@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
 import { getCurrentUser } from '@/lib/currentUser';
-import { isWithinCallingHours, minutesUntilCallingWindowCloses, MAX_CALLS_PER_DAY, isTestLead } from '@/lib/util';
+import { isWithinCallingHours, minutesUntilCallingWindowCloses, MAX_CALLS_PER_DAY, isTestLead, agentMidnightUTC } from '@/lib/util';
 
 // A lead whose state is closing for the day within this many minutes jumps
 // to the front of the queue — otherwise it's easy to work through fresher
@@ -38,13 +38,20 @@ export async function GET(req: NextRequest) {
     db.prepare('DELETE FROM dial_sessions WHERE user_id = ?').run(user.id);
   }
 
+  // Was `date(occurred_at) = date('now')` -- a UTC calendar day, while the
+  // actual per-call cap check (app/api/leads/[id]/calls/route.ts) and every
+  // other "today" in this app use the agent's own Mountain-time day. During
+  // the ~6 hour gap between UTC midnight and real Mountain midnight, that
+  // mismatch let an already-maxed-out lead look freshly eligible again here
+  // only to have the real dial rejected by the per-call check moments later.
+  const todayStart = agentMidnightUTC(0).toISOString().slice(0, 19).replace('T', ' ');
   const allRows = db
     .prepare(
       `SELECT id, status, state, first_name, last_name FROM customers
        WHERE archived = 0 AND owner_id = ? AND status IN ('fresh','working','aging_45_90','aging_90_plus')
          AND phone IS NOT NULL AND TRIM(phone) != ''
          AND id NOT IN (
-           SELECT customer_id FROM calls WHERE date(occurred_at) = date('now')
+           SELECT customer_id FROM calls WHERE occurred_at >= ?
            GROUP BY customer_id HAVING COUNT(*) >= ${MAX_CALLS_PER_DAY}
          )
        ORDER BY CASE status WHEN 'fresh' THEN 0 WHEN 'working' THEN 1 WHEN 'aging_45_90' THEN 2 ELSE 3 END,
@@ -56,7 +63,7 @@ export async function GET(req: NextRequest) {
          -- to clear before it ages further, not new arrivals to rush to.
          CASE WHEN status = 'fresh' THEN -CAST(strftime('%s', purchased_at) AS INTEGER) ELSE CAST(strftime('%s', purchased_at) AS INTEGER) END`
     )
-    .all(user.id) as { id: string; status: string; state: string | null; first_name: string; last_name: string }[];
+    .all(user.id, todayStart) as { id: string; status: string; state: string | null; first_name: string; last_name: string }[];
 
   // Leads whose local time is outside the 8am-9pm calling window get held
   // back rather than queued dead-on-arrival — they'll be picked up again on

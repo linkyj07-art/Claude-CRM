@@ -18,6 +18,9 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   const requester = await getCurrentUser();
   if (!requester) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+  if (requester.role !== 'admin') {
+    return NextResponse.json({ error: 'Only an admin can add a new teammate.' }, { status: 403 });
+  }
 
   const body = await req.json().catch(() => ({}));
   const username = typeof body.username === 'string' ? body.username.trim() : '';

@@ -13,6 +13,24 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   if (!ownsCustomer(db, params.id, user.id)) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
   const body = await req.json();
+
+  // The client already guards against a second pending call via its own
+  // pendingCallId state, but that's just one browser tab's memory -- two
+  // devices sharing the same Power Dial session (explicitly supported),
+  // or a manual Call click landing while Auto-Dial's own dial is mid-
+  // flight, can both pass that check before either response comes back.
+  // Enforcing "one pending call per lead" here, at the actual insert, is
+  // what makes it not a race: hand back the SAME pending call's id rather
+  // than create a second, orphaned one that never gets dispositioned.
+  if (body.outcome === 'pending') {
+    const existingPending = db
+      .prepare(`SELECT id, attempt_number FROM calls WHERE customer_id = ? AND outcome = 'pending' ORDER BY occurred_at DESC LIMIT 1`)
+      .get(params.id) as { id: string; attempt_number: number } | undefined;
+    if (existingPending) {
+      return NextResponse.json({ id: existingPending.id, attempt: existingPending.attempt_number, alreadyPending: true });
+    }
+  }
+
   const countRow = db
     .prepare('SELECT COUNT(*) n FROM calls WHERE customer_id = ?')
     .get(params.id) as { n: number };

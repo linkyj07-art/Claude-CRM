@@ -53,7 +53,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 
   db.prepare(`UPDATE customers SET status = 'sold', sold_at = ?, updated_at = ? WHERE id = ?`).run(now, now, params.id);
 
-  logAudit(params.id, 'policy_issued', `Policy issued — ${body.carrier} ($${(body.annual_premium || 0).toFixed ? body.annual_premium : body.annual_premium}/yr)`);
+  logAudit(params.id, 'policy_issued', `Policy issued — ${body.carrier} ($${(Number(body.annual_premium) || 0).toFixed(0)}/yr)`);
   logAudit(params.id, 'commission', `Commission recorded — $${body.net_commission ?? body.expected_commission ?? 0} net`);
 
   return NextResponse.json({ policyId, commissionId, applicationId });

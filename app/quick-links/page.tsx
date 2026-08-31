@@ -24,7 +24,7 @@ export default async function QuickLinksPage() {
           menu, the Suggested Carrier Order, and the Review Queue on every lead. Add, edit, or remove your own — no code changes needed.
         </p>
       </div>
-      <SettingsManager carriers={carriers} rules={rules} quickLinks={quickLinks} licensedStates={licensedStates} users={users} currentUserId={user?.id || ''} />
+      <SettingsManager carriers={carriers} rules={rules} quickLinks={quickLinks} licensedStates={licensedStates} users={users} currentUserId={user?.id || ''} isAdmin={user?.role === 'admin'} />
     </div>
   );
 }

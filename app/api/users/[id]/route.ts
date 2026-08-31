@@ -8,6 +8,13 @@ export const dynamic = 'force-dynamic';
 export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
   const requester = await getCurrentUser();
   if (!requester) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+  // Resetting your OWN password is fine for anyone; resetting someone
+  // else's requires admin -- without this, any logged-in agent could PUT
+  // straight to another user's (including the admin's) id and take over
+  // their account.
+  if (requester.id !== params.id && requester.role !== 'admin') {
+    return NextResponse.json({ error: 'Only an admin can reset another user\'s password.' }, { status: 403 });
+  }
 
   const body = await req.json().catch(() => ({}));
   const password = typeof body.password === 'string' ? body.password : '';
@@ -23,6 +30,9 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
 export async function DELETE(_req: NextRequest, { params }: { params: { id: string } }) {
   const me = await getCurrentUser();
   if (!me) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+  if (me.role !== 'admin') {
+    return NextResponse.json({ error: 'Only an admin can remove a teammate\'s account.' }, { status: 403 });
+  }
 
   const db = getDb();
   if (me.id === params.id) {
