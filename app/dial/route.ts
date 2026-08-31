@@ -4,10 +4,14 @@ import { getCurrentUser } from '@/lib/currentUser';
 import { isWithinCallingHours, minutesUntilCallingWindowCloses, MAX_CALLS_PER_DAY, isTestLead, agentMidnightUTC } from '@/lib/util';
 
 // A lead whose state is closing for the day within this many minutes jumps
-// to the front of the queue — otherwise it's easy to work through fresher
-// leads all morning and never circle back before that window shuts, even
-// though the lead has only been dialed once or twice.
-const CLOSING_SOON_MINUTES = 90;
+// to the front of the queue, ahead of even genuinely never-called leads --
+// otherwise it's easy to work through fresher leads all morning and never
+// circle back before that window shuts. Deliberately tight: different
+// states close at different times in the agent's own timezone, so a wider
+// window means several states can be "closing soon" at once throughout the
+// day, pulling already-called leads to the front well before it actually
+// feels close to closing.
+const CLOSING_SOON_MINUTES = 60;
 
 export async function GET(req: NextRequest) {
   const user = await getCurrentUser();
