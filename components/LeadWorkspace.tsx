@@ -133,6 +133,50 @@ export default function LeadWorkspace({
   const [busy, setBusy] = useState(false);
   const [quoBusy, setQuoBusy] = useState(false);
   const [autoDialing, setAutoDialing] = useState(false);
+  // Remembered drag position for the disposition popup (top-left corner,
+  // in pixels) -- null means "use the default bottom-right corner".
+  // Persisted to localStorage (a per-browser preference, not data anyone
+  // else needs) so it stays wherever it's dragged across every future
+  // call, not just the current one.
+  const [popupPos, setPopupPos] = useState<{ x: number; y: number } | null>(null);
+  const dragRef = useRef<{ dx: number; dy: number } | null>(null);
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('crm_disposition_popup_pos');
+      if (saved) setPopupPos(JSON.parse(saved));
+    } catch {
+      // ignore -- just falls back to the default corner
+    }
+  }, []);
+
+  function startDragPopup(e: React.MouseEvent) {
+    const rect = (e.currentTarget.closest('[data-drag-popup]') as HTMLElement)?.getBoundingClientRect();
+    if (!rect) return;
+    dragRef.current = { dx: e.clientX - rect.left, dy: e.clientY - rect.top };
+
+    function onMove(ev: MouseEvent) {
+      if (!dragRef.current) return;
+      const x = Math.min(Math.max(0, ev.clientX - dragRef.current.dx), window.innerWidth - 288);
+      const y = Math.min(Math.max(0, ev.clientY - dragRef.current.dy), window.innerHeight - 40);
+      setPopupPos({ x, y });
+    }
+    function onUp() {
+      dragRef.current = null;
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+      setPopupPos((pos) => {
+        try {
+          if (pos) localStorage.setItem('crm_disposition_popup_pos', JSON.stringify(pos));
+        } catch {
+          // best-effort -- position just won't be remembered next time
+        }
+        return pos;
+      });
+    }
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+  }
   // Guards against firing a second auto-dial for the same lead — e.g. a
   // React effect re-run (dev strict mode double-invoke) or a `refresh()`
   // re-render that doesn't actually change the lead.
@@ -842,8 +886,18 @@ export default function LeadWorkspace({
             // it to a fixed screen corner instead means it can never again
             // be covered by anything else on the page, in any browser,
             // regardless of layout/scroll position.
-            <div className="fixed bottom-4 right-4 z-50 max-h-[80vh] w-72 overflow-y-auto rounded-xl border border-line bg-panel p-3 shadow-2xl">
-              <div className="mb-2 text-xs font-semibold text-brand-400">📞 In progress — what happened?</div>
+            <div
+              data-drag-popup
+              className={`fixed z-50 max-h-[80vh] w-72 overflow-y-auto rounded-xl border border-line bg-panel p-3 shadow-2xl ${popupPos ? '' : 'bottom-4 right-4'}`}
+              style={popupPos ? { left: popupPos.x, top: popupPos.y } : undefined}
+            >
+              <div
+                onMouseDown={startDragPopup}
+                className="mb-2 flex cursor-move items-center gap-1 text-xs font-semibold text-brand-400"
+                title="Drag to move — stays here for future calls too"
+              >
+                <span className="text-slate-300">⠿</span> 📞 In progress — what happened?
+              </div>
               {callError && <div className="mb-2 rounded bg-red-50 p-2 text-xs text-red-700">{callError}</div>}
               {quoBusy && (
                 <div className="mb-2 rounded bg-amber-50 p-2 text-xs text-amber-700">⏳ Ending the Quo call — one second before you can pick an outcome…</div>
