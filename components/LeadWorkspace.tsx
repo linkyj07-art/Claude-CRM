@@ -151,21 +151,44 @@ export default function LeadWorkspace({
   useEffect(() => {
     try {
       const saved = localStorage.getItem('crm_disposition_popup_pos');
-      if (saved) setPopupPos(JSON.parse(saved));
+      if (!saved) return;
+      const pos = JSON.parse(saved);
+      // The old drag clamp only kept a ~40px sliver of the popup on screen
+      // regardless of its actual height, so a position saved from dragging
+      // near the bottom of the screen could push most of the popup (all
+      // the disposition buttons) below the visible viewport -- worse the
+      // taller the popup is, which is exactly what adding more disposition
+      // buttons did. Re-clamp whatever was saved against the real button
+      // grid's rough footprint so an already-bad saved position
+      // self-corrects on load instead of staying stuck off-screen forever.
+      const approxHeight = 420;
+      const approxWidth = 288;
+      setPopupPos({
+        x: Math.min(Math.max(0, pos.x), Math.max(0, window.innerWidth - approxWidth)),
+        y: Math.min(Math.max(0, pos.y), Math.max(0, window.innerHeight - approxHeight))
+      });
     } catch {
       // ignore -- just falls back to the default corner
     }
   }, []);
 
   function startDragPopup(e: React.MouseEvent) {
+    // Lets the whole popup (not just the thin header strip) act as a drag
+    // handle -- mousedown on any button inside it (a disposition, cancel,
+    // etc.) still just clicks normally instead of starting a drag.
+    if ((e.target as HTMLElement).closest('button')) return;
     const rect = (e.currentTarget.closest('[data-drag-popup]') as HTMLElement)?.getBoundingClientRect();
     if (!rect) return;
     dragRef.current = { dx: e.clientX - rect.left, dy: e.clientY - rect.top };
 
     function onMove(ev: MouseEvent) {
       if (!dragRef.current) return;
-      const x = Math.min(Math.max(0, ev.clientX - dragRef.current.dx), window.innerWidth - 288);
-      const y = Math.min(Math.max(0, ev.clientY - dragRef.current.dy), window.innerHeight - 40);
+      // Clamped against the popup's OWN measured size (not a guessed
+      // constant), so the full thing -- however many disposition buttons
+      // it currently has -- always stays entirely on screen no matter
+      // where it's dragged to.
+      const x = Math.min(Math.max(0, ev.clientX - dragRef.current.dx), Math.max(0, window.innerWidth - rect.width));
+      const y = Math.min(Math.max(0, ev.clientY - dragRef.current.dy), Math.max(0, window.innerHeight - rect.height));
       setPopupPos({ x, y });
     }
     function onUp() {
@@ -682,7 +705,17 @@ export default function LeadWorkspace({
         (c) => c.id !== pendingCallId && (c.outcome === 'no_answer' || c.outcome === 'voicemail' || c.outcome === 'google_voice')
       ).length;
       const redialAttemptsSoFar = priorRedialAttempts + (isRedialOutcome ? 1 : 0);
-      const shouldRedial = isForcedRedial || (isRedialOutcome && redialAttemptsSoFar < MAX_REDIAL_ATTEMPTS);
+      // dailyLimitReached (todayCount >= MAX_CALLS_PER_DAY) already covers
+      // the call just logged above -- startCall()'s own refresh() updated
+      // the calls prop, and callsToday counts every outcome including
+      // 'pending', before this popup ever rendered. The server hard-rejects
+      // any call once today's count hits the cap
+      // (app/api/leads/[id]/calls/route.ts), so without this check,
+      // redialing (automatic or "Call Again") right at that boundary would
+      // fire, get silently rejected server-side, and just strand the agent
+      // on this lead with nothing happening -- neither a new call nor a
+      // move to the next one.
+      const shouldRedial = !dailyLimitReached && (isForcedRedial || (isRedialOutcome && redialAttemptsSoFar < MAX_REDIAL_ATTEMPTS));
 
       // Session stats — tracked for every disposition made while dialing,
       // regardless of whether Auto-Dial is even on, so the connect count
@@ -1059,11 +1092,11 @@ export default function LeadWorkspace({
             // regardless of layout/scroll position.
             <div
               data-drag-popup
-              className={`fixed z-50 max-h-[80vh] w-72 overflow-y-auto rounded-xl border border-line bg-panel p-3 shadow-2xl ${popupPos ? '' : 'bottom-4 right-4'}`}
+              onMouseDown={startDragPopup}
+              className={`fixed z-50 max-h-[80vh] w-72 cursor-move overflow-y-auto rounded-xl border border-line bg-panel p-3 shadow-2xl ${popupPos ? '' : 'bottom-4 right-4'}`}
               style={popupPos ? { left: popupPos.x, top: popupPos.y } : undefined}
             >
               <div
-                onMouseDown={startDragPopup}
                 className="mb-2 flex cursor-move items-center gap-1 text-xs font-semibold text-brand-400"
                 title="Drag to move — stays here for future calls too"
               >
