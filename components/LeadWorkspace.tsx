@@ -6,7 +6,7 @@ import Badge from './Badge';
 import {
   Customer, NoteVersion, CallRecord, Policy, Commission, Carrier, CarrierRule, LeadVendor
 } from '@/lib/types';
-import { fmtMoney, fmtMoney0, leadAgeLabel, localTimeForState, agentLocalTime, statusBadge, isValidRoutingNumber, callsToday, MAX_CALLS_PER_DAY, isWithinCallingHours, callingWindowStatus, isTestLead } from '@/lib/util';
+import { fmtMoney, fmtMoney0, leadAgeLabel, localTimeForState, agentLocalTime, statusBadge, isValidRoutingNumber, callsToday, MAX_CALLS_PER_DAY, isWithinCallingHours, callingWindowStatus, isTestLead, AGENT_TIMEZONE } from '@/lib/util';
 import { suggestCarriers, detectTobaccoUse, extractBuild, countDistinctConditions } from '@/lib/underwriting';
 import RoutingLookup from './RoutingLookup';
 import SellModal from './SellModal';
@@ -1069,6 +1069,7 @@ export default function LeadWorkspace({
             <InfoRow label="🕐 Best Time" value={customer.best_time} />
             <InfoRow label="🏷 Vendor" value={vendors.find((v) => v.id === customer.lead_vendor_id)?.name} />
             <InfoRow label="💵 Lead Cost" value={fmtMoney(customer.lead_cost)} />
+            <InfoRow label="📥 Imported" value={fmtImportedAt(customer.created_at)} />
           </dl>
 
           <div className="border-t border-line pt-3">
@@ -1471,6 +1472,27 @@ function fmtDob(dob: string | null): string | null {
   const d = new Date(dob);
   if (isNaN(d.getTime())) return dob;
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' });
+}
+
+// customer.created_at is a SQLite `datetime('now')` string ("2026-03-15
+// 14:23:00", no timezone) -- both when the lead was first added manually
+// and when it landed via CSV import/the Goat Leads webhook, so this is
+// genuinely "when did this become a lead in the CRM" regardless of
+// source. Unlike DOB (a pure date, deliberately kept at UTC midnight so
+// the calendar date never shifts), this has a real time-of-day that's
+// worth converting to the agent's own timezone -- same space-to-T-plus-Z
+// parsing lib/util.ts's own isSameAgentDay uses for this exact string
+// shape, since new Date() treats a bare space-separated string
+// ambiguously across browsers otherwise.
+function fmtImportedAt(createdAt: string | null): string | null {
+  if (!createdAt) return null;
+  const iso = createdAt.replace(' ', 'T') + (createdAt.includes('Z') ? '' : 'Z');
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return createdAt;
+  return new Intl.DateTimeFormat('en-US', {
+    month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true,
+    timeZone: AGENT_TIMEZONE
+  }).format(d);
 }
 
 // Shows the DOB with the lead's current age right next to it, e.g.
