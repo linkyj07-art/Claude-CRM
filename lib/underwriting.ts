@@ -105,13 +105,114 @@ export function detectTobaccoUse(healthText: string): boolean {
   return TOBACCO_KEYWORDS.some((k) => findGenuineOccurrences(text, k).length > 0);
 }
 
+export interface BuildInfo {
+  heightInches: number;
+  weightLbs: number;
+  bmi: number;
+}
+
+// "5'9 220", "5'9\" 220 lbs", "5 ft 9 in, 220 pounds", "height 69in weight
+// 220lbs" -- height/weight (and the resulting build/BMI) is one of the
+// single biggest knockout factors in FE underwriting, and agents often
+// jot it straight into the free-text health note rather than a dedicated
+// field. Surfacing it (not scoring against it -- this app has no
+// per-carrier build chart data) at least puts it in front of the agent
+// instead of it sitting unused in a paragraph of prose.
+const HEIGHT_FEET_INCHES = /\b(\d)\s*(?:'|feet|ft\.?)\s*(\d{1,2})\s*(?:"|in\.?|inch(?:es)?)?\b/i;
+const HEIGHT_INCHES_ONLY = /\bheight[:\s]*(\d{2,3})\s*(?:in\.?|inch(?:es)?)\b/i;
+const WEIGHT_LBS = /\b(\d{2,3})\s*(?:lbs?\.?|pounds?)\b/i;
+
+export function extractBuild(healthText: string): BuildInfo | null {
+  const text = (healthText || '').toLowerCase();
+  if (!text.trim()) return null;
+
+  let heightInches: number | null = null;
+  const feetInches = HEIGHT_FEET_INCHES.exec(text);
+  if (feetInches) {
+    const feet = Number(feetInches[1]);
+    const inches = Number(feetInches[2]);
+    // A bare "5'9" is almost always height -- but a bare N'M pattern can
+    // also just be two unrelated numbers separated by an apostrophe in
+    // some other context, so keep this to plausible adult human ranges
+    // (4'0"-7'11") rather than accepting anything the regex happens to find.
+    if (feet >= 4 && feet <= 7 && inches >= 0 && inches <= 11) heightInches = feet * 12 + inches;
+  }
+  if (heightInches === null) {
+    const inchesOnly = HEIGHT_INCHES_ONLY.exec(text);
+    if (inchesOnly) {
+      const inches = Number(inchesOnly[1]);
+      if (inches >= 48 && inches <= 95) heightInches = inches;
+    }
+  }
+
+  const weightMatch = WEIGHT_LBS.exec(text);
+  const weightLbs = weightMatch ? Number(weightMatch[1]) : null;
+  // Plausible adult weight range -- guards against matching an unrelated
+  // 2-3 digit number (a dosage, a date fragment) that happens to sit next
+  // to "lbs" by coincidence in messy free text.
+  if (heightInches === null || weightLbs === null || weightLbs < 70 || weightLbs > 600) return null;
+
+  const bmi = (weightLbs / (heightInches * heightInches)) * 703;
+  return { heightInches, weightLbs, bmi: Math.round(bmi * 10) / 10 };
+}
+
+// A rule's keywords field can join terms with "+" to require ALL of them
+// to genuinely appear (not just any one) -- e.g. "diabetes+neuropathy"
+// alongside a separate plain "cancer" entry in the same comma-separated
+// list. Existing simple keyword lists ("diabetes, cancer, copd") are
+// untouched by this -- a single term with no "+" behaves exactly as
+// before. This is the one way this app can express "this specific
+// COMBINATION is what actually matters to this carrier," since the
+// per-condition rules alone can only ever say "any of these," and real FE
+// underwriting very often cares specifically about combinations (a
+// standalone condition treated very differently than the same condition
+// plus a second one) in a way this app has no way to know generically —
+// only the agent configuring their own carrier rules does.
+function parseKeywordEntry(entry: string): string[] {
+  return entry.split('+').map((p) => p.trim()).filter(Boolean);
+}
+
+// A lead with several distinct conditions mentioned can be a materially
+// different underwriting case than any one of them alone, even when every
+// individual carrier's own rules would each accept it fine on its own --
+// this app has no way to know which SPECIFIC combinations any given
+// carrier actually treats differently (that's carrier-specific
+// underwriting knowledge this data model doesn't capture), so rather than
+// guess at that, this just counts how many distinct conditions were
+// mentioned at all, as a general "this is a more complex case, look
+// closer" signal alongside the ranked list. Dedupes by base keyword (a
+// "+"-compound entry's parts each count individually) across every
+// carrier's rules combined, since the same real condition is often
+// configured under near-identical keywords by more than one carrier.
+export function countDistinctConditions(healthText: string, rules: CarrierRule[]): number {
+  const text = (healthText || '').toLowerCase();
+  if (!text.trim()) return 0;
+  const seen = new Set<string>();
+  for (const rule of rules) {
+    if (rule.is_knockout) continue;
+    for (const entry of rule.keywords.split(',').map((k) => k.trim().toLowerCase()).filter(Boolean)) {
+      for (const part of parseKeywordEntry(entry)) {
+        if (findGenuineOccurrences(text, part).length > 0) seen.add(part);
+      }
+    }
+  }
+  return seen.size;
+}
+
 /**
  * Ranks carriers for a given free-text HEALTH note using the user's own
- * keyword rules (set up per carrier under Manage Carriers). This is a
- * keyword-match heuristic (word-boundary aware, with basic negation
- * detection) to help order who to run the app through first/second/third
+ * keyword rules (set up per carrier under Manage Carriers). Word-boundary
+ * and negation aware ("no history of X" won't count as X being present),
+ * pulls severity/timing context from around each match ("controlled" vs
+ * "uncontrolled", "years ago" vs "recently"), supports "+"-joined
+ * compound keywords for combination-specific rules, and uses
+ * diminishing-returns scoring so a verbose synonym list doesn't
+ * outweigh a precise one for the same real condition. This is a
+ * heuristic to help order who to run the app through first/second/third
  * — it is NOT full underwriting and should always be verified against the
- * carrier's actual field/underwriting guide.
+ * carrier's actual field/underwriting guide. See also detectTobaccoUse,
+ * extractBuild, and countDistinctConditions for signals surfaced
+ * alongside the ranked list rather than folded into any one carrier's score.
  */
 export function suggestCarriers(
   healthText: string,
@@ -137,15 +238,24 @@ export function suggestCarriers(
     for (const rule of rules) {
       const entry = byCarrier.get(rule.carrier_id);
       if (!entry) continue;
-      const keywords = rule.keywords
+      const keywordEntries = rule.keywords
         .split(',')
         .map((k) => k.trim().toLowerCase())
         .filter(Boolean);
-      // occurrences (not just a boolean) per keyword -- needed to pull
-      // qualifier/timing context from right around each real match.
-      const hitEntries = keywords
-        .map((k) => ({ keyword: k, occurrences: findGenuineOccurrences(text, k) }))
-        .filter((h) => h.occurrences.length > 0);
+      // Each comma-separated entry can itself be a "+"-joined compound
+      // ("diabetes+neuropathy") requiring ALL its parts to genuinely
+      // match, not just one -- everything else behaves exactly as a
+      // single plain keyword always has. occurrences (not just a boolean)
+      // are kept per entry to pull qualifier/timing context from right
+      // around the match.
+      const hitEntries = keywordEntries
+        .map((entry) => {
+          const parts = parseKeywordEntry(entry);
+          const occurrencesByPart = parts.map((p) => findGenuineOccurrences(text, p));
+          if (occurrencesByPart.some((occs) => occs.length === 0)) return null;
+          return { keyword: entry, occurrences: occurrencesByPart.map((occs) => occs[0]) };
+        })
+        .filter((h): h is { keyword: string; occurrences: { index: number; length: number }[] } => h !== null);
       if (hitEntries.length === 0) continue;
       const hits = hitEntries.map((h) => h.keyword);
 
@@ -159,8 +269,10 @@ export function suggestCarriers(
         // with the carrier directly, instead of just seeing a bare
         // keyword with no context at all.
         for (const h of hitEntries) {
-          const { notes } = qualifiersNear(text, h.occurrences[0]);
-          entry.qualifierNotes.push(...notes.map((n) => `${h.keyword}: ${n}`));
+          for (const occ of h.occurrences) {
+            const { notes } = qualifiersNear(text, occ);
+            entry.qualifierNotes.push(...notes.map((n) => `${h.keyword}: ${n}`));
+          }
         }
       } else {
         // Diminishing returns per additional synonym within the SAME
@@ -172,7 +284,12 @@ export function suggestCarriers(
         // synonyms happened to be listed.
         let ruleScore = rule.priority || 0;
         hitEntries.forEach((h, i) => {
-          ruleScore += i === 0 ? 10 : 3;
+          // A compound entry ("diabetes+neuropathy") matching all its
+          // required parts is much more specific evidence than any single
+          // condition alone -- worth extra weight per additional required
+          // part, on top of the base diminishing-returns amount.
+          const compoundBonus = (h.occurrences.length - 1) * 5;
+          ruleScore += (i === 0 ? 10 : 3) + compoundBonus;
           const { notes, adjustment } = qualifiersNear(text, h.occurrences[0]);
           ruleScore += adjustment;
           entry.qualifierNotes.push(...notes.map((n) => `${h.keyword}: ${n}`));
