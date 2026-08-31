@@ -433,12 +433,22 @@ async function dialCall(phone) {
     console.log(`[action] dial-call: activated "${QUO_APP_NAME}" (was: "${frontApp}"), sent safety hangup flush`);
     try {
       await new Promise((resolve, reject) => {
-        execFile('open', [`tel:${digits}`], (error, _stdout, stderr) => {
+        // `-a QUO_APP_NAME` forces THIS app to open the URL, instead of
+        // asking macOS/LaunchServices "whoever's registered as the tel:
+        // handler." A bare `open tel:...` relies on that registration
+        // staying pointed at Quo -- if it's ever lost (Quo reinstalled,
+        // a permission reset, another app claiming tel: at some point)
+        // macOS hands it to whatever IS the default handler instead,
+        // which on this machine is the browser the CRM itself is open
+        // in -- and that browser, unable to resolve tel: as a real page,
+        // falls back to a Google search and blows away the CRM tab.
+        // Targeting Quo explicitly can't hit that failure mode at all.
+        execFile('open', ['-a', QUO_APP_NAME, `tel:${digits}`], (error, _stdout, stderr) => {
           if (error) reject(new Error(stderr?.trim() || error.message));
           else resolve();
         });
       });
-      console.log(`[action] dial-call: opened tel:${digits}`);
+      console.log(`[action] dial-call: opened tel:${digits} in "${QUO_APP_NAME}"`);
       await sleep(DIAL_SETTLE_MS);
       await runOsascript([
         `tell application "${QUO_APP_NAME}" to activate`,
