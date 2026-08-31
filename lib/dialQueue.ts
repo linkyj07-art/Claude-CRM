@@ -24,7 +24,12 @@ export function fetchEligibleLeads(db: Database.Database, ownerId: string): Elig
          AND id NOT IN (
            SELECT customer_id FROM calls WHERE date(occurred_at) = date('now')
            GROUP BY customer_id HAVING COUNT(*) >= ${MAX_CALLS_PER_DAY}
-         )`
+         )
+       ORDER BY CASE status WHEN 'fresh' THEN 0 WHEN 'working' THEN 1 WHEN 'aging_45_90' THEN 2 ELSE 3 END,
+         -- Same newest-first-within-fresh rule /dial's own queue-build uses,
+         -- so when several new leads surface at once in the live-queue
+         -- banner, the freshest of them is the one offered/queued first.
+         CASE WHEN status = 'fresh' THEN -CAST(strftime('%s', purchased_at) AS INTEGER) ELSE CAST(strftime('%s', purchased_at) AS INTEGER) END`
     )
     .all(ownerId) as EligibleLead[];
 
