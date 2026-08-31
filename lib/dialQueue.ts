@@ -25,20 +25,28 @@ export function fetchEligibleLeads(db: Database.Database, ownerId: string): Elig
   const todayStart = agentMidnightUTC(0).toISOString().slice(0, 19).replace('T', ' ');
   const allRows = db
     .prepare(
-      `SELECT id, status, state, first_name, last_name, phone FROM customers
-       WHERE archived = 0 AND owner_id = ? AND status IN ('fresh','working','aging_45_90','aging_90_plus')
+      `SELECT id, status, state, first_name, last_name, phone,
+         (SELECT COUNT(*) FROM calls WHERE customer_id = customers.id AND occurred_at >= @todayStart) AS calls_today
+       FROM customers
+       WHERE archived = 0 AND owner_id = @ownerId AND status IN ('fresh','working','aging_45_90','aging_90_plus')
          AND phone IS NOT NULL AND TRIM(phone) != ''
          AND id NOT IN (
-           SELECT customer_id FROM calls WHERE occurred_at >= ?
+           SELECT customer_id FROM calls WHERE occurred_at >= @todayStart
            GROUP BY customer_id HAVING COUNT(*) >= ${MAX_CALLS_PER_DAY}
          )
        ORDER BY CASE status WHEN 'fresh' THEN 0 WHEN 'working' THEN 1 WHEN 'aging_45_90' THEN 2 ELSE 3 END,
+         -- Same "not dialed today yet" priority /dial's own queue-build
+         -- uses -- see the comment there for why this matters (No Answer/
+         -- Voicemail/Busy don't move a lead out of 'fresh', so without
+         -- this an already-redialed-3x-today lead keeps competing purely
+         -- on purchase date against leads nobody's touched yet).
+         calls_today > 0,
          -- Same newest-first-within-fresh rule /dial's own queue-build uses,
          -- so when several new leads surface at once in the live-queue
          -- banner, the freshest of them is the one offered/queued first.
          CASE WHEN status = 'fresh' THEN -CAST(strftime('%s', purchased_at) AS INTEGER) ELSE CAST(strftime('%s', purchased_at) AS INTEGER) END`
     )
-    .all(ownerId, todayStart) as EligibleLead[];
+    .all({ ownerId, todayStart }) as EligibleLead[];
 
   return allRows.filter((r) => isTestLead(r) || isWithinCallingHours(r.state));
 }
