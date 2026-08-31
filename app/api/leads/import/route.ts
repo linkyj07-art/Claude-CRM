@@ -2,7 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import Papa from 'papaparse';
 import ExcelJS from 'exceljs';
 import { getDb } from '@/lib/db';
-import { newId, normalizeState, parseCoverageRange, stateFromAreaCode, reconcileContactFields } from '@/lib/util';
+import {
+  newId, normalizeState, parseCoverageRange, stateFromAreaCode, reconcileContactFields,
+  looksLikePhone, looksLikeEmail, looksLikeDob, looksLikeGender
+} from '@/lib/util';
 import { logAudit } from '@/lib/audit';
 import { findDncMatch, addToDncRegistry } from '@/lib/dnc';
 import { CustomerStatus } from '@/lib/types';
@@ -74,6 +77,94 @@ function buildHeaderMap(headers: string[]): Record<string, string> {
   return map;
 }
 
+// When a column's header text is blank -- either a genuinely headerless
+// sheet, or (confirmed on a real vendor export) a header row narrower than
+// the sheet's real column count -- buildHeaderMap has no text to match
+// against, and that column's data would sit unused under its synthetic
+// __unlabeled_col_N key forever even though rowsFromXlsx now preserves it.
+// This looks at the ACTUAL VALUES in each unlabeled column, using the same
+// shape checks reconcileContactFields already trusts for misaligned fields,
+// and claims a column for whichever field its values consistently look
+// like. It only ever considers columns whose header didn't resolve via
+// buildHeaderMap in the first place, and only fills fields buildHeaderMap
+// left empty -- a labeled column that didn't match any alias is left alone
+// rather than reinterpreted, since real header text is a stronger signal
+// than content sniffing. On a normally-headered sheet there are no
+// unlabeled columns at all, so this is a no-op.
+function inferHeaderMapFromContent(headers: string[], rows: Record<string, string>[], headerMap: Record<string, string>): void {
+  const unlabeled = headers.filter((h) => h.startsWith(UNLABELED_COL_PREFIX));
+  if (unlabeled.length === 0) return;
+
+  const sample = rows.slice(0, 200);
+  const claimed = new Set<string>();
+
+  function scoreColumn(header: string, test: (v: string) => boolean): { fraction: number; nonEmpty: number } {
+    let nonEmpty = 0;
+    let matches = 0;
+    for (const row of sample) {
+      const v = (row[header] || '').trim();
+      if (!v) continue;
+      nonEmpty++;
+      if (test(v)) matches++;
+    }
+    return { fraction: nonEmpty ? matches / nonEmpty : 0, nonEmpty };
+  }
+
+  const MIN_CONFIDENCE = 0.6;
+  const MIN_SAMPLE = 2;
+
+  function claimBestColumn(field: string, test: (v: string) => boolean): void {
+    if (headerMap[field]) return;
+    let best: { header: string; fraction: number } | null = null;
+    for (const header of unlabeled) {
+      if (claimed.has(header)) continue;
+      const { fraction, nonEmpty } = scoreColumn(header, test);
+      if (nonEmpty < MIN_SAMPLE || fraction < MIN_CONFIDENCE) continue;
+      if (!best || fraction > best.fraction) best = { header, fraction };
+    }
+    if (best) {
+      headerMap[field] = best.header;
+      claimed.add(best.header);
+    }
+  }
+
+  // Most-specific/least-ambiguous shapes first, so a value that could
+  // plausibly match more than one check gets locked in by its strongest
+  // signal before a looser check downstream gets a chance at the column.
+  claimBestColumn('email', looksLikeEmail);
+  claimBestColumn('phone', looksLikePhone);
+  claimBestColumn('dob', looksLikeDob);
+  claimBestColumn('state', (v) => !!normalizeState(v));
+  claimBestColumn('gender', looksLikeGender);
+
+  // Name columns get a position-based tiebreak on top of the shape check --
+  // plain alphabetic text alone is too weak a signal by itself (a scratch
+  // tag column, a city column) -- so among candidates that pass the shape
+  // check, prefer whichever are closest to the email/phone/dob column
+  // actually found. On every real sheet seen so far, first/last name sit
+  // immediately beside contact info, not scattered elsewhere in the sheet.
+  if (!headerMap.first_name && !headerMap.last_name && !headerMap.full_name) {
+    const looksLikeName = (v: string) => /^[A-Za-z][A-Za-z\s'.-]{1,29}$/.test(v);
+    const nameCandidates = unlabeled.filter((h) => {
+      if (claimed.has(h)) return false;
+      const { fraction, nonEmpty } = scoreColumn(h, looksLikeName);
+      return nonEmpty >= MIN_SAMPLE && fraction >= MIN_CONFIDENCE;
+    });
+    const anchorHeader = headerMap.email || headerMap.phone || headerMap.dob || null;
+    const anchorIdx = anchorHeader ? headers.indexOf(anchorHeader) : -1;
+    const sorted = anchorIdx === -1
+      ? nameCandidates
+      : [...nameCandidates].sort((a, b) => Math.abs(headers.indexOf(a) - anchorIdx) - Math.abs(headers.indexOf(b) - anchorIdx));
+    const picked = sorted.slice(0, 2).sort((a, b) => headers.indexOf(a) - headers.indexOf(b));
+    if (picked.length === 2) {
+      headerMap.first_name = picked[0];
+      headerMap.last_name = picked[1];
+    } else if (picked.length === 1) {
+      headerMap.full_name = picked[0];
+    }
+  }
+}
+
 function parseAgeRange(text: string): CustomerStatus | null {
   const t = normalize(text);
   if (!t) return null;
@@ -135,24 +226,36 @@ async function rowsFromXlsx(buffer: Buffer): Promise<{ headers: string[]; rows: 
   const sheet = workbook.worksheets[0];
   if (!sheet) return { headers: [], rows: [] };
 
+  // Row 1's OWN cell range can be narrower than the sheet's real column
+  // count -- confirmed on a real lead export where the header row was
+  // essentially blank (cellCount of 3 against a 21-column sheet). Both the
+  // header-reading and row-reading loops used to rely on eachCell(), which
+  // only visits cells THAT SPECIFIC ROW has definitions for -- so every
+  // column past that row's own narrow range got no header at all, and the
+  // per-row loop's "no header, skip this cell" guard silently dropped
+  // every field in it: first name, last name, email, phone, all of it.
+  // Iterating explicitly up to the sheet's actual column count instead
+  // guarantees every column any row ever uses gets at least a synthetic
+  // header, so its data survives regardless of how sparse any individual
+  // row's cell definitions are.
+  const colCount = Math.max(sheet.columnCount, sheet.getRow(1).cellCount);
   const headers: string[] = [];
-  sheet.getRow(1).eachCell({ includeEmpty: true }, (cell, colNumber) => {
-    const text = cellToString(cell.value).trim();
+  for (let colNumber = 1; colNumber <= colCount; colNumber++) {
+    const text = cellToString(sheet.getRow(1).getCell(colNumber).value).trim();
     headers[colNumber - 1] = text || `${UNLABELED_COL_PREFIX}${colNumber}`;
-  });
+  }
 
   const rows: Record<string, string>[] = [];
   sheet.eachRow((row, rowNumber) => {
     if (rowNumber === 1) return;
     const obj: Record<string, string> = {};
     let hasValue = false;
-    row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
+    for (let colNumber = 1; colNumber <= colCount; colNumber++) {
       const header = headers[colNumber - 1];
-      if (!header) return;
-      const v = cellToString(cell.value);
+      const v = cellToString(row.getCell(colNumber).value);
       obj[header] = v;
       if (v) hasValue = true;
-    });
+    }
     if (hasValue) rows.push(obj);
   });
   return { headers, rows };
@@ -247,6 +350,7 @@ export async function POST(req: NextRequest) {
   }
 
   const headerMap = buildHeaderMap(headers);
+  inferHeaderMapFromContent(headers, rows, headerMap);
   const dcTagKeys = tagColumnKeys(headers);
   const db = getDb();
 
