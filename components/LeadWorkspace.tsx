@@ -7,7 +7,7 @@ import {
   Customer, NoteVersion, CallRecord, Policy, Commission, Carrier, CarrierRule, LeadVendor
 } from '@/lib/types';
 import { fmtMoney, fmtMoney0, leadAgeLabel, localTimeForState, agentLocalTime, statusBadge, isValidRoutingNumber, callsToday, MAX_CALLS_PER_DAY, isWithinCallingHours, callingWindowStatus, isTestLead } from '@/lib/util';
-import { suggestCarriers, detectTobaccoUse } from '@/lib/underwriting';
+import { suggestCarriers, detectTobaccoUse, extractBuild, countDistinctConditions } from '@/lib/underwriting';
 import RoutingLookup from './RoutingLookup';
 import SellModal from './SellModal';
 import AddressAutocomplete from './AddressAutocomplete';
@@ -172,6 +172,8 @@ export default function LeadWorkspace({
   const top3 = suggestions.filter((s) => !s.knockout).slice(0, 3);
   const knockouts = suggestions.filter((s) => s.knockout);
   const tobaccoDetected = useMemo(() => detectTobaccoUse(combinedHealthText), [combinedHealthText]);
+  const buildInfo = useMemo(() => extractBuild(combinedHealthText), [combinedHealthText]);
+  const distinctConditions = useMemo(() => countDistinctConditions(combinedHealthText, rules), [combinedHealthText, rules]);
 
   const attemptCount = calls.length;
   const todayCount = callsToday(calls);
@@ -1089,6 +1091,16 @@ export default function LeadWorkspace({
                 {tobaccoDetected && (
                   <div className="rounded-lg border border-amber-200 bg-amber-50 p-2 text-xs font-medium text-amber-800">
                     🚬 Tobacco/nicotine mentioned — confirm current use status, affects rate class on most carriers
+                  </div>
+                )}
+                {buildInfo && (
+                  <div className="rounded-lg border border-amber-200 bg-amber-50 p-2 text-xs font-medium text-amber-800">
+                    📏 Build: {Math.floor(buildInfo.heightInches / 12)}&apos;{buildInfo.heightInches % 12}&quot;, {buildInfo.weightLbs} lbs (BMI {buildInfo.bmi}) — check against each carrier&apos;s build chart
+                  </div>
+                )}
+                {distinctConditions >= 3 && (
+                  <div className="rounded-lg border border-amber-200 bg-amber-50 p-2 text-xs font-medium text-amber-800">
+                    ⚕️ {distinctConditions} distinct conditions noted — combination may be viewed differently than any one alone, verify closely
                   </div>
                 )}
                 {top3.map((s, i) => (
