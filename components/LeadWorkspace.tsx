@@ -373,6 +373,15 @@ export default function LeadWorkspace({
         return undefined;
       }
       setPendingCallId(data.id);
+      // A leftover quoBusy=true from the PREVIOUS call's auto-hangup
+      // (fired fire-and-forget in logCall, racing this brand-new call's
+      // own startCall) has nothing to do with THIS call -- but since
+      // quoBusy is a single flag shared across the whole lead, it was
+      // still disabling this call's disposition buttons until that old
+      // request happened to resolve. A new pending call means whatever
+      // hangup was in flight is for a call that's already over, so it
+      // can't still be blocking this one.
+      setQuoBusy(false);
       // Counts every dial made during a Power Dial session, manual or
       // auto-fired, toward the session stats shown in the header — not
       // awaited, since it shouldn't slow down the actual call.
@@ -385,20 +394,25 @@ export default function LeadWorkspace({
     }
   }
 
-  // Manual dial: the real <a href="tel:"> click below is what actually
-  // opens Quo — always was, and browsers handle it safely (no navigation
-  // side effects if there's no handler). This just fires the helper
-  // alongside it as a bonus, to also press Enter for you. Deliberately NOT
-  // a location.href fallback -- assigning window.location.href to a tel:
-  // URI directly (tried previously) let Chrome treat an unresolved
-  // navigation as a search query and blow the whole CRM tab away to a
-  // Google results page when the helper wasn't reachable. Fire-and-forget:
-  // if the helper's unreachable, the anchor's own click already did
-  // everything it used to.
+  // Manual dial: goes through the Quo helper only -- no browser-level tel:
+  // navigation at all anymore. This used to be a real <a href="tel:">
+  // click (safer than a location.href assignment, which definitely blew
+  // the tab away to a Google search when unresolved), but even a genuine
+  // anchor click on an unregistered/no-longer-confirmed protocol can make
+  // Chrome fall back to searching Google for the tel: text and replace the
+  // whole CRM tab -- confirmed happening here, including from an impatient
+  // click on the Call button during Auto-Dial's brief redial window (see
+  // the pendingCallId check below). The helper's `open tel:` runs on the
+  // Mac itself (a plain shell `open`, not a browser navigation), so it
+  // can't ever trigger that failure mode -- routing every dial through it
+  // exclusively removes the whole bug class instead of racing it.
   async function placeManualCall() {
     await startCall();
     if (!customer.phone) return;
-    quoDialCall(customer.phone.replace(/[^\d+]/g, ''));
+    const result = await quoDialCall(customer.phone.replace(/[^\d+]/g, ''));
+    if (!result.ok && !(result.error && /ringing/i.test(result.error))) {
+      alert('Could not reach the Quo helper to dial. Make sure it\'s running on this Mac (`npm run quo-helper`), then dial this number directly in Quo.');
+    }
   }
 
   async function cancelPendingCall() {
@@ -951,9 +965,9 @@ export default function LeadWorkspace({
                 📞 Call {customer.phone}
               </button>
             ) : (
-              <a href={`tel:${customer.phone.replace(/[^\d+]/g, '')}`} className="btn-good" onClick={placeManualCall}>
+              <button className="btn-good" onClick={placeManualCall}>
                 📞 Call {customer.phone}
-              </a>
+              </button>
             )
           )}
           {pendingCallId && (

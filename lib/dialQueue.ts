@@ -8,6 +8,7 @@ export type EligibleLead = {
   first_name: string;
   last_name: string;
   phone: string | null;
+  calls_today: number;
 };
 
 // The same "is this lead actually dialable right now" rule /dial uses to
