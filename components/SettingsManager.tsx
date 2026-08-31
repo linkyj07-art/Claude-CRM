@@ -10,9 +10,9 @@ type AnyRow = Record<string, any>;
 interface TeamUser { id: string; username: string; name: string; created_at: string; }
 
 export default function SettingsManager({
-  carriers, rules, quickLinks, licensedStates, users, currentUserId
+  carriers, rules, quickLinks, licensedStates, users, currentUserId, isAdmin
 }: {
-  carriers: Carrier[]; rules: CarrierRule[]; quickLinks: QuickLink[]; licensedStates: string[]; users: TeamUser[]; currentUserId: string;
+  carriers: Carrier[]; rules: CarrierRule[]; quickLinks: QuickLink[]; licensedStates: string[]; users: TeamUser[]; currentUserId: string; isAdmin: boolean;
 }) {
   const router = useRouter();
   const [tab, setTab] = useState<'carriers' | 'rules' | 'links' | 'licensing' | 'team' | 'dnc'>('carriers');
@@ -40,13 +40,13 @@ export default function SettingsManager({
       {tab === 'rules' && <RulesTab carriers={carriers} rules={rules} onChanged={refresh} />}
       {tab === 'links' && <LinksTab quickLinks={quickLinks} onChanged={refresh} />}
       {tab === 'licensing' && <LicensingTab licensedStates={licensedStates} onChanged={refresh} />}
-      {tab === 'team' && <TeamTab users={users} currentUserId={currentUserId} onChanged={refresh} />}
+      {tab === 'team' && <TeamTab users={users} currentUserId={currentUserId} isAdmin={isAdmin} onChanged={refresh} />}
       {tab === 'dnc' && <DncTab />}
     </div>
   );
 }
 
-function TeamTab({ users, currentUserId, onChanged }: { users: TeamUser[]; currentUserId: string; onChanged: () => void }) {
+function TeamTab({ users, currentUserId, isAdmin, onChanged }: { users: TeamUser[]; currentUserId: string; isAdmin: boolean; onChanged: () => void }) {
   const [form, setForm] = useState<AnyRow>({ name: '', username: '', password: '' });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -88,33 +88,40 @@ function TeamTab({ users, currentUserId, onChanged }: { users: TeamUser[]; curre
         else's book of business. Carriers, underwriting rules, quick links, and licensed states above are shared by everyone.
       </div>
 
-      <div className="mb-4 grid grid-cols-1 gap-2 rounded-lg border border-line bg-slate-50 p-3 sm:grid-cols-[1fr_1fr_1fr_auto]">
-        <input className="input" placeholder="Full name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
-        <input className="input" placeholder="Username" value={form.username} onChange={(e) => setForm({ ...form, username: e.target.value })} />
-        <input className="input" type="password" placeholder="Password (6+ chars)" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} />
-        <button className="btn-primary" disabled={busy || !form.username || !form.password} onClick={addUser}>+ Add Teammate</button>
-      </div>
+      {isAdmin && (
+        <div className="mb-4 grid grid-cols-1 gap-2 rounded-lg border border-line bg-slate-50 p-3 sm:grid-cols-[1fr_1fr_1fr_auto]">
+          <input className="input" placeholder="Full name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+          <input className="input" placeholder="Username" value={form.username} onChange={(e) => setForm({ ...form, username: e.target.value })} />
+          <input className="input" type="password" placeholder="Password (6+ chars)" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} />
+          <button className="btn-primary" disabled={busy || !form.username || !form.password} onClick={addUser}>+ Add Teammate</button>
+        </div>
+      )}
       {error && <div className="mb-3 text-sm text-red-600">{error}</div>}
 
       <div className="space-y-2">
-        {users.map((u) => (
-          <div key={u.id} className="flex flex-wrap items-center gap-2 rounded-lg border border-line p-3">
-            <div className="flex-1">
-              <div className="font-medium">{u.name} {u.id === currentUserId && <span className="badge-brand ml-1">You</span>}</div>
-              <div className="text-xs text-slate-400">@{u.username}</div>
+        {users.map((u) => {
+          const canReset = isAdmin || u.id === currentUserId;
+          return (
+            <div key={u.id} className="flex flex-wrap items-center gap-2 rounded-lg border border-line p-3">
+              <div className="flex-1">
+                <div className="font-medium">{u.name} {u.id === currentUserId && <span className="badge-brand ml-1">You</span>}</div>
+                <div className="text-xs text-slate-400">@{u.username}</div>
+              </div>
+              {canReset && (
+                resetId === u.id ? (
+                  <>
+                    <input className="input w-40" type="password" placeholder="New password" value={resetPassword} onChange={(e) => setResetPassword(e.target.value)} />
+                    <button className="btn-secondary text-xs" onClick={() => savePassword(u.id)}>Save</button>
+                    <button className="btn-secondary text-xs" onClick={() => { setResetId(null); setResetPassword(''); }}>Cancel</button>
+                  </>
+                ) : (
+                  <button className="btn-secondary text-xs" onClick={() => setResetId(u.id)}>Reset Password</button>
+                )
+              )}
+              {isAdmin && u.id !== currentUserId && <button className="btn-danger text-xs" onClick={() => removeUser(u.id)}>Remove</button>}
             </div>
-            {resetId === u.id ? (
-              <>
-                <input className="input w-40" type="password" placeholder="New password" value={resetPassword} onChange={(e) => setResetPassword(e.target.value)} />
-                <button className="btn-secondary text-xs" onClick={() => savePassword(u.id)}>Save</button>
-                <button className="btn-secondary text-xs" onClick={() => { setResetId(null); setResetPassword(''); }}>Cancel</button>
-              </>
-            ) : (
-              <button className="btn-secondary text-xs" onClick={() => setResetId(u.id)}>Reset Password</button>
-            )}
-            {u.id !== currentUserId && <button className="btn-danger text-xs" onClick={() => removeUser(u.id)}>Remove</button>}
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );

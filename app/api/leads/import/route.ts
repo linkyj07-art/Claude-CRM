@@ -163,7 +163,12 @@ async function rowsFromXlsx(buffer: Buffer): Promise<{ headers: string[]; rows: 
 // notes/disposition field. Deliberately NOT every column -- a blind
 // whole-row text search would misfire on a legitimate "State" value of DC
 // (Washington, D.C. is a real state code in this data).
-const TAG_HEADER_ALIASES = ['tag', 'tags', 'disposition', 'call notes', 'notes', 'status notes', 'agent notes'];
+// Deliberately just the short, structured, "this is a classification" names
+// -- not 'notes'/'call notes'/'agent notes', which are exactly the kind of
+// free-text field likely to contain "DC" for unrelated reasons (a client
+// who moved from Washington DC, a reference number, etc.) and would wrongly
+// trigger a permanent, company-wide DNC registration.
+const TAG_HEADER_ALIASES = ['tag', 'tags', 'disposition'];
 
 function tagColumnKeys(headers: string[]): string[] {
   return headers.filter((h) => h.startsWith(UNLABELED_COL_PREFIX) || TAG_HEADER_ALIASES.includes(normalize(h)));
