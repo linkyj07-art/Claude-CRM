@@ -79,6 +79,11 @@ function migrate(db: Database.Database) {
   // later on the Dispute Log.
   addColumnIfMissing(db, 'customers', 'was_import_duplicate', 'INTEGER NOT NULL DEFAULT 0');
   addColumnIfMissing(db, 'customers', 'duplicate_of_customer_id', 'TEXT');
+  // Set to now+3 days on a Not Interested disposition (lib/audit.ts) --
+  // status still goes to 'lost' like any other rejection, but the queue
+  // eligibility check treats a 'lost' lead as callable again once this
+  // passes, so it doesn't need a manual status reset to come back around.
+  addColumnIfMissing(db, 'customers', 'retry_after', 'TEXT');
   db.exec('CREATE INDEX IF NOT EXISTS idx_customers_owner ON customers(owner_id);');
 
   const defaultUserId = seedDefaultUser(db);
