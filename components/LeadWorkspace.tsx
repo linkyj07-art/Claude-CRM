@@ -353,8 +353,25 @@ export default function LeadWorkspace({
       // Logging the pending call and actually dialing via the helper don't
       // depend on each other -- running them together instead of one after
       // the other cuts real latency off every auto-fired dial.
-      const [callId, dialResult] = await Promise.all([startCall(), quoDialCall(phone)]);
+      let [callId, dialResult] = await Promise.all([startCall(), quoDialCall(phone)]);
       if (!mountedRef.current) return;
+      // Quo dialing and the call actually getting logged are two separate
+      // requests -- a transient failure on just the logging POST (network
+      // blip, momentary DB contention) used to fall through here with
+      // nothing checking for it, since only dialResult.ok was ever
+      // examined. That left a real, ringing call with no pending row at
+      // all -- no popup, no way to disposition it, completely untracked,
+      // even though Quo had already committed to dialing. One retry first
+      // (the transient case resolves itself almost always), then a loud
+      // alert instead of silence if it's still not logged -- the agent
+      // needs to know to catch this one manually.
+      if (dialResult.ok && !callId) {
+        callId = await startCall();
+        if (!mountedRef.current) return;
+        if (!callId) {
+          alert(`Auto-Dial just called ${phone} but could not log it in the CRM. Hit Call now to catch up, or check your connection.`);
+        }
+      }
       if (!dialResult.ok) {
         // A real inbound call takes priority -- the helper deliberately
         // refused rather than dial over it. This redial never actually
