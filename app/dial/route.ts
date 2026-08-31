@@ -48,7 +48,8 @@ export async function GET(req: NextRequest) {
   const allRows = db
     .prepare(
       `SELECT id, status, state, first_name, last_name,
-         (SELECT COUNT(*) FROM calls WHERE customer_id = customers.id AND occurred_at >= @todayStart) AS calls_today
+         (SELECT COUNT(*) FROM calls WHERE customer_id = customers.id AND occurred_at >= @todayStart) AS calls_today,
+         (SELECT COUNT(*) FROM calls WHERE customer_id = customers.id) AS calls_ever
        FROM customers
        WHERE archived = 0 AND owner_id = @ownerId AND status IN ('fresh','working','aging_45_90','aging_90_plus')
          AND phone IS NOT NULL AND TRIM(phone) != ''
@@ -57,12 +58,21 @@ export async function GET(req: NextRequest) {
            GROUP BY customer_id HAVING COUNT(*) >= ${MAX_CALLS_PER_DAY}
          )
        ORDER BY CASE status WHEN 'fresh' THEN 0 WHEN 'working' THEN 1 WHEN 'aging_45_90' THEN 2 ELSE 3 END,
-         -- Not-yet-dialed-today beats already-dialed-today-but-under-cap,
-         -- regardless of status tier or purchase date -- outcomes like No
-         -- Answer/Voicemail/Busy don't change a lead's status away from
-         -- 'fresh', so without this a lead already redialed 3x today would
-         -- keep competing purely on purchase date against leads that
-         -- haven't been touched at all, and often win just for being newer.
+         -- Never-called-at-all (any day, not just today) beats everyone
+         -- that's been dialed before, full stop -- without this, a lead
+         -- dialed YESTERDAY with no answer resets to calls_today=0 this
+         -- morning and competes purely on purchase date against a lead
+         -- that's NEVER been called, and wins whenever it happens to have
+         -- a newer purchased_at -- exactly the "queue keeps giving me
+         -- leads I've already dialed, before I'm through the genuinely new
+         -- ones" bug this fixes.
+         calls_ever > 0,
+         -- Within that: not-yet-dialed-today beats already-dialed-today-
+         -- but-under-cap -- outcomes like No Answer/Voicemail/Busy don't
+         -- change a lead's status away from 'fresh', so without this a
+         -- lead already redialed today would keep competing purely on
+         -- purchase date against other previously-dialed (but not today)
+         -- leads.
          calls_today > 0,
          -- Within "fresh" specifically: newest purchase first, so a lead
          -- that just got imported (or dripped in live) gets dialed ahead of
@@ -72,7 +82,7 @@ export async function GET(req: NextRequest) {
          -- to clear before it ages further, not new arrivals to rush to.
          CASE WHEN status = 'fresh' THEN -CAST(strftime('%s', purchased_at) AS INTEGER) ELSE CAST(strftime('%s', purchased_at) AS INTEGER) END`
     )
-    .all({ ownerId: user.id, todayStart }) as { id: string; status: string; state: string | null; first_name: string; last_name: string; calls_today: number }[];
+    .all({ ownerId: user.id, todayStart }) as { id: string; status: string; state: string | null; first_name: string; last_name: string; calls_today: number; calls_ever: number }[];
 
   // Leads whose local time is outside the 8am-9pm calling window get held
   // back rather than queued dead-on-arrival — they'll be picked up again on
