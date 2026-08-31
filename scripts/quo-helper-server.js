@@ -75,7 +75,11 @@ const POLL_MS = process.env.QUO_POLL_MS ? Number(process.env.QUO_POLL_MS) : 300;
 // How long to wait after opening tel:<number> before sending Enter -- Quo
 // pre-fills its search bar essentially instantly, so this only needs to
 // cover the OS handing off the tel: URL and Quo redrawing, not a real load.
-const DIAL_SETTLE_MS = process.env.QUO_DIAL_SETTLE_MS ? Number(process.env.QUO_DIAL_SETTLE_MS) : 300;
+// Tune with QUO_DIAL_SETTLE_MS (no code change/redeploy needed) if this
+// value ever needs to go lower still or back up -- e.g.
+// QUO_DIAL_SETTLE_MS=100 npm run quo-helper, or bake it into the
+// --autostart install command the same way CRM_BASE_URL is.
+const DIAL_SETTLE_MS = process.env.QUO_DIAL_SETTLE_MS ? Number(process.env.QUO_DIAL_SETTLE_MS) : 150;
 // On the Desktop (not a hidden temp folder) so it can actually be opened
 // and inspected while debugging -- one file, overwritten every capture, not
 // something that accumulates.
@@ -407,6 +411,15 @@ async function dialCall(phone) {
   if (actionInFlight) {
     throw new Error('Another action is already in progress -- wait for it to finish before dialing.');
   }
+  // A real inbound call ringing right now takes priority over an
+  // outbound Auto-Dial attempt -- without this, the safety hangup flush
+  // below would fire blind and could dismiss/decline that live ring
+  // before the next poll tick ever gets to detect and report it,
+  // exactly the kind of "second call sometimes doesn't get detected"
+  // symptom that only shows up while Auto-Dial is actively cycling.
+  if (currentRingingPhone) {
+    throw new Error('A call appears to be ringing in right now -- not auto-dialing over it.');
+  }
   actionInFlight = true;
   try {
     const frontApp = await runOsascript([
@@ -429,7 +442,7 @@ async function dialCall(phone) {
       await sleep(DIAL_SETTLE_MS);
       await runOsascript([
         `tell application "${QUO_APP_NAME}" to activate`,
-        'delay 0.1',
+        'delay 0.05',
         'tell application "System Events" to keystroke return'
       ]);
       console.log(`[action] dial-call: sent Enter to dial ${digits}`);

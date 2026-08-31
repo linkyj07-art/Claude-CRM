@@ -246,16 +246,20 @@ export default function LeadWorkspace({
 
   // Tells the Quo helper to actually dial a number (open tel: + send Enter),
   // vs. the plain `tel:` link, which only opens Quo with the number filled
-  // in and still needs a manual Enter. Returns whether it worked so callers
-  // can fall back to the plain link when the helper isn't reachable.
-  async function quoDialCall(phone: string): Promise<boolean> {
+  // in and still needs a manual Enter. Returns whether it worked (plus the
+  // helper's error text, when it didn't) so callers can tell "unreachable"
+  // apart from a deliberate refusal, like declining to dial over a live
+  // incoming ring — those need different handling, not just a flat pass/fail.
+  async function quoDialCall(phone: string): Promise<{ ok: boolean; error?: string }> {
     try {
       const res = await fetch(`${process.env.NEXT_PUBLIC_QUO_HELPER_URL || 'http://127.0.0.1:8787'}/dial-call`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone })
       });
-      return res.ok;
+      if (res.ok) return { ok: true };
+      const data = await res.json().catch(() => ({}));
+      return { ok: false, error: typeof data.error === 'string' ? data.error : undefined };
     } catch {
-      return false;
+      return { ok: false };
     }
   }
 
@@ -306,9 +310,22 @@ export default function LeadWorkspace({
       // Logging the pending call and actually dialing via the helper don't
       // depend on each other -- running them together instead of one after
       // the other cuts real latency off every auto-fired dial.
-      const [, dialed] = await Promise.all([startCall(), quoDialCall(phone)]);
+      const [callId, dialResult] = await Promise.all([startCall(), quoDialCall(phone)]);
       if (!mountedRef.current) return;
-      if (!dialed) {
+      if (!dialResult.ok) {
+        // A real inbound call takes priority -- the helper deliberately
+        // refused rather than dial over it. This redial never actually
+        // happened, so roll back the pending call startCall() logged in
+        // parallel (it doesn't know the dial got skipped) rather than
+        // leave a phantom row behind, and just try again on the next
+        // redial/advance instead of treating this as a failure.
+        if (dialResult.error && /ringing/i.test(dialResult.error)) {
+          if (callId) {
+            fetch(`/api/leads/${customer.id}/calls/${callId}`, { method: 'DELETE' }).catch(() => {});
+            setPendingCallId(null);
+          }
+          return;
+        }
         await patchDialSession({ autoDial: false });
         alert('Auto-Dial could not reach the Quo helper, so it turned itself off. Make sure the helper is running on this Mac (`npm run quo-helper`), then turn Auto-Dial back on.');
       }
@@ -321,14 +338,14 @@ export default function LeadWorkspace({
   // for an outcome — that's the actual attempt being made, and the agent
   // picks what happened once the call is over via the outcome buttons below,
   // which complete this same row instead of creating a second one.
-  async function startCall() {
+  async function startCall(): Promise<string | undefined> {
     // A call's already in progress for this lead -- never log a second one
     // on top of it. Without this, Auto-Dial firing automatically and then
     // a manual click of Call (or Auto-Dial firing twice in a race) each
     // created their own separate 'pending' row; only the LAST one's id
     // ever made it into pendingCallId, so the first was silently
     // orphaned -- stuck as pending forever, with no way to disposition it.
-    if (pendingCallId) return;
+    if (pendingCallId) return pendingCallId;
     setCallError('');
     try {
       const res = await fetch(`/api/leads/${customer.id}/calls`, {
@@ -338,7 +355,7 @@ export default function LeadWorkspace({
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
         setCallError(data.error || 'Could not start that call.');
-        return;
+        return undefined;
       }
       setPendingCallId(data.id);
       // Counts every dial made during a Power Dial session, manual or
@@ -346,8 +363,10 @@ export default function LeadWorkspace({
       // awaited, since it shouldn't slow down the actual call.
       if (isDialing) patchDialSession({ incrementDial: true });
       await refresh();
+      return data.id as string;
     } catch {
       setCallError('Could not start that call.');
+      return undefined;
     }
   }
 
