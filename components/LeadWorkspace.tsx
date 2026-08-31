@@ -269,6 +269,13 @@ export default function LeadWorkspace({
   // picks what happened once the call is over via the outcome buttons below,
   // which complete this same row instead of creating a second one.
   async function startCall() {
+    // A call's already in progress for this lead -- never log a second one
+    // on top of it. Without this, Auto-Dial firing automatically and then
+    // a manual click of Call (or Auto-Dial firing twice in a race) each
+    // created their own separate 'pending' row; only the LAST one's id
+    // ever made it into pendingCallId, so the first was silently
+    // orphaned -- stuck as pending forever, with no way to disposition it.
+    if (pendingCallId) return;
     setCallError('');
     try {
       const res = await fetch(`/api/leads/${customer.id}/calls`, {
@@ -812,9 +819,18 @@ export default function LeadWorkspace({
         </div>
         <div className="flex flex-wrap gap-2">
           {customer.phone && (
-            <a href={`tel:${customer.phone.replace(/[^\d+]/g, '')}`} className="btn-good" onClick={placeManualCall}>
-              📞 Call {customer.phone}
-            </a>
+            pendingCallId ? (
+              // A call's already in progress -- no href, no click handler.
+              // Clicking Call again here used to fire a second, separate
+              // pending call on top of the one already running.
+              <button className="btn-good" disabled title="A call is already in progress for this lead — log its outcome below">
+                📞 Call {customer.phone}
+              </button>
+            ) : (
+              <a href={`tel:${customer.phone.replace(/[^\d+]/g, '')}`} className="btn-good" onClick={placeManualCall}>
+                📞 Call {customer.phone}
+              </a>
+            )
           )}
           {pendingCallId && (
             // Fixed to the viewport (not positioned relative to the Call
