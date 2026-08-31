@@ -62,7 +62,11 @@ export function applyCallOutcome(customerId: string, outcome: string, dispositio
     db.prepare(`UPDATE customers SET status = 'invalid' WHERE id = ?`).run(customerId);
   } else if (outcome === 'connected' && disposition) {
     const map: Record<string, string> = {
-      not_interested: 'lost', unqualified: 'lost', qualified: 'working',
+      // hung_up ("Connected (HU)") means they picked up and hung up on the
+      // agent -- a rejection, not a sign of interest, same bucket as Not
+      // Interested. Previously missing from this map entirely, which left
+      // status untouched rather than actually marking it lost.
+      not_interested: 'lost', unqualified: 'lost', hung_up: 'lost', qualified: 'working',
       interested: 'working', callback: 'working', sold: 'sold'
     };
     if (map[disposition]) {

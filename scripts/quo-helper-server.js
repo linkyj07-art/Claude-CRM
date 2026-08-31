@@ -100,15 +100,53 @@ function runOsascript(lines) {
   });
 }
 
-function endQuoCall() {
-  return runOsascript([
-    'tell application "System Events" to set frontApp to name of first application process whose frontmost is true',
+// `tell application "X" to activate` only REQUESTS the focus switch -- it
+// doesn't wait for macOS to actually complete it. Every keystroke-sending
+// action here used to just activate Quo, wait a fixed guessed delay (as
+// little as 0.05s on the dial-Enter step), and fire the keystroke --
+// assuming that delay was always enough. When it wasn't (system under
+// load, Quo slow to wake from the background), the keystroke landed on
+// whatever window still actually had focus instead -- which is what let a
+// stray Enter meant for Quo fire inside the user's browser/other app and,
+// if that window had an address/search bar focused, trigger an unrelated
+// Google navigation completely outside the CRM. Polled inside ONE
+// osascript call (not repeated process spawns, to not add real dialing
+// latency) so it exits the instant focus actually lands, typically well
+// under the old fixed delay, only spending extra time on the rare slow
+// case instead of eating it every single time. Throws instead of
+// proceeding if focus never lands within budget (~0.6s), since sending
+// the keystroke anyway is exactly the unsafe behavior this replaces --
+// callers see this as a normal failed dial/hangup, not a silent misfire
+// somewhere else on the Mac.
+function focusQuoOrThrowLines() {
+  return [
     `tell application "${QUO_APP_NAME}" to activate`,
-    'delay 0.35',
-    `tell application "System Events" to keystroke "${QUO_HANGUP_KEY}" using {command down, shift down}`,
-    'delay 0.15',
-    'tell application frontApp to activate'
+    'set _quoFocused to false',
+    'repeat 20 times',
+    `if (name of first application process whose frontmost is true) is "${QUO_APP_NAME}" then`,
+    'set _quoFocused to true',
+    'exit repeat',
+    'end if',
+    'delay 0.03',
+    'end repeat',
+    `if _quoFocused is false then error "${QUO_APP_NAME} did not come to the foreground in time -- not sending a keystroke to whatever window actually has focus"`
+  ];
+}
+
+async function endQuoCall() {
+  const frontApp = await runOsascript([
+    'tell application "System Events" to set frontApp to name of first application process whose frontmost is true',
+    'return frontApp'
   ]);
+  try {
+    await runOsascript([
+      ...focusQuoOrThrowLines(),
+      `tell application "System Events" to keystroke "${QUO_HANGUP_KEY}" using {command down, shift down}`,
+      'delay 0.15'
+    ]);
+  } finally {
+    await runOsascript([`tell application "${frontApp}" to activate`]).catch(() => {});
+  }
 }
 
 // Reading position/size (unlike clicking or sending keystrokes) doesn't
@@ -424,14 +462,15 @@ async function dialCall(phone) {
   try {
     const frontApp = await runOsascript([
       'tell application "System Events" to set frontApp to name of first application process whose frontmost is true',
-      `tell application "${QUO_APP_NAME}" to activate`,
-      'delay 0.2',
-      `tell application "System Events" to keystroke "${QUO_HANGUP_KEY}" using {command down, shift down}`,
-      'delay 0.15',
       'return frontApp'
     ]);
-    console.log(`[action] dial-call: activated "${QUO_APP_NAME}" (was: "${frontApp}"), sent safety hangup flush`);
     try {
+      await runOsascript([
+        ...focusQuoOrThrowLines(),
+        `tell application "System Events" to keystroke "${QUO_HANGUP_KEY}" using {command down, shift down}`,
+        'delay 0.15'
+      ]);
+      console.log(`[action] dial-call: activated "${QUO_APP_NAME}" (was: "${frontApp}"), sent safety hangup flush`);
       await new Promise((resolve, reject) => {
         // `-a QUO_APP_NAME` forces THIS app to open the URL, instead of
         // asking macOS/LaunchServices "whoever's registered as the tel:
@@ -451,8 +490,7 @@ async function dialCall(phone) {
       console.log(`[action] dial-call: opened tel:${digits} in "${QUO_APP_NAME}"`);
       await sleep(DIAL_SETTLE_MS);
       await runOsascript([
-        `tell application "${QUO_APP_NAME}" to activate`,
-        'delay 0.05',
+        ...focusQuoOrThrowLines(),
         'tell application "System Events" to keystroke return'
       ]);
       console.log(`[action] dial-call: sent Enter to dial ${digits}`);

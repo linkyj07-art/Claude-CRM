@@ -631,7 +631,17 @@ export default function LeadWorkspace({
       setPendingCallId(null);
       if (outcome === 'dnc' && confirm('Marked Do Not Call. Delete this lead entirely too?')) {
         await fetch(`/api/leads/${customer.id}`, { method: 'DELETE' });
-        router.push('/leads');
+        // Deleting used to always bounce out to the full leads list, even
+        // mid-Power-Dial -- dumping the agent out of their whole session
+        // over one disposition instead of just moving on like every other
+        // outcome does. advanceQueue already handles "session's actually
+        // over" (empty queue and recycle) by landing on /leads itself, so
+        // this only needs to defer to it while dialing.
+        if (isDialing) {
+          advanceQueue();
+        } else {
+          router.push('/leads');
+        }
         return;
       }
       // A "Sold" disposition needs the full Sell modal (policy/commission
