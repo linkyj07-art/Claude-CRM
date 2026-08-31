@@ -243,13 +243,21 @@ export default function LeadWorkspace({
     router.refresh();
   }
 
-  async function endQuoCall() {
+  // silent=true is for the automatic hangup logCall fires after a No
+  // Answer/Voicemail/etc. disposition -- that call site awaits this (see
+  // logCall) specifically so a slow hangup command can't still be in
+  // flight to the helper once Auto-Dial has already moved on and started
+  // ringing the NEXT lead. A blocking alert() there would freeze that same
+  // sequencing on a transient helper hiccup, which defeats the point, so it
+  // stays silent; the explicit End Quo Call button (silent=false, the
+  // default) still alerts since a person is sitting right there to act on it.
+  async function endQuoCall(silent = false) {
     setQuoBusy(true);
     try {
       const res = await fetch(`${process.env.NEXT_PUBLIC_QUO_HELPER_URL || 'http://127.0.0.1:8787'}/end-call`, { method: 'POST' });
       if (!res.ok) throw new Error(await res.text());
     } catch {
-      alert('Could not reach the Quo helper. Make sure it\'s running on this Mac (`npm run quo-helper`) and try again.');
+      if (!silent) alert('Could not reach the Quo helper. Make sure it\'s running on this Mac (`npm run quo-helper`) and try again.');
     } finally {
       setQuoBusy(false);
     }
@@ -411,7 +419,14 @@ export default function LeadWorkspace({
     if (!customer.phone) return;
     const result = await quoDialCall(customer.phone.replace(/[^\d+]/g, ''));
     if (!result.ok && !(result.error && /ringing/i.test(result.error))) {
-      alert('Could not reach the Quo helper to dial. Make sure it\'s running on this Mac (`npm run quo-helper`), then dial this number directly in Quo.');
+      // The helper deliberately refuses to run a second action (dial, hang
+      // up) while one's still in flight, rather than queue it — clicking
+      // Call again while the last hangup/dial hasn't finished settling on
+      // the Mac hits that guard, not a dead helper. result.error carries
+      // its real reason ("Another action is already in progress...") when
+      // it's reachable at all; only fall back to the generic "can't reach
+      // it" message when there's no error text, i.e. the fetch itself failed.
+      alert(result.error || 'Could not reach the Quo helper to dial. Make sure it\'s running on this Mac (`npm run quo-helper`), then dial this number directly in Quo.');
     }
   }
 
@@ -557,15 +572,23 @@ export default function LeadWorkspace({
   // manually. Other outcomes (Connected, Busy, etc.) don't auto-hang-up
   // since the agent might still be on the line or need to act on it
   // themselves; the End Quo Call button stays available for those.
-  const AUTO_HANGUP_OUTCOMES = ['no_answer', 'voicemail', 'google_voice'];
+  const AUTO_HANGUP_OUTCOMES = ['no_answer', 'voicemail', 'google_voice', 'disconnected'];
 
   async function logCall(outcome: string, disposition?: string) {
     // "Connected (HU)" -- they picked up, then hung up -- is also
     // definitely over the instant it's logged, same as the no-answer-like
     // outcomes above, even though the outcome itself is 'connected'.
-    if (AUTO_HANGUP_OUTCOMES.includes(outcome) || (outcome === 'connected' && disposition === 'hung_up')) {
-      endQuoCall(); // fire-and-forget, runs alongside logging the disposition below
-    }
+    //
+    // Kicked off here (not awaited yet) so it runs alongside logging the
+    // disposition below rather than adding its latency on top -- but
+    // whoever below actually triggers the NEXT dial (redialing this same
+    // lead, or Auto-Dial firing on whatever advanceQueue lands on) awaits
+    // this first. Without that, a slow hangup command could still be in
+    // flight to the helper once the next dial's already gone out, and land
+    // on THAT live call instead of the dead one it was meant for.
+    const hangupPromise = AUTO_HANGUP_OUTCOMES.includes(outcome) || (outcome === 'connected' && disposition === 'hung_up')
+      ? endQuoCall(true)
+      : null;
     setBusy(true);
     setCallError('');
     try {
@@ -625,6 +648,7 @@ export default function LeadWorkspace({
 
       if (isDialing && !shouldRedial) {
         const maxedOutId = isRedialOutcome && redialAttemptsSoFar >= 2 ? customer.id : undefined;
+        if (hangupPromise) await hangupPromise;
         // The lead advanceQueue navigates to fires its own auto-dial (if
         // enabled) from its mount effect once it lands.
         advanceQueue(maxedOutId);
@@ -637,6 +661,7 @@ export default function LeadWorkspace({
       // lead once this one's maxed out (the branch above) still only
       // auto-dials that new lead when Auto-Dial is actually on.
       if (isDialing && shouldRedial && customer.phone) {
+        if (hangupPromise) await hangupPromise;
         fireAutoDial(customer.phone, session?.autoDialPaceMs ?? 2000);
       }
     } finally { setBusy(false); }
@@ -1017,7 +1042,7 @@ export default function LeadWorkspace({
           <button
             className="btn-danger"
             disabled={quoBusy}
-            onClick={endQuoCall}
+            onClick={() => endQuoCall()}
             title="Ends the active call in Quo (requires the local Quo helper running on this Mac — npm run quo-helper)"
           >
             {quoBusy ? '⏳ Ending…' : '☎️ End Quo Call'}
