@@ -7,7 +7,7 @@ import {
   Customer, NoteVersion, CallRecord, Policy, Commission, Carrier, CarrierRule, LeadVendor
 } from '@/lib/types';
 import { fmtMoney, fmtMoney0, leadAgeLabel, localTimeForState, agentLocalTime, statusBadge, isValidRoutingNumber, callsToday, MAX_CALLS_PER_DAY, isWithinCallingHours, callingWindowStatus, isTestLead } from '@/lib/util';
-import { suggestCarriers } from '@/lib/underwriting';
+import { suggestCarriers, detectTobaccoUse } from '@/lib/underwriting';
 import RoutingLookup from './RoutingLookup';
 import SellModal from './SellModal';
 import AddressAutocomplete from './AddressAutocomplete';
@@ -171,6 +171,7 @@ export default function LeadWorkspace({
   const suggestions = useMemo(() => suggestCarriers(combinedHealthText, carriers, rules), [combinedHealthText, carriers, rules]);
   const top3 = suggestions.filter((s) => !s.knockout).slice(0, 3);
   const knockouts = suggestions.filter((s) => s.knockout);
+  const tobaccoDetected = useMemo(() => detectTobaccoUse(combinedHealthText), [combinedHealthText]);
 
   const attemptCount = calls.length;
   const todayCount = callsToday(calls);
@@ -1085,6 +1086,11 @@ export default function LeadWorkspace({
             <div className="label mb-2">💡 Suggested Carrier Order</div>
             {noteForm.health?.trim() ? (
               <div className="space-y-1.5">
+                {tobaccoDetected && (
+                  <div className="rounded-lg border border-amber-200 bg-amber-50 p-2 text-xs font-medium text-amber-800">
+                    🚬 Tobacco/nicotine mentioned — confirm current use status, affects rate class on most carriers
+                  </div>
+                )}
                 {top3.map((s, i) => (
                   <div key={s.carrier.id} className="rounded-lg border border-line bg-slate-50 p-2">
                     <div className="flex items-center justify-between">
@@ -1099,13 +1105,21 @@ export default function LeadWorkspace({
                     {s.matchedKeywords.length > 0 && (
                       <div className="mt-0.5 text-[11px] text-slate-400">matched: {Array.from(new Set(s.matchedKeywords)).join(', ')}</div>
                     )}
+                    {s.qualifierNotes.length > 0 && (
+                      <div className="mt-0.5 text-[11px] text-slate-400">context: {s.qualifierNotes.join(', ')}</div>
+                    )}
                   </div>
                 ))}
                 {knockouts.length > 0 && (
                   <div className="rounded-lg border border-red-200 bg-red-50 p-2">
                     <div className="text-xs font-semibold text-red-700">⚠ Avoid running first:</div>
                     {knockouts.map((k) => (
-                      <div key={k.carrier.id} className="text-xs text-red-600">{k.carrier.name} — {Array.from(new Set(k.knockoutReasons)).join(', ')}</div>
+                      <div key={k.carrier.id} className="text-xs text-red-600">
+                        {k.carrier.name} — {Array.from(new Set(k.knockoutReasons)).join(', ')}
+                        {k.qualifierNotes.length > 0 && (
+                          <span className="text-red-400"> ({k.qualifierNotes.join(', ')} — still verify, not auto-decided)</span>
+                        )}
+                      </div>
                     ))}
                   </div>
                 )}
