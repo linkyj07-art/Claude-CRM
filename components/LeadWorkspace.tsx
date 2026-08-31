@@ -140,74 +140,6 @@ export default function LeadWorkspace({
   const [busy, setBusy] = useState(false);
   const [quoBusy, setQuoBusy] = useState(false);
   const [autoDialing, setAutoDialing] = useState(false);
-  // Remembered drag position for the disposition popup (top-left corner,
-  // in pixels) -- null means "use the default bottom-right corner".
-  // Persisted to localStorage (a per-browser preference, not data anyone
-  // else needs) so it stays wherever it's dragged across every future
-  // call, not just the current one.
-  const [popupPos, setPopupPos] = useState<{ x: number; y: number } | null>(null);
-  const dragRef = useRef<{ dx: number; dy: number } | null>(null);
-  const popupRef = useRef<HTMLDivElement | null>(null);
-
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem('crm_disposition_popup_pos');
-      if (!saved) return;
-      const pos = JSON.parse(saved);
-      // The old drag clamp only kept a ~40px sliver of the popup on screen
-      // regardless of its actual height, so a position saved from dragging
-      // near the bottom of the screen could push most of the popup (all
-      // the disposition buttons) below the visible viewport -- worse the
-      // taller the popup is, which is exactly what adding more disposition
-      // buttons did. Re-clamp whatever was saved against the real button
-      // grid's rough footprint so an already-bad saved position
-      // self-corrects on load instead of staying stuck off-screen forever.
-      const approxHeight = 420;
-      const approxWidth = 288;
-      setPopupPos({
-        x: Math.min(Math.max(0, pos.x), Math.max(0, window.innerWidth - approxWidth)),
-        y: Math.min(Math.max(0, pos.y), Math.max(0, window.innerHeight - approxHeight))
-      });
-    } catch {
-      // ignore -- just falls back to the default corner
-    }
-  }, []);
-
-  function startDragPopup(e: React.MouseEvent) {
-    // Lets the whole popup (not just the thin header strip) act as a drag
-    // handle -- mousedown on any button inside it (a disposition, cancel,
-    // etc.) still just clicks normally instead of starting a drag.
-    if ((e.target as HTMLElement).closest('button')) return;
-    const rect = (e.currentTarget.closest('[data-drag-popup]') as HTMLElement)?.getBoundingClientRect();
-    if (!rect) return;
-    dragRef.current = { dx: e.clientX - rect.left, dy: e.clientY - rect.top };
-
-    function onMove(ev: MouseEvent) {
-      if (!dragRef.current) return;
-      // Clamped against the popup's OWN measured size (not a guessed
-      // constant), so the full thing -- however many disposition buttons
-      // it currently has -- always stays entirely on screen no matter
-      // where it's dragged to.
-      const x = Math.min(Math.max(0, ev.clientX - dragRef.current.dx), Math.max(0, window.innerWidth - rect.width));
-      const y = Math.min(Math.max(0, ev.clientY - dragRef.current.dy), Math.max(0, window.innerHeight - rect.height));
-      setPopupPos({ x, y });
-    }
-    function onUp() {
-      dragRef.current = null;
-      window.removeEventListener('mousemove', onMove);
-      window.removeEventListener('mouseup', onUp);
-      setPopupPos((pos) => {
-        try {
-          if (pos) localStorage.setItem('crm_disposition_popup_pos', JSON.stringify(pos));
-        } catch {
-          // best-effort -- position just won't be remembered next time
-        }
-        return pos;
-      });
-    }
-    window.addEventListener('mousemove', onMove);
-    window.addEventListener('mouseup', onUp);
-  }
   // Guards against firing a second auto-dial for the same lead — e.g. a
   // React effect re-run (dev strict mode double-invoke) or a `refresh()`
   // re-render that doesn't actually change the lead.
@@ -262,35 +194,6 @@ export default function LeadWorkspace({
     pendingCallIdRef.current = id;
     setPendingCallIdState(id);
   }
-
-  // A guessed popup height/width (tried previously) can't account for every
-  // window size this actually renders in -- narrow browser panels included,
-  // which is exactly where it was still measured wrong. Measuring the real
-  // rendered element instead, right after the popup actually appears, is
-  // accurate regardless of how many disposition buttons it currently has or
-  // how narrow the window is. If any part of it is off-screen, snaps the
-  // whole thing fully into view -- this is what makes an already-bad saved
-  // position self-correct instead of staying stuck with no visible way to
-  // drag it back.
-  useEffect(() => {
-    if (!pendingCallId) return;
-    const el = popupRef.current;
-    if (!el) return;
-    const rect = el.getBoundingClientRect();
-    const maxX = Math.max(0, window.innerWidth - rect.width);
-    const maxY = Math.max(0, window.innerHeight - rect.height);
-    const clampedX = Math.min(Math.max(0, rect.left), maxX);
-    const clampedY = Math.min(Math.max(0, rect.top), maxY);
-    if (clampedX !== rect.left || clampedY !== rect.top) {
-      setPopupPos({ x: clampedX, y: clampedY });
-      try {
-        localStorage.setItem('crm_disposition_popup_pos', JSON.stringify({ x: clampedX, y: clampedY }));
-      } catch {
-        // best-effort
-      }
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pendingCallId]);
 
   async function refresh() {
     router.refresh();
@@ -1120,18 +1023,9 @@ export default function LeadWorkspace({
             // it to a fixed screen corner instead means it can never again
             // be covered by anything else on the page, in any browser,
             // regardless of layout/scroll position.
-            <div
-              ref={popupRef}
-              data-drag-popup
-              onMouseDown={startDragPopup}
-              className={`fixed z-50 max-h-[80vh] w-72 cursor-move overflow-y-auto rounded-xl border border-line bg-panel p-3 shadow-2xl ${popupPos ? '' : 'bottom-4 right-4'}`}
-              style={popupPos ? { left: popupPos.x, top: popupPos.y } : undefined}
-            >
-              <div
-                className="mb-2 flex cursor-move items-center gap-1 text-xs font-semibold text-brand-400"
-                title="Drag to move — stays here for future calls too"
-              >
-                <span className="text-slate-300">⠿</span> 📞 In progress — what happened?
+            <div className="fixed bottom-4 right-4 z-50 max-h-[80vh] w-72 overflow-y-auto rounded-xl border border-line bg-panel p-3 shadow-2xl">
+              <div className="mb-2 flex items-center gap-1 text-xs font-semibold text-brand-400">
+                📞 In progress — what happened?
               </div>
               {callError && <div className="mb-2 rounded bg-red-50 p-2 text-xs text-red-700">{callError}</div>}
               {quoBusy && (
