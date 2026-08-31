@@ -54,9 +54,17 @@ export async function GET() {
     // client shows these as a "new lead ready" banner and lets the agent
     // decide whether to work it in now or queue it up next, rather than
     // silently reordering their in-progress session for them.
+    //
+    // A lead dispositioned this session with an outcome that doesn't max it
+    // out (Busy, Not Interested, Wrong #, Connected, ...) leaves BOTH queue
+    // and recycle -- advanceQueue only re-adds a lead to recycle when it's
+    // hit its 2nd unanswered dial. Without the calls_today check below,
+    // that lead (still eligible -- those outcomes don't change status) was
+    // indistinguishable from a genuinely new one and got offered right back
+    // via this banner, ahead of leads never dialed at all today.
     const known = new Set([row.current_lead_id, ...cleanQueue, ...cleanRecycle].filter(Boolean) as string[]);
     newLeads = fetchEligibleLeads(db, user.id)
-      .filter((c) => !known.has(c.id))
+      .filter((c) => !known.has(c.id) && c.calls_today === 0)
       .map((c) => ({ id: c.id, firstName: c.first_name, lastName: c.last_name, phone: c.phone }));
   }
   return NextResponse.json({ ...serialize(row), newLeads });
