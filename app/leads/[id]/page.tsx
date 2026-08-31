@@ -36,6 +36,15 @@ export default async function LeadPage({ params }: { params: { id: string } }) {
 
   return (
     <LeadWorkspace
+      // Forces a full remount on every lead change (Power Dial navigates
+      // between leads without a full page load) -- without this, React
+      // reuses the same component instance across leads and every
+      // useState's lazy initializer (pendingCallId included) keeps
+      // whatever value it had for the PREVIOUS lead instead of
+      // re-deriving from this lead's own props. That's how a lead you
+      // haven't touched yet could show up looking like a call's already
+      // in progress on it.
+      key={customer.id}
       customer={customer}
       notes={notes}
       calls={calls}
