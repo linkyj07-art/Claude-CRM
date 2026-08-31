@@ -14,6 +14,13 @@ import AddressAutocomplete from './AddressAutocomplete';
 
 type AnyRow = Record<string, any>;
 
+// One-shot handoff of Auto-Dial's on/off + pace from the lead a Power Dial
+// session is leaving to the one it's landing on, via sessionStorage --
+// read-and-cleared by the new lead's mount effect so it can fire
+// immediately instead of waiting on a fetch to re-derive values the
+// previous lead's component already had in hand.
+const DIAL_HANDOFF_KEY = 'crm_dial_handoff';
+
 const NOTE_FIELDS: { key: keyof NoteVersion; label: string; type?: 'text' | 'textarea' | 'date' }[] = [
   { key: 'name', label: 'NAME' },
   { key: 'note_date', label: 'DOB', type: 'date' },
@@ -296,9 +303,11 @@ export default function LeadWorkspace({
       if (paceMs > 0) await new Promise((resolve) => setTimeout(resolve, paceMs));
       if (!mountedRef.current) return;
       if (!withinCallingHours || dailyLimitReached || customer.status === 'dnc' || !customer.phone) return;
-      await startCall();
+      // Logging the pending call and actually dialing via the helper don't
+      // depend on each other -- running them together instead of one after
+      // the other cuts real latency off every auto-fired dial.
+      const [, dialed] = await Promise.all([startCall(), quoDialCall(phone)]);
       if (!mountedRef.current) return;
-      const dialed = await quoDialCall(phone);
       if (!dialed) {
         await patchDialSession({ autoDial: false });
         alert('Auto-Dial could not reach the Quo helper, so it turned itself off. Make sure the helper is running on this Mac (`npm run quo-helper`), then turn Auto-Dial back on.');
@@ -402,22 +411,36 @@ export default function LeadWorkspace({
   // the new position to the server (not just this device's own URL) so
   // every device sharing this session follows along within one poll.
   async function advanceQueue(maxedOutId?: string) {
-    const session = (await currentDialSession()) || { currentLeadId: customer.id, queue: [], recycle: [], pass: 1 };
+    const session = (await currentDialSession()) || {
+      currentLeadId: customer.id, queue: [], recycle: [], pass: 1,
+      autoDial: false, autoDialPaceMs: 2000, sessionDials: 0, sessionConnects: 0, consecutiveNoAnswer: 0
+    };
     const updatedRecycle =
       maxedOutId && session.pass !== 2 && !session.recycle.includes(maxedOutId)
         ? [...session.recycle, maxedOutId]
         : session.recycle;
 
     async function moveTo(next: string, queue: string[], recycle: string[], pass: number) {
+      // Hand the auto-dial/pace values we already know straight to the
+      // next lead's mount effect via sessionStorage, so it can fire
+      // immediately instead of waiting on a fetch round trip to
+      // re-derive the exact same values we're holding right now.
       try {
-        await fetch('/api/dial-session', {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ currentLeadId: next, queue, recycle, pass })
-        });
+        sessionStorage.setItem(DIAL_HANDOFF_KEY, JSON.stringify({ autoDial: session.autoDial, autoDialPaceMs: session.autoDialPaceMs }));
       } catch {
-        // Network hiccup — still navigate locally; the next poll on any
-        // device (including this one) will reconcile once it succeeds.
+        // best-effort -- the mount effect just falls back to fetching
       }
+      // Not awaited: navigating doesn't need to wait on this landing --
+      // the next lead's own poll reconciles it within a few seconds either
+      // way, and any other device sharing the session already does the
+      // same. Every ms here is a ms added before the next dial can fire.
+      fetch('/api/dial-session', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ currentLeadId: next, queue, recycle, pass })
+      }).catch(() => {
+        // Network hiccup — still navigated already; the next poll on any
+        // device (including this one) will reconcile once it succeeds.
+      });
       router.push(`/leads/${next}?dialing=1`);
     }
 
@@ -726,15 +749,29 @@ export default function LeadWorkspace({
   // advanceQueue navigates to afterward, since both are a fresh mount of
   // this component for a new customer.id. The same-lead redial case (no
   // navigation, no remount) is fired explicitly from logCall instead.
-  // Reads the session fresh via currentDialSession() rather than trusting
-  // component state, since dialSession can still be null for a few hundred
-  // ms right after mount, before the poll below has resolved once.
   useEffect(() => {
     if (!isDialing || skipReason || !customer.phone) return;
     if (dialedForLeadRef.current === customer.id) return;
     let cancelled = false;
     (async () => {
-      const session = await currentDialSession();
+      // The previous lead's moveTo() hands its already-known autoDial/pace
+      // straight through sessionStorage -- reading that (instant, no
+      // network) instead of fetching lets Auto-Dial fire immediately on
+      // arrival rather than waiting on a round trip to re-derive the exact
+      // same values. Only actually falls back to fetching for the one
+      // entry point that never went through moveTo: the very first lead
+      // of a session, landed on via /dial's server-side redirect.
+      let session: { autoDial: boolean; autoDialPaceMs: number } | DialSession | null = null;
+      try {
+        const handoff = sessionStorage.getItem(DIAL_HANDOFF_KEY);
+        if (handoff) {
+          sessionStorage.removeItem(DIAL_HANDOFF_KEY);
+          session = JSON.parse(handoff);
+        }
+      } catch {
+        // fall through to fetching
+      }
+      if (!session) session = await currentDialSession();
       if (cancelled || !session?.autoDial || dialedForLeadRef.current === customer.id) return;
       dialedForLeadRef.current = customer.id;
       await fireAutoDial(customer.phone!, session.autoDialPaceMs);
