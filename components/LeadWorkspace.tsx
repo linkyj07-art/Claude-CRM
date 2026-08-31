@@ -326,8 +326,12 @@ export default function LeadWorkspace({
           }
           return;
         }
+        // Also fired by the always-on same-lead redial (independent of the
+        // toggle), so this can't assume Auto-Dial was actually the one
+        // running -- turning it off here is still correct either way
+        // (harmless no-op if it wasn't on), just worded generically.
         await patchDialSession({ autoDial: false });
-        alert('Auto-Dial could not reach the Quo helper, so it turned itself off. Make sure the helper is running on this Mac (`npm run quo-helper`), then turn Auto-Dial back on.');
+        alert('Could not reach the Quo helper to redial automatically. Make sure it\'s running on this Mac (`npm run quo-helper`), then try Call again.');
       }
     } finally {
       if (mountedRef.current) setAutoDialing(false);
@@ -569,15 +573,16 @@ export default function LeadWorkspace({
       // Power Dial: once this lead's disposition is logged, move straight to
       // the next one instead of making the agent click Skip / Next Lead too —
       // relying on the just-cleared pendingCallId here rather than the
-      // (still-stale-until-re-render) pendingDisposition flag. No Answer and
-      // Voicemail are the exception, but only once: after the FIRST such
-      // outcome on this lead, stay put for an immediate redial; once a
-      // SECOND one lands (this lead has now gone unanswered twice), it's
-      // "maxed out" — move on now, but let advanceQueue hold onto it for a
-      // second pass once the rest of the queue is worked through.
-      const isRedialOutcome = outcome === 'no_answer' || outcome === 'voicemail';
+      // (still-stale-until-re-render) pendingDisposition flag. No Answer,
+      // Voicemail, and Google Voice are the exception, but only once: after
+      // the FIRST such outcome on this lead, stay put for an immediate
+      // redial; once a SECOND one lands (this lead has now gone unanswered
+      // twice), it's "maxed out" — move on now, but let advanceQueue hold
+      // onto it for a second pass once the rest of the queue is worked
+      // through.
+      const isRedialOutcome = outcome === 'no_answer' || outcome === 'voicemail' || outcome === 'google_voice';
       const priorRedialAttempts = calls.filter(
-        (c) => c.id !== pendingCallId && (c.outcome === 'no_answer' || c.outcome === 'voicemail')
+        (c) => c.id !== pendingCallId && (c.outcome === 'no_answer' || c.outcome === 'voicemail' || c.outcome === 'google_voice')
       ).length;
       const redialAttemptsSoFar = priorRedialAttempts + (isRedialOutcome ? 1 : 0);
       const shouldRedial = isRedialOutcome && redialAttemptsSoFar < 2;
@@ -601,8 +606,13 @@ export default function LeadWorkspace({
         return;
       }
       await refresh();
-      if (isDialing && shouldRedial && session?.autoDial && customer.phone) {
-        fireAutoDial(customer.phone, session.autoDialPaceMs);
+      // Redialing a lead that's only gone unanswered once is independent of
+      // the Auto-Dial toggle — it fires for manual dialing too, not just
+      // while Auto-Dial is running the whole queue. Advancing to the NEXT
+      // lead once this one's maxed out (the branch above) still only
+      // auto-dials that new lead when Auto-Dial is actually on.
+      if (isDialing && shouldRedial && customer.phone) {
+        fireAutoDial(customer.phone, session?.autoDialPaceMs ?? 2000);
       }
     } finally { setBusy(false); }
   }
