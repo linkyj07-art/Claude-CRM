@@ -34,6 +34,8 @@ export interface Customer {
   lead_cost: number;
   trusted_form_url: string | null;
   last_followed_up_at: string | null;
+  was_import_duplicate: number;
+  duplicate_of_customer_id: string | null;
   status: CustomerStatus;
   purchased_at: string;
   sold_at: string | null;

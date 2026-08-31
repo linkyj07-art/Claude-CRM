@@ -23,6 +23,7 @@ export type DisputeRowData = {
   credit_amount: number | null;
   notes: string | null;
   created_at: string;
+  was_import_duplicate: number;
 };
 
 export default function DisputeRow({ dispute }: { dispute: DisputeRowData }) {
@@ -61,6 +62,11 @@ export default function DisputeRow({ dispute }: { dispute: DisputeRowData }) {
             {dispute.phone || '—'} · {dispute.vendor_name || 'Unassigned vendor'} · Lead cost {dispute.lead_cost ? `$${dispute.lead_cost}` : '—'}
           </div>
           <div className="mt-1 text-sm text-slate-600">{dispute.reason}</div>
+          {!!dispute.was_import_duplicate && (
+            <div className="mt-1 inline-block rounded bg-amber-100 px-1.5 py-0.5 text-[11px] font-medium text-amber-700">
+              🔁 Started as an import-flagged duplicate, added anyway
+            </div>
+          )}
         </div>
         {isDenied ? (
           <span className="badge-bad">DENIED</span>
