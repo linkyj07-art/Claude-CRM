@@ -666,19 +666,23 @@ export default function LeadWorkspace({
       // the next one instead of making the agent click Skip / Next Lead too —
       // relying on the just-cleared pendingCallId here rather than the
       // (still-stale-until-re-render) pendingDisposition flag. No Answer,
-      // Voicemail, and Google Voice are the exception, up to MAX_REDIAL_
-      // ATTEMPTS in a row: after each one short of that limit, stay put for
-      // an immediate redial; once the limit's hit (this lead has now gone
-      // unanswered that many times), it's "maxed out" — move on now, but
-      // let advanceQueue hold onto it for a second pass once the rest of
-      // the queue is worked through.
-      const MAX_REDIAL_ATTEMPTS = 3;
+      // Voicemail, and Google Voice are the exception, but only once: after
+      // the FIRST such outcome on this lead, stay put for an immediate
+      // redial; once a SECOND one lands (this lead has now gone unanswered
+      // twice), it's "maxed out" — move on now, but let advanceQueue hold
+      // onto it for a second pass once the rest of the queue is worked
+      // through. "Call Again" (its own disposition button, not an outcome
+      // on its own) always forces one more immediate redial regardless of
+      // that count -- an explicit agent choice, not automatic, for
+      // whenever 2 attempts wasn't actually enough on a given lead.
+      const MAX_REDIAL_ATTEMPTS = 2;
       const isRedialOutcome = outcome === 'no_answer' || outcome === 'voicemail' || outcome === 'google_voice';
+      const isForcedRedial = disposition === 'call_again';
       const priorRedialAttempts = calls.filter(
         (c) => c.id !== pendingCallId && (c.outcome === 'no_answer' || c.outcome === 'voicemail' || c.outcome === 'google_voice')
       ).length;
       const redialAttemptsSoFar = priorRedialAttempts + (isRedialOutcome ? 1 : 0);
-      const shouldRedial = isRedialOutcome && redialAttemptsSoFar < MAX_REDIAL_ATTEMPTS;
+      const shouldRedial = isForcedRedial || (isRedialOutcome && redialAttemptsSoFar < MAX_REDIAL_ATTEMPTS);
 
       // Session stats — tracked for every disposition made while dialing,
       // regardless of whether Auto-Dial is even on, so the connect count
@@ -1074,12 +1078,21 @@ export default function LeadWorkspace({
                 <button disabled={busy || quoBusy} onClick={() => logCall('voicemail')} className="btn-secondary text-xs px-2 py-1.5">Voicemail</button>
                 <button disabled={busy || quoBusy} onClick={() => logCall('google_voice')} className="btn-secondary text-xs px-2 py-1.5">Google Voice</button>
                 <button disabled={busy || quoBusy} onClick={() => logCall('busy')} className="btn-secondary text-xs px-2 py-1.5">Busy</button>
+                <button
+                  disabled={busy || quoBusy}
+                  onClick={() => logCall('no_answer', 'call_again')}
+                  title="Logs No Answer and redials right now, regardless of how many attempts this lead's already had"
+                  className="btn-secondary text-xs px-2 py-1.5"
+                >
+                  🔁 Call Again
+                </button>
                 <button disabled={busy || quoBusy} onClick={() => logCall('wrong_number')} className="btn-secondary text-xs px-2 py-1.5">Wrong #</button>
                 <button disabled={busy || quoBusy} onClick={() => logCall('disconnected')} className="btn-secondary text-xs px-2 py-1.5">📵 Disconnected</button>
                 <button disabled={busy || quoBusy} onClick={() => logCall('connected', 'interested')} className="btn-good text-xs px-2 py-1.5">Connected</button>
                 <button disabled={busy || quoBusy} onClick={() => logCall('connected', 'hung_up')} className="btn-secondary text-xs px-2 py-1.5">Connected (HU)</button>
                 <button disabled={busy || quoBusy} onClick={() => logCall('connected', 'sold')} className="btn-good text-xs px-2 py-1.5">💰 Sold</button>
                 <button disabled={busy || quoBusy} onClick={() => logCall('connected', 'not_interested')} className="btn-secondary text-xs px-2 py-1.5">Not Interested</button>
+                <button disabled={busy || quoBusy} onClick={() => logCall('connected', 'broke')} className="btn-secondary text-xs px-2 py-1.5">💸 Broke</button>
                 <button disabled={busy || quoBusy} onClick={() => logCall('dnc')} className="btn-danger text-xs px-2 py-1.5">DNC</button>
               </div>
               <button className="mt-2 w-full text-center text-xs text-slate-400 hover:text-ink" disabled={busy || quoBusy} onClick={cancelPendingCall}>
