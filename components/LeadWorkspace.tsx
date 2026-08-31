@@ -225,8 +225,19 @@ export default function LeadWorkspace({
   // otherwise a reload mid-call (crash, accidental refresh) would silently
   // drop the "must disposition before moving on" lock and leave the pending
   // dial orphaned forever.
-  const [pendingCallId, setPendingCallId] = useState<string | null>(() => calls.find((c) => c.outcome === 'pending')?.id || null);
+  const [pendingCallId, setPendingCallIdState] = useState<string | null>(() => calls.find((c) => c.outcome === 'pending')?.id || null);
   const pendingDisposition = pendingCallId !== null;
+  // React state updates aren't reflected in the current closure until the
+  // next render -- logCall calls setPendingCallId(null) and then, still
+  // within that same synchronous call, may fire off a redial through
+  // startCall(). Without this ref, startCall()'s "is one already pending"
+  // guard would read the OLD (not-yet-updated) pendingCallId and wrongly
+  // treat the redial as a duplicate, silently declining to log it at all.
+  const pendingCallIdRef = useRef<string | null>(pendingCallId);
+  function setPendingCallId(id: string | null) {
+    pendingCallIdRef.current = id;
+    setPendingCallIdState(id);
+  }
 
   async function refresh() {
     router.refresh();
@@ -349,7 +360,7 @@ export default function LeadWorkspace({
     // created their own separate 'pending' row; only the LAST one's id
     // ever made it into pendingCallId, so the first was silently
     // orphaned -- stuck as pending forever, with no way to disposition it.
-    if (pendingCallId) return pendingCallId;
+    if (pendingCallIdRef.current) return pendingCallIdRef.current;
     setCallError('');
     try {
       const res = await fetch(`/api/leads/${customer.id}/calls`, {
