@@ -66,7 +66,11 @@ export function applyCallOutcome(customerId: string, outcome: string, dispositio
       // agent -- a rejection, not a sign of interest, same bucket as Not
       // Interested. Previously missing from this map entirely, which left
       // status untouched rather than actually marking it lost.
-      not_interested: 'lost', unqualified: 'lost', hung_up: 'lost', qualified: 'working',
+      // broke ("Broke") means the prospect can't afford coverage -- same
+      // 'lost' bucket, which is what actually drops a lead out of Power
+      // Dial eligibility (fetchEligibleLeads/the /dial queue build only
+      // pull 'fresh'/'working'/'aging_45_90'/'aging_90_plus').
+      not_interested: 'lost', unqualified: 'lost', hung_up: 'lost', broke: 'lost', qualified: 'working',
       interested: 'working', callback: 'working', sold: 'sold'
     };
     if (map[disposition]) {
