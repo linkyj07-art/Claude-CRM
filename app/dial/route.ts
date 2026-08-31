@@ -47,14 +47,23 @@ export async function GET(req: NextRequest) {
   const todayStart = agentMidnightUTC(0).toISOString().slice(0, 19).replace('T', ' ');
   const allRows = db
     .prepare(
-      `SELECT id, status, state, first_name, last_name FROM customers
-       WHERE archived = 0 AND owner_id = ? AND status IN ('fresh','working','aging_45_90','aging_90_plus')
+      `SELECT id, status, state, first_name, last_name,
+         (SELECT COUNT(*) FROM calls WHERE customer_id = customers.id AND occurred_at >= @todayStart) AS calls_today
+       FROM customers
+       WHERE archived = 0 AND owner_id = @ownerId AND status IN ('fresh','working','aging_45_90','aging_90_plus')
          AND phone IS NOT NULL AND TRIM(phone) != ''
          AND id NOT IN (
-           SELECT customer_id FROM calls WHERE occurred_at >= ?
+           SELECT customer_id FROM calls WHERE occurred_at >= @todayStart
            GROUP BY customer_id HAVING COUNT(*) >= ${MAX_CALLS_PER_DAY}
          )
        ORDER BY CASE status WHEN 'fresh' THEN 0 WHEN 'working' THEN 1 WHEN 'aging_45_90' THEN 2 ELSE 3 END,
+         -- Not-yet-dialed-today beats already-dialed-today-but-under-cap,
+         -- regardless of status tier or purchase date -- outcomes like No
+         -- Answer/Voicemail/Busy don't change a lead's status away from
+         -- 'fresh', so without this a lead already redialed 3x today would
+         -- keep competing purely on purchase date against leads that
+         -- haven't been touched at all, and often win just for being newer.
+         calls_today > 0,
          -- Within "fresh" specifically: newest purchase first, so a lead
          -- that just got imported (or dripped in live) gets dialed ahead of
          -- ones sitting from an earlier import -- and if an even newer
@@ -63,7 +72,7 @@ export async function GET(req: NextRequest) {
          -- to clear before it ages further, not new arrivals to rush to.
          CASE WHEN status = 'fresh' THEN -CAST(strftime('%s', purchased_at) AS INTEGER) ELSE CAST(strftime('%s', purchased_at) AS INTEGER) END`
     )
-    .all(user.id, todayStart) as { id: string; status: string; state: string | null; first_name: string; last_name: string }[];
+    .all({ ownerId: user.id, todayStart }) as { id: string; status: string; state: string | null; first_name: string; last_name: string; calls_today: number }[];
 
   // Leads whose local time is outside the 8am-9pm calling window get held
   // back rather than queued dead-on-arrival — they'll be picked up again on

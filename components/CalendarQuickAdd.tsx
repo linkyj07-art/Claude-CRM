@@ -12,6 +12,14 @@ export default function CalendarQuickAdd({ defaultDate }: { defaultDate: string 
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<LeadHit[]>([]);
   const [selected, setSelected] = useState<LeadHit | null>(null);
+  // Override for someone not in the CRM yet — a quick minimal lead gets
+  // created (same as the regular + Add Lead flow) and the appointment
+  // attaches to that, so it's not left dangling with no lead record and
+  // the person is there to work afterward instead of getting lost.
+  const [quickAdd, setQuickAdd] = useState(false);
+  const [quickFirst, setQuickFirst] = useState('');
+  const [quickLast, setQuickLast] = useState('');
+  const [quickPhone, setQuickPhone] = useState('');
   const [scheduledAt, setScheduledAt] = useState(`${defaultDate}T09:00`);
   const [type, setType] = useState('phone');
   const [notes, setNotes] = useState('');
@@ -26,10 +34,24 @@ export default function CalendarQuickAdd({ defaultDate }: { defaultDate: string 
   }
 
   async function save() {
-    if (!selected) return;
+    if (!selected && !(quickAdd && quickFirst.trim())) return;
     setBusy(true);
     try {
-      const res = await fetch(`/api/leads/${selected.id}/appointments`, {
+      let leadId = selected?.id;
+      if (!leadId) {
+        const leadRes = await fetch('/api/leads', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ first_name: quickFirst.trim(), last_name: quickLast.trim(), phone: quickPhone.trim() || null })
+        });
+        const leadData = await leadRes.json().catch(() => ({}));
+        if (!leadRes.ok || !leadData.id) {
+          alert(leadData.error || 'Could not create that lead — please try again.');
+          return;
+        }
+        leadId = leadData.id;
+      }
+
+      const res = await fetch(`/api/leads/${leadId}/appointments`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ scheduled_at: scheduledAt, type, notes })
       });
@@ -45,6 +67,7 @@ export default function CalendarQuickAdd({ defaultDate }: { defaultDate: string 
   function close() {
     setOpen(false);
     setQuery(''); setResults([]); setSelected(null); setNotes('');
+    setQuickAdd(false); setQuickFirst(''); setQuickLast(''); setQuickPhone('');
     setScheduledAt(`${defaultDate}T09:00`);
   }
 
@@ -66,6 +89,20 @@ export default function CalendarQuickAdd({ defaultDate }: { defaultDate: string 
                     <span>{selected.first_name} {selected.last_name} · {selected.phone || '—'}</span>
                     <button className="text-xs text-brand-600 hover:underline" onClick={() => setSelected(null)}>Change</button>
                   </div>
+                ) : quickAdd ? (
+                  <div className="space-y-1.5 rounded-lg border border-line p-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-medium text-slate-500">New lead — not in the CRM yet</span>
+                      <button className="text-xs text-brand-600 hover:underline" onClick={() => { setQuickAdd(false); setQuickFirst(''); setQuickLast(''); setQuickPhone(''); }}>
+                        Search instead
+                      </button>
+                    </div>
+                    <div className="grid grid-cols-2 gap-1.5">
+                      <input className="input" placeholder="First name" value={quickFirst} onChange={(e) => setQuickFirst(e.target.value)} />
+                      <input className="input" placeholder="Last name" value={quickLast} onChange={(e) => setQuickLast(e.target.value)} />
+                    </div>
+                    <input className="input" placeholder="Phone (optional)" value={quickPhone} onChange={(e) => setQuickPhone(e.target.value)} />
+                  </div>
                 ) : (
                   <>
                     <input className="input" placeholder="Search leads by name or phone…" value={query} onChange={(e) => search(e.target.value)} />
@@ -83,6 +120,9 @@ export default function CalendarQuickAdd({ defaultDate }: { defaultDate: string 
                         ))}
                       </div>
                     )}
+                    <button className="mt-1 text-xs text-brand-600 hover:underline" onClick={() => setQuickAdd(true)}>
+                      Can&apos;t find them? + Add as a new lead
+                    </button>
                   </>
                 )}
               </div>
@@ -102,7 +142,7 @@ export default function CalendarQuickAdd({ defaultDate }: { defaultDate: string 
                 <label className="label mb-1 block">Notes</label>
                 <textarea className="input" value={notes} onChange={(e) => setNotes(e.target.value)} />
               </div>
-              <button className="btn-primary w-full" disabled={busy || !selected || !scheduledAt} onClick={save}>
+              <button className="btn-primary w-full" disabled={busy || (!selected && !(quickAdd && quickFirst.trim())) || !scheduledAt} onClick={save}>
                 {busy ? 'Saving…' : 'Save Appointment'}
               </button>
             </div>
