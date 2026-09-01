@@ -157,6 +157,23 @@ export function stateFullName(abbr: string | null | undefined): string | null {
   return ABBR_TO_STATE_NAME[trimmed.toUpperCase()] || trimmed;
 }
 
+// Display-only, same pattern as stateFullName -- a lead sheet's phone column
+// shows up in whatever format that particular vendor used ("9072035657",
+// "907-203-5657", "(907) 203-5657", ...), which reads inconsistently on the
+// lead page depending on where the lead came from. Only standard 10-digit
+// (or 11 with a leading 1) US numbers get reformatted; anything else --
+// an extension, a garbled import, a non-US number -- is left exactly as
+// stored rather than risk mangling it. Every actual dialing/matching call
+// site keeps stripping non-digits from the raw customer.phone itself, same
+// as before -- this never touches that value, only how it's shown.
+export function fmtPhone(phone: string | null | undefined): string | null {
+  if (!phone) return null;
+  const digits = phone.replace(/\D/g, '');
+  const tenDigit = digits.length === 11 && digits.startsWith('1') ? digits.slice(1) : digits;
+  if (tenDigit.length !== 10) return phone;
+  return `(${tenDigit.slice(0, 3)}) ${tenDigit.slice(3, 6)}-${tenDigit.slice(6)}`;
+}
+
 // NANPA area code -> primary state, for the common (non-split, non-overlay)
 // codes. This is a best-effort fallback only — cell numbers move with people
 // and some codes are shared across state lines — never a substitute for a
