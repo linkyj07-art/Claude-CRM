@@ -133,7 +133,20 @@ function inferHeaderMapFromContent(headers: string[], rows: Record<string, strin
   // signal before a looser check downstream gets a chance at the column.
   claimBestColumn('email', looksLikeEmail);
   claimBestColumn('phone', looksLikePhone);
-  claimBestColumn('dob', looksLikeDob);
+  // looksLikeDob alone only checks for a date shape with a plausible
+  // CALENDAR year (1900-now) -- a "date submitted"/"purchase date" column
+  // (very common on these sheets, and often unlabeled itself) satisfies
+  // that exactly as well as a real date of birth. Every lead on a lead
+  // sheet is an adult, so requiring the resulting age to actually fall in
+  // an adult range is what tells a real DOB column apart from a recent
+  // submission date -- a purchase date parses to an age near 0, which this
+  // rejects outright instead of risking it getting written to customers.dob.
+  const looksLikePlausibleDob = (v: string) => {
+    if (!looksLikeDob(v)) return false;
+    const age = Math.floor((Date.now() - new Date(v).getTime()) / (365.25 * 24 * 60 * 60 * 1000));
+    return age >= 18 && age <= 100;
+  };
+  claimBestColumn('dob', looksLikePlausibleDob);
   claimBestColumn('state', (v) => !!normalizeState(v));
   claimBestColumn('gender', looksLikeGender);
 
@@ -145,10 +158,20 @@ function inferHeaderMapFromContent(headers: string[], rows: Record<string, strin
   // immediately beside contact info, not scattered elsewhere in the sheet.
   if (!headerMap.first_name && !headerMap.last_name && !headerMap.full_name) {
     const looksLikeName = (v: string) => /^[A-Za-z][A-Za-z\s'.-]{1,29}$/.test(v);
+    // A closed-vocabulary scratch/status column (the sheet's own documented
+    // example values are "Cooked"/"Hung up") is plain alphabetic text too,
+    // so the shape check alone can't tell it apart from a real name column.
+    // Names are close to unique per row; a repeated handful of tag values is
+    // not -- requiring most non-empty values to be distinct is what actually
+    // separates "this is somebody's name" from "this is a category label".
+    const MIN_UNIQUENESS = 0.5;
     const nameCandidates = unlabeled.filter((h) => {
       if (claimed.has(h)) return false;
       const { fraction, nonEmpty } = scoreColumn(h, looksLikeName);
-      return nonEmpty >= MIN_SAMPLE && fraction >= MIN_CONFIDENCE;
+      if (nonEmpty < MIN_SAMPLE || fraction < MIN_CONFIDENCE) return false;
+      const values = sample.map((row) => (row[h] || '').trim()).filter(Boolean);
+      const distinct = new Set(values.map((v) => v.toLowerCase())).size;
+      return distinct / values.length >= MIN_UNIQUENESS;
     });
     const anchorHeader = headerMap.email || headerMap.phone || headerMap.dob || null;
     const anchorIdx = anchorHeader ? headers.indexOf(anchorHeader) : -1;
@@ -252,7 +275,11 @@ async function rowsFromXlsx(buffer: Buffer): Promise<{ headers: string[]; rows: 
     let hasValue = false;
     for (let colNumber = 1; colNumber <= colCount; colNumber++) {
       const header = headers[colNumber - 1];
-      const v = cellToString(row.getCell(colNumber).value);
+      // findCell (not getCell) -- getCell creates and permanently caches a
+      // Cell object for every column position it's asked about, even ones
+      // this row never populated; on a wide, sparse sheet at MAX_ROWS that's
+      // a lot of dead allocation for cells that are empty either way.
+      const v = cellToString(row.findCell(colNumber)?.value);
       obj[header] = v;
       if (v) hasValue = true;
     }
@@ -273,8 +300,17 @@ async function rowsFromXlsx(buffer: Buffer): Promise<{ headers: string[]; rows: 
 // trigger a permanent, company-wide DNC registration.
 const TAG_HEADER_ALIASES = ['tag', 'tags', 'disposition'];
 
-function tagColumnKeys(headers: string[]): string[] {
-  return headers.filter((h) => h.startsWith(UNLABELED_COL_PREFIX) || TAG_HEADER_ALIASES.includes(normalize(h)));
+// resolvedHeaders excludes any column inferHeaderMapFromContent already
+// confidently claimed for a real field (state, email, phone, ...) -- an
+// unlabeled column stops being a "could be anything, including a scratch
+// tag" column the moment its values are confidently something else. Without
+// this, a state column recovered by content-inference (still keyed under
+// its synthetic __unlabeled_col_N header) stayed in the DC/DNC tag scan, so
+// a Washington D.C. lead's own "DC" state value would trip the same
+// permanent-DNC-registration path this file's own DC_TAG_PATTERN comment
+// already warns about for labeled State columns.
+function tagColumnKeys(headers: string[], resolvedHeaders: Set<string>): string[] {
+  return headers.filter((h) => !resolvedHeaders.has(h) && (h.startsWith(UNLABELED_COL_PREFIX) || TAG_HEADER_ALIASES.includes(normalize(h))));
 }
 
 const DC_TAG_PATTERN = /\b(DC|DNC)\b/i;
@@ -351,7 +387,7 @@ export async function POST(req: NextRequest) {
 
   const headerMap = buildHeaderMap(headers);
   inferHeaderMapFromContent(headers, rows, headerMap);
-  const dcTagKeys = tagColumnKeys(headers);
+  const dcTagKeys = tagColumnKeys(headers, new Set(Object.values(headerMap)));
   const db = getDb();
 
   const vendors = db.prepare('SELECT id, name FROM lead_vendors').all() as { id: string; name: string }[];
