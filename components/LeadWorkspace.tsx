@@ -6,7 +6,7 @@ import Badge from './Badge';
 import {
   Customer, NoteVersion, CallRecord, Policy, Commission, Carrier, CarrierRule, LeadVendor
 } from '@/lib/types';
-import { fmtMoney, fmtMoney0, leadAgeLabel, localTimeForState, agentLocalTime, statusBadge, isValidRoutingNumber, callsToday, MAX_CALLS_PER_DAY, isWithinCallingHours, callingWindowStatus, isTestLead, AGENT_TIMEZONE, isSameAgentDay, stateFullName } from '@/lib/util';
+import { fmtMoney, fmtMoney0, leadAgeLabel, localTimeForState, agentLocalTime, statusBadge, isValidRoutingNumber, callsToday, MAX_CALLS_PER_DAY, isWithinCallingHours, callingWindowStatus, isTestLead, AGENT_TIMEZONE, isSameAgentDay, stateFullName, fmtPhone } from '@/lib/util';
 import { suggestCarriers, detectTobaccoUse, extractBuild, countDistinctConditions } from '@/lib/underwriting';
 import RoutingLookup from './RoutingLookup';
 import SellModal from './SellModal';
@@ -1009,11 +1009,11 @@ export default function LeadWorkspace({
               // Clicking Call again here used to fire a second, separate
               // pending call on top of the one already running.
               <button className="btn-good" disabled title="A call is already in progress for this lead — log its outcome below">
-                📞 Call {customer.phone}
+                📞 Call {fmtPhone(customer.phone)}
               </button>
             ) : (
               <button className="btn-good" onClick={placeManualCall}>
-                📞 Call {customer.phone}
+                📞 Call {fmtPhone(customer.phone)}
               </button>
             )
           )}
@@ -1058,7 +1058,7 @@ export default function LeadWorkspace({
         <div className="card space-y-3 p-4">
           <div className="label">Lead Information</div>
           <dl className="space-y-2 text-sm">
-            <InfoRow label="📞 Phone" value={customer.phone} />
+            <InfoRow label="📞 Phone" value={fmtPhone(customer.phone)} />
             <InfoRow label="✉️ Email" value={customer.email} />
             <InfoRow label="🎂 DOB" value={fmtDobWithAge(customer.dob)} />
             <InfoRow label="♂ Gender" value={customer.gender} />
