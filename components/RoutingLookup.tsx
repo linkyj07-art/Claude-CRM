@@ -51,7 +51,11 @@ export default function RoutingLookup({
       </button>
 
       {searched && (
-        <div className="mt-2 max-h-40 overflow-y-auto rounded-lg border border-line">
+        <div className="mt-2">
+          {results.length > 0 && (
+            <div className="mb-1 text-xs text-slate-400">{results.length} match{results.length === 1 ? '' : 'es'}</div>
+          )}
+          <div className="max-h-72 overflow-y-auto rounded-lg border border-line">
           {results.length === 0 && (
             <div className="p-2 text-xs text-slate-500">
               No match in the sample lookup. Enter the routing number manually below — the client&apos;s check or online banking is the definitive source.
@@ -68,6 +72,7 @@ export default function RoutingLookup({
               <span className="font-mono font-semibold">{r.routing_number}</span>
             </button>
           ))}
+          </div>
         </div>
       )}
 
