@@ -41,7 +41,7 @@ export default function DialCategoryButton({ counts }: { counts: CategoryCounts 
 
   return (
     <>
-      <button className="btn-secondary" onClick={() => setOpen(true)}>🎯 Dial Categories</button>
+      <button className="btn-primary" onClick={() => setOpen(true)}>⚡ Power Dial</button>
       {open && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setOpen(false)}>
           <div className="w-full max-w-sm rounded-xl bg-panel p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
