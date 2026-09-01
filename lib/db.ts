@@ -2,7 +2,7 @@ import Database from 'better-sqlite3';
 import fs from 'fs';
 import path from 'path';
 import Papa from 'papaparse';
-import { newId } from './util';
+import { newId, normalizeState } from './util';
 import { hashPassword } from './auth';
 
 const ROUTING_SEED_PATH = path.join(process.cwd(), 'seed', 'routing_numbers.csv');
@@ -103,18 +103,24 @@ function migrate(db: Database.Database) {
   seedRoutingNumbers(db);
 }
 
-// User-supplied bank routing-number directory (FDIC bank name matched
-// against the Federal Reserve's FedACH routing directory, by state) — a real
-// sourced dataset the user provided, not fabricated. Rows the source
-// couldn't confidently match ("NOT FOUND") are skipped; everything else is
-// shown in the app as a suggestion to confirm with the client, never
-// auto-filled blindly, same "verify before use" posture as the rest of
-// routing_lookup. Guarded by the same one-time atomic claim pattern used
-// elsewhere in this file so re-deploys don't re-import or duplicate rows.
+// User-supplied bank routing-number directory — a real sourced dataset the
+// user provided, not fabricated. Shown in the app as a suggestion to
+// confirm with the client, never auto-filled blindly, same "verify before
+// use" posture as the rest of routing_lookup.
+//
+// Versioned guard key (v2 replaces the original v1 FDIC/FedACH-matched
+// sheet with a broader all-institutions list in a different column shape --
+// State/Institution Name/Routing Numbers instead of the old Bank Name
+// (FDIC)/State Code/Routing Number/Match Type/etc). Bumping the key is what
+// lets this run again on an already-seeded production database instead of
+// being a permanent no-op like seedRoutingNumbers was designed to be --
+// and because this is a full replacement, not an addition, a successful
+// claim clears every existing row before importing the new file rather
+// than appending alongside stale entries from the old sheet.
 function seedRoutingNumbers(db: Database.Database) {
   if (!fs.existsSync(ROUTING_SEED_PATH)) return;
 
-  const claimed = db.prepare(`INSERT INTO app_settings (key, value) VALUES ('routing_numbers_seeded_v1', '1') ON CONFLICT(key) DO NOTHING`).run();
+  const claimed = db.prepare(`INSERT INTO app_settings (key, value) VALUES ('routing_numbers_seeded_v2', '1') ON CONFLICT(key) DO NOTHING`).run();
   if (claimed.changes === 0) return;
 
   const text = fs.readFileSync(ROUTING_SEED_PATH, 'utf-8');
@@ -127,21 +133,20 @@ function seedRoutingNumbers(db: Database.Database) {
   const isCreditUnion = (name: string) => /credit union|\bfcu\b/i.test(name);
 
   const runSeed = db.transaction((rows: Record<string, string>[]) => {
+    db.exec('DELETE FROM routing_lookup');
     for (const row of rows) {
-      const bankName = (row['Bank Name (FDIC)'] || '').trim();
-      const state = (row['State Code'] || '').trim().toUpperCase();
-      const routingNumber = (row['Routing Number'] || '').trim();
+      const bankName = (row['Institution Name'] || '').trim();
+      // Source file uses full state names (and includes a handful of US
+      // territories -- Guam, Puerto Rico, etc. -- that this app's state
+      // system doesn't otherwise track since STATE_TIMEZONES/US_STATES only
+      // cover the 50 states + DC); normalizeState both converts to the
+      // 2-letter code routing_lookup/the state filter dropdown expect and
+      // naturally skips anything it can't resolve.
+      const state = normalizeState(row['State']);
+      const routingNumber = (row['Routing Numbers'] || '').trim();
       if (!bankName || !state || !/^\d{9}$/.test(routingNumber)) continue;
 
-      const matchType = (row['Match Type'] || '').trim();
-      const fedOffice = (row['Routing Office City/State'] || '').trim();
-      const note = (row['Note'] || '').trim();
-      const sourceNote = [
-        fedOffice ? `Fed directory match: ${fedOffice}${matchType ? ` (${matchType})` : ''}` : null,
-        note || null
-      ].filter(Boolean).join(' — ');
-
-      insert.run(newId(), bankName, state, routingNumber, isCreditUnion(bankName) ? 'credit_union' : 'bank', sourceNote || null);
+      insert.run(newId(), bankName, state, routingNumber, isCreditUnion(bankName) ? 'credit_union' : 'bank', null);
     }
   });
 
