@@ -20,10 +20,10 @@ Georgia,ASSOCIATED CREDIT UNION,
 Colorado,AURORA,
 Michigan,AWAKON,
 Massachusetts,Adams Community Bank,011805388
-Oklahoma,AllNations Bank,
+Oklahoma,AllNations Bank,103107004
 California,Altos Bank,
 Minnesota,American Bank & Trust,091405753
-Oklahoma,"American Exchange Bank, Lindsay, Oklahoma",
+Oklahoma,"American Exchange Bank, Lindsay, Oklahoma",103103668
 California,"American Plus Bank, N.A.",122244663
 Illinois,Anderson State Bank,071110262
 Kansas,Argentine Federal Savings,301070852
@@ -61,7 +61,7 @@ Florida,BankMiami,067017146
 Wisconsin,Baraboo State Bank,075901590
 Florida,BayFirst National Bank,063114551
 Ohio,Belmont Savings Bank,243270671
-North Carolina,"Black Mountain Savings Bank, SSB",
+North Carolina,"Black Mountain Savings Bank, SSB",253170091
 Texas,Bodcaw Bank,082904360
 Florida,Brannen Bank,063104626
 Minnesota,Bridgewater Bank,091014487
@@ -126,7 +126,7 @@ Missouri,DISTRICT ONE HIGHWAY,
 Wisconsin,DMB Community Bank,075910484
 Michigan,DOWAGIAC AREA,
 Minnesota,DULUTH POLICE DEPARTMENT EMPLOYEES,
-Texas,"Dalhart Federal Savings & Loan Association, SSB",
+Texas,"Dalhart Federal Savings & Loan Association, SSB",311371172
 Iowa,Decorah Bank & Trust Company,073921695
 Illinois,Dewey Bank,
 Iowa,Dysart State Bank,073906788
@@ -172,10 +172,10 @@ Oklahoma,First Bank & Trust Company,103101631
 Oklahoma,First Bank of Owasso,103112853
 Illinois,First Community Bank and Trust,071911652
 Illinois,First FSB of Mascoutah,
-Wisconsin,First Federal Bank of Wisconsin,
+Wisconsin,First Federal Bank of Wisconsin,275971692
 Illinois,"First Federal Savings and Loan Association of Central Illinois, S.B.",
 Minnesota,First Financial Bank in Winnebago,091210922
-Texas,First Lockhart Bank,
+Texas,First Lockhart Bank,114903213
 Michigan,First National Bank & Trust Co.,075907073
 Illinois,First National Bank in Olney,081204126
 Texas,First National Bank of Central Texas,111926112
@@ -184,7 +184,7 @@ Florida,First National Bank of Wauchula,063106705
 California,First Pacific Bank,
 Minnesota,First Security Bank - Canby,091202736
 Minnesota,First State Bank Southwest,091206101
-Texas,First State Bank of Burnet,
+Texas,First State Bank of Burnet,114907387
 Indiana,First State Bank of Porter,071211734
 Missouri,First State Community Bank,081502815
 Tennessee,First Vision Bank of Tennessee,064109028
@@ -206,9 +206,9 @@ Nebraska,GREENWICH MUNICIPAL EMPLOYEES,
 Texas,GULF COAST EDUCATORS,
 Kansas,Garden Plain State Bank,101101413
 Georgia,Georgia Community Bank,
-Texas,Global One Bank,
+Texas,Global One Bank,113109982
 Missouri,Grand Missouri Bank,086519816
-Wisconsin,GreenLeaf Bank,
+Wisconsin,GreenLeaf Bank,075907581
 Illinois,Grundy Bank,071904290
 Florida,Gulfside Bank,063116902
 Ohio,HANCOCK SCHOOL EMP.,
@@ -239,13 +239,13 @@ Louisiana,INTERNAL REVENUE,
 Texas,IRVING CITY EMPLOYEES,
 New Jersey,I.L.A. LOCAL 1235,
 Ohio,Independence Bank,041201813
-Virginia,Integrity Bank for Business,
+Virginia,Integrity Bank for Business,051409731
 Iowa,"Iowa State Bank and Trust Company of Fairfield, Iowa",
 Missouri,J C FEDERAL EMPLOYEES,
 Louisiana,JD Bank,065204579
 Tennessee,JOHNSONVILLE TVA EMPLOYEES,
 Texas,JSC,
-Wisconsin,"John Deere Financial, f.s.b.",
+Wisconsin,"John Deere Financial, f.s.b.",075972228
 Kansas,K C K FIREMEN & POLICE,
 Illinois,KASKASKIA VALLEY,
 Virginia,KEMBA ROANOKE,
@@ -268,7 +268,7 @@ Massachusetts,LYNN TEACHERS,
 Florida,Lafayette State Bank,063105515
 Minnesota,Lakeview Bank,091917351
 Massachusetts,"Leader Bank, National Association",011307129
-New Jersey,Liberty Bank of New Jersey,
+New Jersey,Liberty Bank of New Jersey,021214914
 Illinois,Lisle Savings Bank,271972404
 Illinois,Longview Bank,071110819
 Kansas,Lyons Federal Bank,301170985
@@ -299,7 +299,7 @@ Pennsylvania,Marquette Savings Bank,243373248
 Pennsylvania,Mauch Chunk Trust Company,031307701
 Massachusetts,Mechanics Cooperative Bank,211370024
 Alabama,"Merchants & Farmers Bank of Greene County, Alabama",062202192
-Ohio,Miami Savings Bank,
+Ohio,Miami Savings Bank,242072391
 Illinois,Midland Community Bank,071108782
 Illinois,Milledgeville State Bank,071121620
 Ohio,Minster Bank,042310525
@@ -318,8 +318,8 @@ Illinois,NORTHSIDE L,
 Pennsylvania,NORWIN TEACHERS,
 Ohio,NUEVA ESPERANZA COMMUNITY,
 New Jersey,N.J.T. EMPLOYEES,
-Ohio,"Nationwide Trust Company, FSB",
-Utah,Nelnet Bank,
+Ohio,"Nationwide Trust Company, FSB",044072324
+Utah,Nelnet Bank,124385355
 Massachusetts,New Valley Bank & Trust,
 Minnesota,North American Banking Company,096016930
 Illinois,North Side Federal Savings and Loan Association of Chicago,271071114
@@ -332,7 +332,7 @@ Michigan,ONE DETROIT,
 Colorado,OPTIONS,
 Texas,OUR MOTHER OF MERCY PARISH HOUSTON,
 Georgia,Oconee Federal Savings and Loan Association,
-Tennessee,One Bank of Tennessee,
+Tennessee,One Bank of Tennessee,064104311
 Kansas,Outdoor Bank,101106528
 Pennsylvania,PAAC TRANSIT DIVISION,
 Texas,PAMPA MUNICIPAL,
@@ -351,7 +351,7 @@ Iowa,PREMIER,
 Texas,PRIORITY TRUST,
 Pennsylvania,PS Bank,031314503
 Virginia,PWC EMPLOYEES,
-Wisconsin,"Paper City Savings Bank, S.A.",
+Wisconsin,"Paper City Savings Bank, S.A.",275971498
 Tennessee,Patriot Bank,084008824
 Pennsylvania,Pennian Bank,031310206
 Alabama,Peoples Bank of Greensboro,062201533
@@ -360,11 +360,11 @@ Minnesota,Perennial Bank,091903433
 Colorado,Pikes Peak National Bank,107000097
 Texas,PlainsCapital Bank,111322994
 California,Poppy Bank,121143891
-Nebraska,Premier Bank National Association,
-Texas,PrimeBank of Texas,
+Nebraska,Premier Bank National Association,104000870
+Texas,PrimeBank of Texas,114924690
 Minnesota,"Profinium, Inc.",091212865
 Iowa,QUAKER OATS,
-Utah,Quill Bank,
+Utah,Quill Bank,124302927
 Alabama,RAILROAD,
 Missouri,RAYTOWN-LEE'S SUMMIT COMMUNITY,
 California,REDLANDS CITY EMPLOYEES,
@@ -408,9 +408,9 @@ Alabama,SYCAMORE,
 Colorado,San Luis Valley Federal Bank,302174728
 Minnesota,Scale Bank,
 Minnesota,Security Bank Minnesota,091908399
-Tennessee,Security Federal Savings Bank of McMinnville,
+Tennessee,Security Federal Savings Bank of McMinnville,264171500
 Oklahoma,Security State Bank of Oklahoma,103108605
-Pennsylvania,Sharon Bank,
+Pennsylvania,Sharon Bank,231372141
 Michigan,Sidney State Bank,072410929
 Colorado,Solera National Bank,107007281
 Georgia,South Georgia Bank,261291247
@@ -445,26 +445,26 @@ Texas,"Texas Advantage Community Bank, National Association",113125445
 Texas,Texas Heritage National Bank,111906501
 Massachusetts,The Bank of Canton,211373102
 Missouri,The Bank of Houston,081506358
-Texas,"The Bank of San Jacinto County, Coldspring, Texas",
+Texas,"The Bank of San Jacinto County, Coldspring, Texas",113101524
 Kansas,The Bendena State Bank,101104384
 Missouri,The Callaway Bank,081501696
 Oklahoma,The Citizens Bank of Edmond,103002251
 Georgia,The Citizens National Bank of Quitman,
 Illinois,The City National Bank of Metropolis,
-Texas,The Commercial National Bank of Brady,
+Texas,The Commercial National Bank of Brady,111303489
 Alabama,The Exchange Bank of Alabama,062204129
 Kentucky,The Farmers National Bank of Danville,
-Oklahoma,The Farmers and Merchants National Bank of Fairview,
-Ohio,The First Citizens National Bank of Upper Sandusky,
-Texas,The First National Bank in Cooper,
-Texas,The First National Bank of Aspermont,
+Oklahoma,The Farmers and Merchants National Bank of Fairview,103102342
+Ohio,The First Citizens National Bank of Upper Sandusky,041205246
+Texas,The First National Bank in Cooper,111905324
+Texas,The First National Bank of Aspermont,111309234
 Kentucky,The First National Bank of Brooksville,042103826
-Texas,The First National Bank of Evant,
+Texas,The First National Bank of Evant,111914878
 Minnesota,The First National Bank of Le Center,
-Texas,The First National Bank of Mertzon,
+Texas,The First National Bank of Mertzon,111311785
 Minnesota,The First National Bank of Osakis,
-Texas,The First National Bank of Sonora,
-Ohio,The First National Bank of Waverly,
+Texas,The First National Bank of Sonora,111313000
+Ohio,The First National Bank of Waverly,044206475
 Illinois,"The First Trust and Savings Bank of Watseka, Illinois",
 Texas,The Granger National Bank,114919281
 Ohio,The Hocking Valley Bank,044201030
@@ -519,7 +519,7 @@ Oklahoma,Washita Valley Bank,103106092
 Tennessee,Wayne County Bank,064105734
 Georgia,West Central Georgia Bank,061102523
 Michigan,West Shore Bank,072408290
-Pennsylvania,Westmoreland Federal Savings and Loan Association,
+Pennsylvania,Westmoreland Federal Savings and Loan Association,243373387
 Massachusetts,"Winter Hill Bank, FSB",211370406
 Minnesota,"Worthington Federal Savings Bank, FSB",
 Michigan,ZEAL,
@@ -661,7 +661,7 @@ Kentucky,The Farmers Bank of Milton,083905546
 Indiana,The Fountain Trust Company,074904860
 Ohio,The Savings Bank,044103976
 Missouri,The Union State Bank of Everest,101106214
-Pennsylvania,Tompkins Bank & Trust,
+Pennsylvania,Tompkins Bank & Trust,021302648
 Pennsylvania,U F C W LOCAL 1776,
 Wisconsin,UNITED ASSOCIATION,
 North Carolina,UNIVERSITY OF SOUTH ALABAMA,
@@ -691,7 +691,7 @@ Oklahoma,Community National Bank & Trust,101105817
 Illinois,Crossroads Bank,081224122
 Iowa,DUPACO COMMUNITY,
 Texas,ENERGY ONE,
-Alabama,FEDERAL EMPLOYEES,
+Alabama,FEDERAL EMPLOYEES,262088116
 Utah,FIREFIGHTERS,
 Utah,FREEDOM,
 New Jersey,First Citizens Community Bank,031309589
@@ -700,7 +700,7 @@ Louisiana,First National Banker's Bank,062006495
 Indiana,Freedom Bank,083914236
 Indiana,GENFED FINANCIAL,
 Ohio,German American Bank,074914274
-Alabama,HOPE,
+Alabama,HOPE,065382514
 New Jersey,"Hana Bank USA, National Association",026003272
 Texas,Herring Bank,107001135
 Alabama,"Investar Bank, National Association",065405527
@@ -730,15 +730,15 @@ Texas,UNIVERSITY,
 Alabama,VALLEY,
 Minnesota,W S S C,
 Louisiana,Washington State Bank,065202461
-Texas,ADVANCIAL,
+Texas,ADVANCIAL,311078857
 Illinois,Byline Bank,071001533
 Missouri,CIBC Bank USA,061020113
-Illinois,CORPORATE AMERICA FAMILY,
+Illinois,CORPORATE AMERICA FAMILY,271987075
 Texas,Commonwealth Business Bank,122043864
-Kentucky,DELTA COMMUNITY,
+Kentucky,DELTA COMMUNITY,261071315
 Missouri,Enterprise Bank & Trust,081006162
 Georgia,Exchange Bank,061101786
-Texas,FIREFIGHTERS FIRST,
+Texas,FIREFIGHTERS FIRST,322078341
 Iowa,F&M Bank,061112830
 Nebraska,First Interstate Bank,092901683
 Florida,First Southern Bank,053208011
@@ -746,7 +746,7 @@ Tennessee,Gateway First Bank,103112552
 Florida,Hancock Whitney Bank,062101219
 Texas,Independent Bank,102104419
 Illinois,Liberty Bank,081214161
-Texas,MEMBERS CHOICE,
+Texas,MEMBERS CHOICE,313083196
 Florida,Members Trust Company,063192612
 Texas,Open Bank,122043958
 Illinois,Royal Business Bank,026013408
@@ -759,21 +759,21 @@ Wisconsin,Unity Bank,091808363
 Illinois,AMG National Trust Bank,107007346
 Illinois,American Bank of Freedom,081518058
 Indiana,Banterra Bank,081215597
-Michigan,COMMUNITY FIRST,
+Michigan,COMMUNITY FIRST,272486724
 Florida,Centennial Bank,063107623
 Colorado,Columbia Bank,055000165
 Florida,ENCORE BANK,082008583
 Georgia,East West Bank,011002877
-Indiana,FEDEX EMPLOYEES CREDIT ASSOCIATION,
+Indiana,FEDEX EMPLOYEES CREDIT ASSOCIATION,284084350
 North Carolina,Farmers & Merchants Bank,053103640
 Illinois,"First Financial Bank, National Association",071100858
 Illinois,First Security Bank,082901774
-California,HONDA,
+California,HONDA,322275746
 Colorado,MidFirst Bank,102007008
-Louisiana,NUCOR EMPLOYEE'S,
-Illinois,POLISH & SLAVIC,
+Louisiana,NUCOR EMPLOYEE'S,253278980
+Illinois,POLISH & SLAVIC,226082022
 Illinois,Preferred Bank,071125943
-Massachusetts,SELFRELIANCE,
+Massachusetts,SELFRELIANCE,271080817
 Kansas,Security State Bank,101101057
 Missouri,Simmons Bank,064201612
 Illinois,"TBK BANK, SSB",071104647
@@ -782,7 +782,7 @@ Iowa,Union State Bank,073903150
 Illinois,"Associated Bank, National Association",075000941
 Illinois,Beal Bank USA,122487459
 Iowa,Central Bank,073903503
-Colorado,ENT,
+Colorado,ENT,307070005
 Tennessee,"FSNB, National Association",103112675
 Kentucky,FirstBank,061107010
 California,"Magnolia Bank, Incorporated",083906888
@@ -790,12 +790,12 @@ Pennsylvania,Manufacturers and Traders Trust Company,221272316
 Iowa,Nicolet National Bank,075901642
 Alabama,ServisFirst Bank,061121122
 Pennsylvania,The Bank of New York Mellon,011001234
-Massachusetts,UKRAINIAN,
+Massachusetts,UKRAINIAN,222382221
 Indiana,"WesBanco Bank, Inc.",042202219
 Missouri,"Armed Forces Bank, National Association",122243017
 California,Bank OZK,026013291
 Illinois,Bank of Hope,021214325
-Wisconsin,CREDIT UNION 1,
+Wisconsin,CREDIT UNION 1,271188081
 Kentucky,Citizens Bank,042104469
 Texas,City National Bank,111304637
 Iowa,Community Bank,073905718
@@ -804,13 +804,13 @@ Colorado,First National Bank of Omaha,071902629
 Missouri,Great Southern Bank,071126269
 Virginia,Hanmi Bank,061106150
 Nebraska,Northwest Bank,073902290
-Virginia,SELF-HELP,
+Virginia,SELF-HELP,253184841
 Massachusetts,"TD Bank, National Association",021101425
 Missouri,The Central Trust Bank,086519609
 Alabama,United Bank,011110633
 Oklahoma,Busey Bank,071100117
 Alabama,Metro City Bank,061104848
-Colorado,NORTHROP GRUMMAN,
+Colorado,NORTHROP GRUMMAN,322276088
 Massachusetts,"The Bank of New York Mellon Trust Company, National Association",
 Nebraska,Commerce Bank,071100010
 Texas,First Horizon Bank,061120152
@@ -818,19 +818,19 @@ Virginia,First National Bank,051403041
 Colorado,KeyBank National Association,011807043
 Georgia,Liberty Bank and Trust Company,065002108
 Iowa,Old National Bank,072413638
-New Jersey,PENTAGON,
+New Jersey,PENTAGON,256078446
 Michigan,"Wilmington Trust, National Association",022313005
 Massachusetts,CIBC National Trust Company,071006486
-Michigan,COMMUNITYAMERICA,
+Michigan,COMMUNITYAMERICA,301081508
 New Jersey,"Citizens Bank, National Association",011001331
 North Carolina,First Community Bank,043308277
-Missouri,TOGETHER,
+Missouri,TOGETHER,281082915
 Louisiana,United Community Bank,065401107
 Illinois,"BNY Mellon, National Association",031300821
 Iowa,Farmers State Bank,073908045
 Illinois,First State Bank,071114491
-Florida,BAXTER,
-Wisconsin,BAXTER,
+Florida,BAXTER,271992400
+Wisconsin,BAXTER,271992400
 Pennsylvania,First Bank,021214163
 Ohio,Truist Bank,031204710
 Minnesota,"UMB Bank, National Association",111015748
@@ -847,9 +847,9 @@ Virginia,Pinnacle Bank,042101886
 Indiana,The Huntington National Bank,041000153
 Texas,The Huntington National Bank,041000153
 Kentucky,U.S. Bank National Association,011501747
-Alabama,NAVY FEDERAL CREDIT UNION,
-Missouri,NAVY FEDERAL CREDIT UNION,
-Virginia,NAVY FEDERAL CREDIT UNION,
+Alabama,NAVY FEDERAL CREDIT UNION,256074974
+Missouri,NAVY FEDERAL CREDIT UNION,256074974
+Virginia,NAVY FEDERAL CREDIT UNION,256074974
 Massachusetts,"PNC Bank, National Association",021200575
 Virginia,"PNC Bank, National Association",021200575
 Kentucky,Bank of England,082902139
@@ -890,7 +890,7 @@ California,American Riviera Bank,122244155
 Kansas,Andover State Bank,101112046
 Minnesota,Arlington State Bank,091904322
 Kansas,Astra Bank,101102344
-Texas,Avana Bank,
+Texas,Avana Bank,111311743
 California,BAKERSFIELD CITY EMPLOYEES,
 Tennessee,BASF CHATTANOOGA,
 Virginia,BAYLANDS FAMILY,
@@ -916,11 +916,11 @@ California,Bank of Marin,121141877
 Illinois,Bank of O'Fallon,081023019
 Utah,Bank of Utah,124300107
 Illinois,Bank of Yates City,071116813
-Tennessee,Bank3,
+Tennessee,Bank3,084304968
 Tennessee,BankTennessee,064109358
 Illinois,"Barrington Bank & Trust Company, National Association",071925651
 Michigan,Baybank,091102894
-North Carolina,"Belmont Savings Bank, SSB",
+North Carolina,"Belmont Savings Bank, SSB",253170088
 Wisconsin,Black River Country Bank,075906032
 Nebraska,Boelus State Bank,104906602
 Missouri,Branson Bank,081518919
@@ -955,7 +955,7 @@ Indiana,CROSSROADS FINANCIAL,
 Iowa,CUSB Bank,073903286
 California,California Pacific Bank,121038265
 Wisconsin,Capitol Bank,075912806
-North Carolina,Cedar Hill National Bank,
+North Carolina,Cedar Hill National Bank,053012906
 Indiana,Centier Bank,071902878
 Kentucky,"Century Bank of Kentucky, Inc.",
 Colorado,Champion Bank,107006897
@@ -963,9 +963,9 @@ Virginia,Chesapeake Bank,051403779
 Minnesota,Citizens Alliance Bank,091904856
 Oklahoma,Citizens Bank of Ada,103101330
 Missouri,Citizens Bank of the Midwest,081518139
-Texas,Citizens National Bank of Crosbyton,
+Texas,Citizens National Bank of Crosbyton,111313631
 Indiana,"Citizens State Bank of New Castle, Indiana",074902082
-Wisconsin,"Clare Bank, National Association",
+Wisconsin,"Clare Bank, National Association",075902052
 Florida,Climate First Bank,063117011
 Wisconsin,Collins State Bank,075908276
 California,Commerce West Bank,122243334
@@ -1020,11 +1020,11 @@ Louisiana,FLEUR-DE-LIS,
 Colorado,FMS Bank,107003942
 Wisconsin,FOCUS,
 New Jersey,FORT DIX,
-Wisconsin,FORTE BANK,
+Wisconsin,FORTE BANK,075902463
 Michigan,FRANKENMUTH,
 Michigan,FREESTAR FINANCIAL,
 Virginia,FRONT ROYAL,
-Ohio,Fairfield Federal Savings and Loan Association of Lancaster,
+Ohio,Fairfield Federal Savings and Loan Association of Lancaster,244171245
 Kentucky,Farmers Bank and Trust Company,083902316
 Minnesota,Farmers State Bank of Underwood,091212687
 Kansas,Farmers and Drovers Bank,101102166
@@ -1037,12 +1037,12 @@ Iowa,First Central State Bank,073910091
 Alabama,First Community Bank of Central Alabama,
 Tennessee,First Farmers & Commercial Bank,064102944
 Alabama,"First Federal Bank, A FSB",
-Pennsylvania,First Federal Savings and Loan Association of Greene Co,
+Pennsylvania,First Federal Savings and Loan Association of Greene Co,243374234
 Tennessee,First Freedom Bank,064109086
 Alabama,First Metro Bank,
-Oklahoma,First National Bank & Trust Company of McAlester,
+Oklahoma,First National Bank & Trust Company of McAlester,103100218
 Nebraska,First National Bank in Ord,104101465
-Texas,First National Bank of Dublin,
+Texas,First National Bank of Dublin,111915770
 Michigan,First National Bank of Michigan,072414239
 Iowa,"First National Bank, Ames, Iowa",
 Tennessee,First Peoples Bank of Tennessee,064202828
@@ -1050,7 +1050,7 @@ Minnesota,First Security Bank - Sleepy Eye,091205607
 Texas,First State Bank and Trust Company,081505155
 Illinois,First State Bank of Campbell Hill,081220524
 Georgia,First State Bank of Randolph County,
-Oklahoma,First Summit Bank,
+Oklahoma,First Summit Bank,103103503
 Minnesota,First Western Bank & Trust,091017552
 Nebraska,Five Points Bank of Hastings,104905616
 Massachusetts,Florence Bank,211871688
@@ -1071,7 +1071,7 @@ Georgia,Georgia First Bank,
 Illinois,Gold Coast Bank,071026848
 Minnesota,Grand Rapids State Bank,091211170
 Wisconsin,"Great Midwest Bank, S.S.B.",275971906
-Texas,Guadalupe Bank,
+Texas,Guadalupe Bank,114925864
 Colorado,Gunnison Savings and Loan Association,302170340
 Ohio,HANCOCK,
 Ohio,HARVEST,
@@ -1154,7 +1154,7 @@ Pennsylvania,M.A.B.C.,
 Georgia,Magnolia State Bank,065302468
 Iowa,Maquoketa State Bank,073922351
 Illinois,Marseilles Bank,071921956
-Texas,Maverick Bank,
+Texas,Maverick Bank,112314066
 North Carolina,Mechanics & Farmers Bank,053010665
 Alabama,Merit Bank,062206813
 Missouri,Mid America Bank,081514748
@@ -1187,7 +1187,7 @@ Texas,ONE SOURCE,
 California,ORANGE COUNTY'S,
 Michigan,OUR,
 Georgia,Oconee State Bank,061113282
-Wisconsin,One Community Bank,
+Wisconsin,One Community Bank,075912275
 Indiana,Owen County State Bank,074912865
 Pennsylvania,PACE RESOURCES,
 Texas,PAMPA TEACHERS,
@@ -1228,7 +1228,7 @@ Texas,ROCKDALE,
 Louisiana,Rayne State Bank & Trust Company,
 Pennsylvania,Reliance Savings Bank,231375397
 Wisconsin,River Falls State Bank,091810979
-Tennessee,"RockPointBank, National Association",
+Tennessee,"RockPointBank, National Association",061309520
 Ohio,S AND J SCHOOL EMPLOYEES,
 Michigan,SAFE HARBOR,
 Virginia,SALEM VA MEDICAL CENTER,
@@ -1261,11 +1261,11 @@ Minnesota,Security Bank USA,091201258
 Indiana,Security Federal Savings Bank,274970607
 Minnesota,Security State Bank of Oklee,
 Illinois,Shelby County State Bank,071104692
-Ohio,"Signature Bank, National Association",
+Ohio,"Signature Bank, National Association",041215621
 Iowa,Solon State Bank,073921446
 Georgia,South Georgia Banking Company,
 Tennessee,Southern Bank of Tennessee,064208453
-Texas,Southwest Heritage Bank,
+Texas,Southwest Heritage Bank,122106251
 Ohio,Spring Valley Bank,042215468
 Missouri,St. Johns Bank and Trust Company,081017575
 Minnesota,State Bank of Bellingham,091216340
@@ -1292,8 +1292,8 @@ Michigan,TRUNORTH,
 Alabama,TUSKEGEE,
 Kentucky,Taylor County Bank,083907887
 Texas,Texas Bank and Trust Company,111925210
-Texas,Texas National Bank of Jacksonville,
-Texas,The American National Bank of Mount Pleasant,
+Texas,Texas National Bank of Jacksonville,113115617
+Texas,The American National Bank of Mount Pleasant,111908208
 Virginia,The Bank of Charlotte County,051404752
 Wisconsin,The Bank of Kaukauna,075901972
 Virginia,The Bank of Southside Virginia,051404642
@@ -1301,19 +1301,19 @@ Kansas,The Bennington State Bank,101104928
 Indiana,The Campbell & Fetter Bank,074903544
 Georgia,The Citizens Bank of Georgia,061104929
 Kentucky,The Citizens National Bank of Somerset,
-Texas,The City National Bank of San Saba,
-Ohio,"The Commercial and Savings Bank of Millersburg, Ohio",
+Texas,The City National Bank of San Saba,111904231
+Ohio,"The Commercial and Savings Bank of Millersburg, Ohio",041206135
 Kansas,The Denison State Bank,101108034
 Oklahoma,The Exchange Bank,103105190
 Kentucky,The Farmers National Bank of Lebanon,
 Illinois,The Farmers and Merchants National Bank of Nashville,
-Oklahoma,The First Farmers National Bank of Waurika,
-Texas,The First National Bank in Falfurrias,
+Oklahoma,The First Farmers National Bank of Waurika,103101738
+Texas,The First National Bank in Falfurrias,114919676
 Illinois,The First National Bank of Assumption,
 Illinois,The First National Bank of Brownstown,
 Minnesota,The First National Bank of Fairfax,
 Alabama,The First National Bank of Hartford,062101882
-Texas,The First National Bank of Lipan,
+Texas,The First National Bank of Lipan,111908758
 Tennessee,The First National Bank of Middle Tennessee,064101589
 Ohio,The First National Bank of Pandora,041212873
 Illinois,The First National Bank of Sparta,
@@ -1348,7 +1348,7 @@ Pennsylvania,U.A.L.U. 354,
 New Jersey,Union County Savings Bank,221272329
 Minnesota,United Bankers' Bank,044002051
 California,United Pacific Bank,122039179
-Texas,Unity National Bank of Houston,
+Texas,Unity National Bank of Houston,113001242
 Louisiana,VALEX,
 Utah,VALLEY WIDE,
 Texas,VATAT,
@@ -1367,7 +1367,7 @@ California,WHEELHOUSE,
 Kansas,WICHITA,
 Wisconsin,"WISCONSIN LATVIAN, INC.",
 Massachusetts,WORKERS,
-Wisconsin,"WaterStone Bank, SSB",
+Wisconsin,"WaterStone Bank, SSB",275071770
 Utah,WebBank,124384589
 California,West Coast Community Bank,
 Texas,West Texas National Bank,112304678
@@ -1412,7 +1412,7 @@ Indiana,Civista Bank,041201635
 Kansas,Community National Bank,101104504
 Minnesota,Crown Bank,091017060
 California,DIRECT,
-New Jersey,Dime Commercial Bank,
+New Jersey,Dime Commercial Bank,021406667
 Florida,ECU,
 Iowa,EMPLOYEES,
 Indiana,EVERWISE,
@@ -1581,13 +1581,13 @@ Ohio,W S S C,
 Kansas,Western National Bank,101112473
 Alabama,Ameris Bank,053208066
 North Carolina,Byline Bank,071001533
-Iowa,CITY & COUNTY,
-Pennsylvania,CORPORATE AMERICA FAMILY,
+Iowa,CITY & COUNTY,296075810
+Pennsylvania,CORPORATE AMERICA FAMILY,271987075
 Indiana,"Community Bank, National Association",011600020
-Texas,DELTA COMMUNITY,
+Texas,DELTA COMMUNITY,261071315
 Kansas,Equity Bank,082908599
 Kansas,Exchange Bank,061101786
-Florida,FIRST CHOICE,
+Florida,FIRST CHOICE,267083349
 Nebraska,F&M Bank,104900802
 Illinois,First Merchants Bank,044072243
 Georgia,First Southern Bank,061206814
@@ -1595,7 +1595,7 @@ Massachusetts,Goldman Sachs Bank USA,124085082
 Louisiana,Hancock Whitney Bank,062101219
 California,Israel Discount Bank of New York,067015232
 Massachusetts,Liberty Bank,011110659
-North Carolina,MEMBERS,
+North Carolina,MEMBERS,253177793
 Texas,Members Trust Company,063192612
 Alabama,Origin Bank,111102758
 New Jersey,Royal Business Bank,026013408
@@ -1603,25 +1603,25 @@ Illinois,State Bank,071125914
 Oklahoma,TEACHERS,
 Georgia,The Farmers Bank,061107861
 Ohio,The Park National Bank,041201512
-Illinois,UNITED COMMUNITY,
+Illinois,UNITED COMMUNITY,281277364
 Ohio,Union Savings Bank,242272311
 California,Western Alliance Bank,121143260
 New Jersey,AMG National Trust Bank,107007346
 Indiana,American Bank of Freedom,081518058
 Kentucky,Banterra Bank,081215597
-Missouri,COMMUNITY FIRST,
+Missouri,COMMUNITY FIRST,281580695
 New Jersey,Columbia Bank,221271935
 Missouri,ENCORE BANK,082008583
 Massachusetts,East West Bank,011002877
-Pennsylvania,FEDEX EMPLOYEES CREDIT ASSOCIATION,
+Pennsylvania,FEDEX EMPLOYEES CREDIT ASSOCIATION,284084350
 Ohio,Farmers & Merchants Bank,042213389
 Indiana,"First Financial Bank, National Association",071100858
 Iowa,First Security Bank,082901774
-Indiana,HONDA,
+Indiana,HONDA,322275746
 Oklahoma,MidFirst Bank,102007008
-New Jersey,POLISH & SLAVIC,
+New Jersey,POLISH & SLAVIC,021283958
 Missouri,Preferred Bank,101911962
-Michigan,SELFRELIANCE,
+Michigan,SELFRELIANCE,271080817
 Oklahoma,Security State Bank,061212853
 Oklahoma,Simmons Bank,064201612
 Iowa,"TBK BANK, SSB",071104647
@@ -1630,7 +1630,7 @@ Kansas,Union State Bank,101100993
 Iowa,"Associated Bank, National Association",075000941
 Pennsylvania,Beal Bank USA,122487459
 Tennessee,Central Bank,284373838
-Florida,ENT,
+Florida,ENT,296076152
 Texas,"FSNB, National Association",103112675
 North Carolina,FirstBank,061107010
 Florida,"Magnolia Bank, Incorporated",083906888
@@ -1649,15 +1649,15 @@ Kansas,Community Bank,101106751
 Oklahoma,Farmers and Merchants Bank,103002099
 Illinois,First National Bank of Omaha,071902629
 Nebraska,Great Southern Bank,065303784
-California,JUSTICE,
-Wisconsin,SELF-HELP,
+California,JUSTICE,254074413
+Wisconsin,SELF-HELP,322273696
 New Jersey,"TD Bank, National Association",011103093
 North Carolina,The Central Trust Bank,086519609
 Florida,United Bank,067092912
 Pennsylvania,Woori America Bank,021210073
 Texas,Busey Bank,071100117
 California,Metro City Bank,061104848
-Florida,NORTHROP GRUMMAN,
+Florida,NORTHROP GRUMMAN,322276088
 Oklahoma,Commerce Bank,071100010
 Virginia,First Horizon Bank,061120152
 California,"Flagstar Bank, National Association",065203648
@@ -1666,14 +1666,14 @@ Illinois,Liberty Bank and Trust Company,065002108
 Kentucky,Old National Bank,072413638
 Minnesota,"Wilmington Trust, National Association",022313005
 Michigan,CIBC National Trust Company,071006486
-Missouri,COMMUNITYAMERICA,
+Missouri,COMMUNITYAMERICA,301081508
 Tennessee,First Community Bank,043308277
 Minnesota,United Community Bank,091210074
-North Carolina,AMERICAN AIRLINES,
+North Carolina,AMERICAN AIRLINES,311992904
 Massachusetts,"BNY Mellon, National Association",031300821
 Kansas,Farmers State Bank,101105927
 Iowa,First State Bank,073904939
-Georgia,BAXTER,
+Georgia,BAXTER,271992400
 California,First Bank,021214163
 Texas,First Bank,111907788
 Pennsylvania,Truist Bank,031204710
@@ -1692,8 +1692,8 @@ Ohio,The Northern Trust Company,063111059
 Kentucky,The Huntington National Bank,041000153
 Wisconsin,The Huntington National Bank,041000153
 Minnesota,U.S. Bank National Association,011501747
-California,NAVY FEDERAL CREDIT UNION,
-Nebraska,NAVY FEDERAL CREDIT UNION,
+California,NAVY FEDERAL CREDIT UNION,256074974
+Nebraska,NAVY FEDERAL CREDIT UNION,256074974
 Alabama,"PNC Bank, National Association",021200575
 Michigan,"PNC Bank, National Association",021200575
 Wisconsin,"PNC Bank, National Association",021200575
@@ -1762,7 +1762,7 @@ Wisconsin,Bank of Mauston,075903158
 Missouri,Bank of Odessa,101904186
 Missouri,Bank of Salem,081503694
 Louisiana,Bank of Zachary,065402520
-Ohio,Bank419,
+Ohio,Bank419,041213872
 Minnesota,BankVista,091916967
 Louisiana,Basile State Bank,065204964
 California,Beach Cities Commercial Bank,122245374
@@ -1794,12 +1794,12 @@ Michigan,COMMUNITY FOCUS,
 Indiana,COMMUNITYWIDE,
 Florida,CONNECT CREDIT UNION,
 Illinois,COOPERATIVE CHOICE NETWORK,
-Oklahoma,COREBANK,
+Oklahoma,COREBANK,103103642
 Texas,COSDEN,
 Indiana,CRANE,
 Virginia,CREDIT UNION OF RICHMOND INCORPORAT,
 Kansas,CROSSROADS,
-Virginia,"Calvin B. Taylor Banking Company of Berlin, Maryland",
+Virginia,"Calvin B. Taylor Banking Company of Berlin, Maryland",052101012
 Michigan,Capitol National Bank,072413450
 Georgia,Carver State Bank,061200658
 Iowa,Cedar Rapids Bank and Trust Company,073900108
@@ -1871,7 +1871,7 @@ Indiana,FORTRESS,
 Michigan,FRANKFORT COMMUNITY,
 Texas,FREESTONE,
 Kansas,FRONTIER COMMUNITY,
-Oklahoma,Fairview Savings and Loan Association,
+Oklahoma,Fairview Savings and Loan Association,303172664
 Missouri,"Farmers Bank of Lohman, Missouri",081510739
 Illinois,Farmers State Bank of Western Illinois,
 Indiana,Farmers and Mechanics Federal Savings Bank,281371613
@@ -1883,13 +1883,13 @@ Nebraska,First Bank of Utica,104904277
 Tennessee,First Century Bank,064204774
 Illinois,First Community Bank of Hillsboro,
 Minnesota,First Farmers & Merchants Bank,091912330
-Ohio,First Federal Community Bank of Bucyrus,
+Ohio,First Federal Community Bank of Bucyrus,241270233
 Indiana,First Federal Savings and Loan Association of Greensburg,274970351
 California,First General Bank,122244061
 Missouri,First Midwest Bank of Dexter,081501175
-Oklahoma,First National Bank and Trust Company of Ardmore,
+Oklahoma,First National Bank and Trust Company of Ardmore,103100522
 Illinois,First National Bank in Pinckneyville,
-Tennessee,First National Bank of Eastern Arkansas,
+Tennessee,First National Bank of Eastern Arkansas,084101417
 Oklahoma,First National Bank of Oklahoma,103111252
 Colorado,"First National Bank, Cortez",102104888
 Georgia,First Peoples Bank,061103849
@@ -1937,7 +1937,7 @@ Utah,HORIZON UTAH,
 Iowa,Hardin County Savings Bank,073904117
 Massachusetts,Haverhill Bank,211370053
 Louisiana,Heritage Bank of St Tammany,265470158
-Tennessee,Highland Federal Savings and Loan Association,
+Tennessee,Highland Federal Savings and Loan Association,264171267
 Kansas,Home Bank and Trust Company,101102289
 Kentucky,"Home Savings Bank, FSB",242170374
 Michigan,Homestead Savings Bank,272471072
@@ -2008,14 +2008,14 @@ Missouri,MULTIPLI,
 Virginia,"MVB Bank, Inc",051504597
 Wisconsin,M.E. EMPLOYEES,
 New Jersey,Magyar Bank,221270910
-Wisconsin,Marathon Bank,
+Wisconsin,Marathon Bank,275970020
 Minnesota,Marshall County State Bank,091215435
 Iowa,Maxwell State Bank,073921938
-Utah,Medallion Bank,
+Utah,Medallion Bank,124085228
 Utah,Merrick Bank,124384602
 Kansas,Mid-America Bank,101114934
 Iowa,"Midstates Bank, National Association",104922987
-New Jersey,Millville Savings Bank,
+New Jersey,Millville Savings Bank,231271006
 California,Mission National Bank,121038773
 Missouri,Montgomery Bank,081517761
 Georgia,Mount Vernon Bank,061206681
@@ -2066,17 +2066,17 @@ Texas,PRESTIGE COMMUNITY,
 Indiana,PROFED,
 Ohio,"PSE CREDIT UNION, INC.",
 Tennessee,P.I.A.S.,
-Wisconsin,"Park Bank, National Association",
-Oklahoma,"Patrons Bank, National Association",
+Wisconsin,"Park Bank, National Association",075909945
+Oklahoma,"Patrons Bank, National Association",103101107
 Illinois,PeopleFirst Bank,071926692
 Illinois,Peoples Bank of Macon,071108193
 Iowa,Peoples Savings Bank,073917285
 Illinois,"Petefish, Skiles & Co.",071107262
-Wisconsin,Pillar Bank,
+Wisconsin,Pillar Bank,091804147
 Georgia,Planters and Citizens Bank,061202957
 Minnesota,Portage Bank,
 Wisconsin,Premier Community Bank,075903831
-Virginia,Primis Bank,
+Virginia,Primis Bank,051409278
 Missouri,Progressive Ozark Bank,281573288
 Ohio,QUEST,
 Texas,R Bank,114914817
@@ -2169,14 +2169,14 @@ Iowa,The Exchange State Bank,073906801
 Illinois,The Farmers State Bank and Trust Company,081216240
 Illinois,The Federal Savings Bank,071026123
 Oklahoma,The First National Bank & Trust,103101107
-Oklahoma,The First National Bank in Marlow,
+Oklahoma,The First National Bank in Marlow,103102494
 Illinois,The First National Bank of Ava,
 Minnesota,The First National Bank of Cokato,
 Colorado,The First National Bank of Fleming,107003829
-Texas,The First National Bank of Hebbronville,
+Texas,The First National Bank of Hebbronville,114916019
 Illinois,The First National Bank of Litchfield,
 Minnesota,The First National Bank of Milaca,
-Virginia,The First National Bank of Peterstown,
+Virginia,The First National Bank of Peterstown,051503051
 Kansas,The First National Bank of Spearville,101105299
 Kentucky,The First National Bank of Williamson,
 Ohio,The Fort Jennings State Bank,041212815
@@ -2185,7 +2185,7 @@ Iowa,The Home Trust & Savings Bank,073903493
 Kansas,The Kansas State Bank Overbrook Kansas,101105765
 Illinois,The Litchfield National Bank,081903540
 Ohio,The Merchants National Bank,042205009
-Ohio,The National Bank of Adams County of West Union,
+Ohio,The National Bank of Adams County of West Union,042207379
 Oklahoma,The Pauls Valley National Bank,103101987
 Illinois,"The Peoples State Bank of Newton, Illinois",
 Wisconsin,The Portage County Bank,075904377
@@ -2197,7 +2197,7 @@ Minnesota,Think Mutual Bank,291975465
 Georgia,Touchmark National Bank,061121106
 Texas,"Transpecos Banks, SSB",112320788
 Oklahoma,"Triad Bank, National Association",103903046
-Virginia,Trustar Bank,
+Virginia,Trustar Bank,056009686
 Utah,UINTAH,
 New Jersey,UNION BUILDING TRADES,
 Michigan,UNITED CHURCHES,
@@ -2446,10 +2446,10 @@ California,WaFd Bank,122106073
 Minnesota,Western National Bank,091900067
 Florida,Ameris Bank,053208066
 Wisconsin,Byline Bank,071001533
-Minnesota,CITY & COUNTY,
-Virginia,CORPORATE AMERICA FAMILY,
+Minnesota,CITY & COUNTY,296075810
+Virginia,CORPORATE AMERICA FAMILY,271987075
 Massachusetts,"Community Bank, National Association",011600020
-Utah,DELTA COMMUNITY,
+Utah,DELTA COMMUNITY,261071315
 Missouri,Equity Bank,082908599
 Nebraska,Exchange Bank,101101303
 Ohio,FIRST CHOICE,
@@ -2460,30 +2460,30 @@ New Jersey,Goldman Sachs Bank USA,124085082
 Texas,Hancock Whitney Bank,062101219
 Florida,Israel Discount Bank of New York,067015232
 Ohio,Liberty Bank,242272269
-Texas,MEMBERS,
+Texas,MEMBERS,311978290
 Virginia,Members Trust Company,063192612
 Florida,Origin Bank,111102758
 Indiana,State Bank,071125914
 Wisconsin,TEACHERS,
 Kentucky,The Farmers Bank,042101792
 Tennessee,The Park National Bank,041201512
-Missouri,UNITED COMMUNITY,
+Missouri,UNITED COMMUNITY,281277364
 Pennsylvania,Union Savings Bank,011102502
 Colorado,Western Alliance Bank,121143260
 North Carolina,AMG National Trust Bank,107007346
 Missouri,American Bank of Freedom,081518058
 Missouri,Banterra Bank,081215597
-Ohio,COMMUNITY FIRST,
+Ohio,COMMUNITY FIRST,241273706
 Tennessee,Centennial Bank,084301518
 North Carolina,ENCORE BANK,082008583
-Tennessee,FEDEX EMPLOYEES CREDIT ASSOCIATION,
+Tennessee,FEDEX EMPLOYEES CREDIT ASSOCIATION,284084350
 Oklahoma,Farmers & Merchants Bank,103002099
 Kentucky,"First Financial Bank, National Association",071100858
 Minnesota,First Security Bank,091216308
-North Carolina,HONDA,
+North Carolina,HONDA,322275746
 Texas,MidFirst Bank,102007008
-North Carolina,NUCOR EMPLOYEE'S,
-Minnesota,SELFRELIANCE,
+North Carolina,NUCOR EMPLOYEE'S,253278980
+Minnesota,SELFRELIANCE,271080817
 Texas,Security State Bank,111317637
 Tennessee,Simmons Bank,064201612
 Kansas,"TBK BANK, SSB",071104647
@@ -2500,7 +2500,7 @@ Colorado,NBH Bank,101000789
 Minnesota,Nicolet National Bank,075901642
 Georgia,ServisFirst Bank,061121122
 Georgia,The Peoples Bank,061112092
-North Carolina,UKRAINIAN,
+North Carolina,UKRAINIAN,222382221
 Michigan,"WesBanco Bank, Inc.",042202219
 Virginia,"Armed Forces Bank, National Association",122243017
 Georgia,Bank OZK,061121135
@@ -2511,7 +2511,7 @@ Oklahoma,Community Bank,103103215
 Texas,Farmers and Merchants Bank,111907021
 Iowa,First National Bank of Omaha,071902629
 Oklahoma,Great Southern Bank,065303784
-Florida,JUSTICE,
+Florida,JUSTICE,254074413
 Ohio,Northwest Bank,073902290
 Alabama,"SouthState Bank, National Association",051408907
 Oklahoma,The Central Trust Bank,086519609
@@ -2519,7 +2519,7 @@ Georgia,United Bank,061101799
 Texas,Woori America Bank,021210073
 Alabama,Community State Bank,031317788
 Florida,Metro City Bank,061104848
-Illinois,NORTHROP GRUMMAN,
+Illinois,NORTHROP GRUMMAN,322276088
 Pennsylvania,"The Bank of New York Mellon Trust Company, National Association",
 Texas,Commerce Bank,114909903
 Alabama,First National Bank,031203915
@@ -2527,19 +2527,19 @@ Florida,"Flagstar Bank, National Association",065203648
 Indiana,KeyBank National Association,011807043
 Kansas,Liberty Bank and Trust Company,065002108
 Michigan,Old National Bank,072413638
-North Carolina,PENTAGON,
+North Carolina,PENTAGON,256078446
 New Jersey,"Wilmington Trust, National Association",022313005
 Missouri,CIBC National Trust Company,071006486
-North Carolina,COMMUNITYAMERICA,
+North Carolina,COMMUNITYAMERICA,301081508
 Ohio,"Citizens Bank, National Association",011001331
 Texas,First Community Bank,114908289
-Ohio,TOGETHER,
+Ohio,TOGETHER,281082915
 Missouri,United Community Bank,053105059
-Oklahoma,AMERICAN AIRLINES,
+Oklahoma,AMERICAN AIRLINES,311992904
 New Jersey,"BNY Mellon, National Association",031300821
 Kentucky,Farmers State Bank,042107738
 Kentucky,First State Bank,083901210
-Illinois,BAXTER,
+Illinois,BAXTER,271992400
 Florida,First Bank,067003778
 Virginia,First Bank,051402589
 Tennessee,Truist Bank,031204710
@@ -2558,8 +2558,8 @@ Pennsylvania,The Northern Trust Company,063111059
 Louisiana,The Huntington National Bank,041000153
 California,U.S. Bank National Association,011501747
 Missouri,U.S. Bank National Association,011501747
-Colorado,NAVY FEDERAL CREDIT UNION,
-New Jersey,NAVY FEDERAL CREDIT UNION,
+Colorado,NAVY FEDERAL CREDIT UNION,256074974
+New Jersey,NAVY FEDERAL CREDIT UNION,256074974
 California,"PNC Bank, National Association",021200575
 Missouri,"PNC Bank, National Association",081004517
 Alabama,Bank of England,082902139
@@ -2592,13 +2592,13 @@ California,ATCHISON VILLAGE,
 Alabama,AUBURN UNIVERSITY,
 Texas,AUSTIN,
 Texas,A+,
-Ohio,Adelphi Bank,
+Ohio,Adelphi Bank,044015996
 Missouri,Alliant Bank,081506390
 Pennsylvania,Ambler Savings Bank,231371634
-North Carolina,American Bank of the Carolinas,
+North Carolina,American Bank of the Carolinas,053112932
 Oklahoma,American Heritage Bank,103100616
 Iowa,American Trust and Savings Bank,073917748
-Texas,"Angelina Savings Bank, SSB",
+Texas,"Angelina Savings Bank, SSB",313173938
 Oklahoma,Armstrong Bank,103104528
 Iowa,Atkins Savings Bank & Trust,073918394
 Massachusetts,Avidia Bank,011375384
@@ -2622,7 +2622,7 @@ Florida,Bank of Belle Glade,067001246
 Georgia,Bank of Camilla,061202944
 Kansas,Bank of Commerce and Trust Company,101101060
 Georgia,Bank of Dudley,061205938
-Tennessee,Bank of Gleason,
+Tennessee,Bank of Gleason,084303011
 Georgia,Bank of Hazlehurst,061203752
 Wisconsin,Bank of Lake Mills,075903174
 Kentucky,Bank of Maysville,042101006
@@ -2638,7 +2638,7 @@ California,Beneficial State Bank,122226063
 Missouri,Bloomsdale Bank,081914814
 Minnesota,Bonanza Valley State Bank,
 Minnesota,Bravera Bank,
-Texas,Broadstreet Bank S S B,
+Texas,Broadstreet Bank S S B,311972526
 Illinois,Byron Bank,071908908
 Louisiana,CADDO PARISH TEACHERS,
 California,CALIFORNIA COAST,
@@ -2675,7 +2675,7 @@ Nebraska,Cedar Rapids State Bank,104113372
 Kentucky,Central Bank & Trust Co.,042100146
 Alabama,Century Bank,011301390
 Massachusetts,Charles River Bank,211373018
-Oklahoma,Chickasaw Community Bank,
+Oklahoma,Chickasaw Community Bank,103012966
 Kentucky,Citizens Bank & Trust Co. of Jackson,
 Illinois,Citizens Bank of Chatsworth,071108313
 California,"Citizens Business Bank, National Association",
@@ -2691,7 +2691,7 @@ Kansas,"Community Bank of Wichita, Inc.",101114879
 Missouri,Community First Banking Company,086518765
 Oklahoma,Community State Bank of Canton,103104764
 Ohio,Conneaut Savings Bank,241270796
-Texas,"Cornerstone Capital Bank, SSB",
+Texas,"Cornerstone Capital Bank, SSB",111326275
 Nebraska,Countryside Bank,104908930
 Minnesota,Currie State Bank,091215985
 Texas,DATCU,
@@ -2705,7 +2705,7 @@ Ohio,DOY,
 Illinois,DUPAGE,
 Nebraska,Dayspring Bank,104901610
 Iowa,Defiance State Bank,104922217
-Texas,Dominion Bank,
+Texas,Dominion Bank,113113923
 California,E-CENTRAL,
 Pennsylvania,EAST END FOOD COOPERATIVE,
 Ohio,EDUCATIONAL COMMUNITY ALLIANCE,
@@ -2719,7 +2719,7 @@ Minnesota,ESB Bank,091207317
 Minnesota,Eagle Rock Bank,
 Florida,Eastern National Bank,067002533
 Kentucky,Elkton Bank & Trust Company,083902727
-Ohio,"Erebor Bank, N.A.",
+Ohio,"Erebor Bank, N.A.",044016018
 Tennessee,Evolve Bank & Trust,084106768
 Georgia,F & M Bank and Trust Company,061112597
 Tennessee,FAMILY ADVANTAGE,
@@ -2732,7 +2732,7 @@ Florida,FIRST FLORIDA,
 Oklahoma,FIRST OKLAHOMA,
 Texas,FIRST WATCH,
 Georgia,FLINT,
-Oklahoma,FNB Coweta,
+Oklahoma,FNB Coweta,103103600
 California,FOOTHILL,
 Indiana,FORT FINANCIAL,
 Indiana,FORUM,
@@ -2741,7 +2741,7 @@ Ohio,FREMONT,
 California,FRONTWAVE,
 Illinois,Fairview State Banking Company,071112901
 Pennsylvania,Farmers Building and Savings Bank,243374108
-Oklahoma,"Farmers State Bank, Allen, Oklahoma",
+Oklahoma,"Farmers State Bank, Allen, Oklahoma",103111977
 Nebraska,Farmers and Merchants Bank of Ashland,104901911
 Iowa,Farmers and Merchants State Bank,104906725
 Massachusetts,Fidelity Co-operative Bank,211370668
@@ -2751,13 +2751,13 @@ Missouri,First Bank of the Lake,081505634
 Georgia,"First Century Bank, National Association",061120084
 Illinois,First Community Bank of Moultrie County,071105507
 Minnesota,First Farmers & Merchants National Bank,091216007
-Ohio,"First Federal Community Bank, National Association",
-Ohio,First Federal Savings and Loan Association of Lakewood,
-New Jersey,"First Hope Bank, A National Banking Association",
+Ohio,"First Federal Community Bank, National Association",241270916
+Ohio,First Federal Savings and Loan Association of Lakewood,241071212
+New Jersey,"First Hope Bank, A National Banking Association",021204597
 Missouri,First Midwest Bank of the Ozarks,081504693
-Pennsylvania,First National Bank and Trust Company of Newtown,
-Texas,First National Bank in Port Lavaca,
-Texas,First National Bank of Fort Stockton,
+Pennsylvania,First National Bank and Trust Company of Newtown,031912785
+Texas,First National Bank in Port Lavaca,113123162
+Texas,First National Bank of Fort Stockton,112323387
 Illinois,First National Bank of Pana,071117760
 Illinois,First Nations Bank,071924306
 Colorado,First Pioneer National Bank,102101315
@@ -2767,7 +2767,7 @@ Illinois,First State Bank of Forrest,071121808
 Illinois,First State Bank of St. Peter,
 Texas,First Texas National Bank,111906271
 Iowa,First Whitney Bank and Trust,073902151
-New Jersey,Five Rivers Bank,
+New Jersey,Five Rivers Bank,021214901
 Missouri,Fm Bank And Trust,084101051
 Wisconsin,Fox Valley Savings Bank,275970130
 Minnesota,Freeport State Bank,091907578
@@ -2803,13 +2803,13 @@ Tennessee,HOLLEY,
 Massachusetts,HOMEFIELD,
 Colorado,HORIZONS NORTH,
 Pennsylvania,Harleysville Bank,231372361
-Wisconsin,Headwaters State Bank,
+Wisconsin,Headwaters State Bank,091510428
 Missouri,Heritage Bank of the Ozarks,081519031
 Wisconsin,Highland State Bank,075905554
 California,Home Bank of California,322285480
 Missouri,"Home Savings and Loan Association of Carroll County, F.A.",301271758
 Kentucky,"Hometown Bank of Corbin, Inc.",042108290
-Texas,Houston Bank & Trust,
+Texas,Houston Bank & Trust,113026463
 Pennsylvania,I B E W LOCAL 56,
 Texas,ILA 1351,
 Missouri,INDEPENDENCE TEACHERS,
@@ -2819,7 +2819,7 @@ Georgia,INTERSTATE ,
 New Jersey,ISRAEL MEMORIAL A M E,
 California,Icon Business Bank,
 Missouri,Independent Farmers Bank,101216683
-Texas,Interstate Bank,
+Texas,Interstate Bank,311372744
 Iowa,Iowa Trust & Savings Bank,073901411
 Texas,JACKSON COUNTY,
 Indiana,JEFFERSON COMMUNITY,
@@ -2855,8 +2855,8 @@ Georgia,MACON FIREMEN'S,
 Massachusetts,MANCHESTER,
 Wisconsin,MARSHFIELD MEDICAL CENTER,
 California,MATADORS COMMUNITY,
-Texas,MCBank,
-Pennsylvania,MCS Bank,
+Texas,MCBank,111906747
+Pennsylvania,MCS Bank,231372811
 Florida,MEMBERS FIRST CREDIT UNION OF FLORI,
 Nebraska,MEMBERSOWN,
 Georgia,MERCY,
@@ -2898,8 +2898,8 @@ Michigan,NORTHERN LIGHTS COMMUNITY,
 Missouri,NORTHWEST MISSOURI REGIONAL,
 Massachusetts,NOTRE DAME COMMUNITY,
 California,NUVISION,
-North Carolina,Nantahala Bank & Trust Company,
-Nebraska,Nebraska Bank,
+North Carolina,Nantahala Bank & Trust Company,053112547
+Nebraska,Nebraska Bank,104903498
 Kansas,New Century Bank,101109538
 New Jersey,Newfield National Bank,031205340
 Massachusetts,North Cambridge Co-operative Bank,
@@ -2913,7 +2913,7 @@ Colorado,ONE THIRTEEN,
 California,ORGANIZED LABOR,
 Oklahoma,OTOE-MISSOURIA,
 Florida,OXFORD,
-Ohio,Ohio State Bank,
+Ohio,Ohio State Bank,044015941
 Massachusetts,OneLocal Bank,211371285
 Michigan,Oxford Bank,072404333
 California,PACIFIC SERVICE,
@@ -2964,7 +2964,7 @@ Kansas,SALINA MUNICIPAL,
 California,SAN JOAQUIN POWER EMPLOYEES,
 Pennsylvania,SARCO,
 California,SCHOOLSFIRST,
-Pennsylvania,SEI Private Trust Company,
+Pennsylvania,SEI Private Trust Company,031976161
 Illinois,SERVICES,
 Ohio,SHAREFAX,
 Illinois,SHERWIN WILLIAMS EMP.,
@@ -3003,7 +3003,7 @@ Utah,State Bank of Southern Utah,124301779
 Missouri,Stifel Bank and Trust,081018972
 New Jersey,Sturdy Savings Bank,231271284
 Minnesota,"Sunrise Banks, National Association",091001144
-Texas,"T Bank, National Association",
+Texas,"T Bank, National Association",111024975
 Ohio,"TAPPAN COMMUNITY CREDIT UNION, INC.",
 North Carolina,TCP,
 North Carolina,TELCO COMMUNITY CREDIT UNION,
@@ -3030,23 +3030,23 @@ Indiana,The Bippus State Bank,074909661
 Massachusetts,The Cape Cod Five Cents Savings Bank,211371078
 Alabama,The Citizens Bank of Winfield,062204938
 Kansas,The Citizens National Bank,101111953
-Texas,The City National Bank of Taylor,
+Texas,The City National Bank of Taylor,114901859
 Massachusetts,The Cooperative Bank,211070230
 Pennsylvania,The Dime Bank,031308551
 Illinois,The FNB Community Bank,103012843
 Kansas,"The Farmers State Bank of Aliceville, Kansas",101107116
-Pennsylvania,The Fidelity Deposit and Discount Bank,
-Oklahoma,"The First National Bank and Trust Co., Chickasha, Oklahoma",
+Pennsylvania,The Fidelity Deposit and Discount Bank,031303129
+Oklahoma,"The First National Bank and Trust Co., Chickasha, Oklahoma",103100467
 Illinois,The First National Bank in Tremont,
 Minnesota,The First National Bank of Bagley,
 Minnesota,The First National Bank of Coleraine,091206965
-Oklahoma,The First National Bank of Fletcher,
-Oklahoma,The First National Bank of Hooker,
-Texas,The First National Bank of Livingston,
+Oklahoma,The First National Bank of Fletcher,103107486
+Oklahoma,The First National Bank of Hooker,103110046
+Texas,The First National Bank of Livingston,113105452
 Indiana,The First National Bank of Monterey,074908426
 Iowa,The First National Bank of Primghar,
 Michigan,The First National Bank of St. Ignace,091108539
-Texas,The First National Bank of Winnsboro,
+Texas,The First National Bank of Winnsboro,111904859
 Georgia,The Four County Bank,061112034
 Missouri,The Hamilton Bank,101918075
 Alabama,The Hometown Bank of Alabama,062206444
@@ -3060,11 +3060,11 @@ Texas,The Perryton National Bank,111318584
 Missouri,The Seymour Bank,081518090
 Illinois,The State Bank of Geneva,071905817
 Kansas,The Stockgrowers State Bank,101104067
-Texas,The Waggoner National Bank of Vernon,
-Texas,Third Coast Bank,
+Texas,The Waggoner National Bank of Vernon,111302833
+Texas,Third Coast Bank,113094149
 Tennessee,Tower Community Bank,064101660
-Utah,"Transportation Alliance Bank, Inc. d/b/a TAB Bank",
-North Carolina,Triad Business Bank,
+Utah,"Transportation Alliance Bank, Inc. d/b/a TAB Bank",124384657
+North Carolina,Triad Business Bank,053112958
 Tennessee,Truxton Trust Company,064008912
 Michigan,UKRAINIAN SELFRELIANCE MICHIGAN,
 New Jersey,UNION COUNTY EMPLOYEES,
@@ -3097,7 +3097,7 @@ Michigan,WILDFIRE,
 Michigan,WMCU,
 Ohio,WRIGHT-DUNBAR AREA,
 Illinois,Waterman Bank,071916482
-Oklahoma,"Welch State Bank of Welch, Okla.",
+Oklahoma,"Welch State Bank of Welch, Okla.",103104942
 Iowa,West Iowa Bank,073908155
 Pennsylvania,West View Savings Bank,243074071
 Iowa,White State Bank,073910923
@@ -3117,7 +3117,7 @@ Illinois,A.B.D.,
 Florida,Amerasia Bank,026011484
 Florida,"American Commerce Bank, National Association",061120453
 Oklahoma,American Nation Bank,103102960
-New Jersey,Apple Bank,
+New Jersey,Apple Bank,226070584
 California,Axos Bank,011575236
 Indiana,BEACON,
 Kentucky,BLUEGRASS COMMUNITY,
@@ -3210,9 +3210,9 @@ Colorado,PEOPLES,
 California,POLAM,
 Florida,PRIORITY,
 Oklahoma,Panhandle First Bank,103102164
-New Jersey,Peapack Private Bank & Trust,
+New Jersey,Peapack Private Bank & Trust,021205237
 Alabama,Peoples Exchange Bank,062102593
-New Jersey,"Ponce Bank, National Association",
+New Jersey,"Ponce Bank, National Association",226070131
 Oklahoma,Prosperity Bank,103000800
 Kansas,RCB Bank,101101109
 Illinois,RIVER TO RIVER,
@@ -3282,7 +3282,7 @@ Utah,Glacier Bank,092101030
 Missouri,HORIZON,
 Massachusetts,"Happen Bank, National Association",211075086
 Nebraska,Horizon Bank,104905784
-Alabama,JM ASSOCIATES,
+Alabama,JM ASSOCIATES,263089800
 Kentucky,LIBERTY,
 Wisconsin,MAYO EMPLOYEES,
 California,MERIWEST,
@@ -3306,18 +3306,18 @@ Iowa,VERIDIAN,
 Texas,WaFd Bank,122106073
 Nebraska,Western National Bank,091900067
 Georgia,Ameris Bank,053208066
-New Jersey,CAMPBELL,
-Missouri,CITY & COUNTY,
+New Jersey,CAMPBELL,236077658
+Missouri,CITY & COUNTY,296075810
 Florida,"Capital Bank, National Association",053112806
 Nebraska,Equity Bank,082908599
 Florida,FAMILY FIRST,
-Pennsylvania,FIRST CHOICE,
+Pennsylvania,FIRST CHOICE,243382815
 Illinois,Fidelity Bank & Trust,071112684
 Michigan,First Merchants Bank,044072243
 Illinois,First State Bank and Trust,081504855
 Georgia,HomeTrust Bank,053208147
 New Jersey,Israel Discount Bank of New York,067015232
-Iowa,MARINE,
+Iowa,MARINE,275977489
 Utah,MEMBERS,
 Florida,Millennium Bank,064208518
 Louisiana,Origin Bank,111102758
@@ -3326,27 +3326,27 @@ Iowa,State Bank,073920997
 Kansas,TRI-COUNTY,
 Oklahoma,The Farmers Bank,103104353
 Florida,TrustCo Bank,021300912
-Pennsylvania,UNITED COMMUNITY,
+Pennsylvania,UNITED COMMUNITY,243380451
 Colorado,"United Fidelity Bank, fsb",021606690
 Illinois,Western Alliance Bank,121143260
 Virginia,AMG National Trust Bank,107007346
 Tennessee,American Bank of Freedom,081518058
 Utah,Banterra Bank,081215597
-Wisconsin,COMMUNITY FIRST,
+Wisconsin,COMMUNITY FIRST,275982801
 Texas,Centennial Bank,111321649
 Utah,Columbia Bank,055000165
 Texas,ENCORE BANK,082008583
 Texas,East West Bank,011002877
-Texas,FEDEX EMPLOYEES CREDIT ASSOCIATION,
+Texas,FEDEX EMPLOYEES CREDIT ASSOCIATION,284084350
 Virginia,Farmers & Merchants Bank,051404419
 Tennessee,"First Financial Bank, National Association",071100858
 Missouri,First Security Bank,101207773
-Ohio,HONDA,
+Ohio,HONDA,322275746
 Utah,MidFirst Bank,102007008
-Tennessee,NUCOR EMPLOYEE'S,
-Pennsylvania,POLISH & SLAVIC,
+Tennessee,NUCOR EMPLOYEE'S,253278980
+Pennsylvania,POLISH & SLAVIC,021283958
 Texas,Preferred Bank,313074370
-New Jersey,SELFRELIANCE,
+New Jersey,SELFRELIANCE,271080817
 Wisconsin,Security State Bank,061212853
 Texas,Simmons Bank,064201612
 Texas,"TBK BANK, SSB",071104647
@@ -3363,7 +3363,7 @@ Florida,NBH Bank,101000789
 Wisconsin,Nicolet National Bank,075901642
 North Carolina,ServisFirst Bank,061121122
 Indiana,The Peoples Bank,083905326
-Ohio,UKRAINIAN,
+Ohio,UKRAINIAN,222382221
 Ohio,"WesBanco Bank, Inc.",042202219
 California,Austin Capital Bank SSB,114994031
 Texas,Bank of Hope,021214325
@@ -3374,16 +3374,16 @@ Pennsylvania,Community Bank,043310980
 Alabama,First Financial Bank,062201397
 Kansas,First National Bank of Omaha,071902629
 Texas,Great Southern Bank,065303784
-Georgia,JUSTICE,
+Georgia,JUSTICE,254074413
 Pennsylvania,Northwest Bank,243374218
 Colorado,"SouthState Bank, National Association",051408907
 North Carolina,"TD Bank, National Association",011103093
-Indiana,UNITED,
+Indiana,UNITED,272484894
 North Carolina,United Bank,011110633
 Virginia,Woori America Bank,021210073
 Colorado,Community State Bank,102107364
 Georgia,Metro City Bank,061104848
-Louisiana,NORTHROP GRUMMAN,
+Louisiana,NORTHROP GRUMMAN,322276088
 Texas,"The Bank of New York Mellon Trust Company, National Association",
 Alabama,First Horizon Bank,061120152
 Colorado,First National Bank,107001960
@@ -3391,16 +3391,16 @@ Indiana,"Flagstar Bank, National Association",065203648
 Massachusetts,KeyBank National Association,011807043
 Louisiana,Liberty Bank and Trust Company,065002108
 Minnesota,Old National Bank,072413638
-Pennsylvania,PENTAGON,
-Tennessee,COMMUNITYAMERICA,
+Pennsylvania,PENTAGON,256078446
+Tennessee,COMMUNITYAMERICA,301081508
 Pennsylvania,"Citizens Bank, National Association",011001331
 Virginia,First Community Bank,051409142
-Texas,TOGETHER,
+Texas,TOGETHER,281082915
 North Carolina,United Community Bank,053105059
-Pennsylvania,AMERICAN AIRLINES,
+Pennsylvania,AMERICAN AIRLINES,311992904
 Michigan,Farmers State Bank,042107738
 Michigan,First State Bank,051502528
-Indiana,BAXTER,
+Indiana,BAXTER,271992400
 Illinois,First Bank,021214163
 Alabama,Truist Bank,031204710
 Texas,Truist Bank,031204710
@@ -3418,7 +3418,7 @@ Texas,The Northern Trust Company,111016064
 Michigan,The Huntington National Bank,041000153
 Colorado,U.S. Bank National Association,011501747
 Nebraska,U.S. Bank National Association,011501747
-Florida,NAVY FEDERAL CREDIT UNION,
+Florida,NAVY FEDERAL CREDIT UNION,256074974
 Colorado,"PNC Bank, National Association",021200575
 New Jersey,"PNC Bank, National Association",021200575
 California,Bank of England,082902139
@@ -3460,10 +3460,10 @@ California,American Business Bank,122042807
 Minnesota,American Heritage National Bank,091903051
 Minnesota,Americana Community Bank,091901969
 Illinois,Anna State Bank,081219108
-Pennsylvania,Armstrong County Building and Loan Association,
+Pennsylvania,Armstrong County Building and Loan Association,243373280
 Kentucky,Auburn Banking Company,083903661
 Florida,"Axiom Bank, National Association",263184815
-Oklahoma,BANK360,
+Oklahoma,BANK360,103106160
 Indiana,BATTERY EMPLOYEES,
 New Jersey,BAYONNE SCHOOL EMPLOYEES,
 Virginia,"BEACON CREDIT UNION, INCORPORATED",
@@ -3477,7 +3477,7 @@ Louisiana,BRECO,
 Texas,BROWNSVILLE CITY EMPLOYEES,
 Tennessee,BULAB EMPLOYEES,
 Missouri,Bank 21,101902366
-Virginia,Bank Of Clarke,
+Virginia,Bank Of Clarke,051402518
 Illinois,Bank of Belleville,081026540
 Wisconsin,Bank of Cashton,075904762
 Louisiana,Bank of Coushatta,111101681
@@ -3531,7 +3531,7 @@ Missouri,Cass Commercial Bank,081000605
 Nebraska,Cedar Security Bank,104101630
 Missouri,Central Bank of Kansas City,101019084
 Louisiana,Century Next Bank,311170250
-Texas,"Charles Schwab Bank, SSB",
+Texas,"Charles Schwab Bank, SSB",111994364
 Missouri,Chillicothe State Bank,101901419
 Minnesota,Citizens Bank & Trust Co.,091901862
 Kentucky,"Citizens Bank of Cumberland County, Inc.",083908307
@@ -3541,7 +3541,7 @@ Virginia,Citizens and Farmers Bank,051402356
 Texas,"Classic Bank, National Association",111902806
 North Carolina,Coastal Carolina National Bank,053208309
 Colorado,Colorado Federal Savings Bank,107089335
-Pennsylvania,Commercial Bank and Trust of PA,
+Pennsylvania,Commercial Bank and Trust of PA,043305092
 Alabama,Commonwealth National Bank,065102833
 Louisiana,Community Bank of Louisiana,111104581
 Florida,Community Bank of the South,063114894
@@ -3602,28 +3602,28 @@ Iowa,Farmers Savings Bank & Trust,073906160
 Iowa,Farmers Trust & Savings Bank,073906160
 California,Farmers and Merchants Bank of Long Beach,122201198
 Nebraska,"Farmers and Merchants State Bank, Bloomfield, Nebraska",104102095
-Ohio,Fidelity Federal Savings and Loan Association of Delaware,
+Ohio,Fidelity Federal Savings and Loan Association of Delaware,244170880
 Minnesota,First Bank Blue Earth,091201915
 Alabama,First Bank of Alabama,062200961
 Michigan,"First Bank, Upper Michigan",091101141
 Wisconsin,First Citizens State Bank,075902337
 Tennessee,First Community Bank of Tennessee,064103671
 Minnesota,First Farmers & Merchants State Bank of Grand Meadow,
-Texas,"First Federal Community Bank, SSB",
-Ohio,First Federal Savings and Loan Association of Lorain,
+Texas,"First Federal Community Bank, SSB",311972704
+Ohio,First Federal Savings and Loan Association of Lorain,241271342
 Minnesota,First International Bank & Trust,091305031
 Ohio,"First Mutual Bank, FSB",243470183
 Texas,First National Bank and Trust Company of Weatherford,103101204
 Illinois,First National Bank in Taylorville,
-Texas,First National Bank of Giddings,
+Texas,First National Bank of Giddings,113104712
 Florida,First National Bank of Pasco,063112728
 Nebraska,First Nebraska Bank,104908956
 Alabama,First Progressive Bank,062103000
 Kentucky,First Southern National Bank,042102351
-Texas,First State Bank of Bedias,
+Texas,First State Bank of Bedias,113109377
 Minnesota,First State Bank of Le Center,091904267
 Minnesota,First State Bank of Swanville,
-Nebraska,First Tri County Bank,
+Nebraska,First Tri County Bank,104908817
 Kentucky,"First & Farmers National Bank, Inc.",083903108
 Florida,Flagship Bank,063115893
 Missouri,Focus Bank,081517732
@@ -3639,7 +3639,7 @@ Michigan,GRACO,
 Iowa,GREATER IOWA,
 New Jersey,GSL Savings Bank,221270525
 Louisiana,G. C. A.,
-Texas,"Gilmer National Bank, Gilmer, Texas",
+Texas,"Gilmer National Bank, Gilmer, Texas",111905612
 Illinois,Goodfield State Bank,071118659
 Illinois,Grand Rivers Community Bank,081213269
 Georgia,Great Oaks Bank,
@@ -3657,9 +3657,9 @@ Wisconsin,HOLY FAMILY MEMORIAL,
 Ohio,HOMELAND,
 Texas,HOUSTON BELT & TERMINAL,
 California,HUNTINGTON BEACH,
-Texas,Harmony Bank,
+Texas,Harmony Bank,111925113
 Florida,Helm Bank USA,067011456
-Nebraska,Hershey Bank,
+Nebraska,Hershey Bank,104101559
 Virginia,Highlands Community Bank,051409171
 Tennessee,Home Banking Company,084305844
 Illinois,"Home State Bank, National Association",071918765
@@ -3678,7 +3678,7 @@ Florida,Intracoastal Bank,063116562
 Iowa,Iowa Trust and Savings Bank,073901411
 Virginia,JACKSON RIVER COMMUNITY,
 Alabama,JEFFERSON CREDIT UNION,
-Nebraska,JONES BANK,
+Nebraska,JONES BANK,104901364
 North Carolina,"Jackson Savings Bank, SSB",253171498
 Kansas,Johnson State Bank,101111458
 Michigan,KALSEE,
@@ -3704,7 +3704,7 @@ Minnesota,Lake Elmo Bank,091910196
 Kansas,Landmark National Bank,101100566
 Texas,"Legend Bank, N.A.",111903290
 Iowa,Liberty Trust & Savings Bank,
-Virginia,"Locus Bank, Inc.",
+Virginia,"Locus Bank, Inc.",051409524
 Minnesota,Lowry State Bank,091208332
 Georgia,MACON-BIBB EMPLOYEES CREDIT UNION,
 Michigan,MANISTIQUE,
@@ -3809,7 +3809,7 @@ Colorado,"RG Bank, A Savings and Loan Association",
 Wisconsin,RIPPLE,
 California,RIZE,
 Illinois,ROCKFORD MUNICIPAL EMPLOYEES,
-Nebraska,RVR Bank,
+Nebraska,RVR Bank,104900116
 Louisiana,Red River Bank,065205264
 Louisiana,Resource Bank,065405242
 Iowa,Rivers Edge Bank,073903749
@@ -3841,7 +3841,7 @@ Wisconsin,SUPERIOR MUNICIPAL EMPLOYEES,
 Florida,Sanibel Captiva Community Bank,067015287
 Illinois,Scott State Bank,071109228
 Missouri,Security Bank of Pulaski County,081518045
-Oklahoma,Security First National Bank of Hugo,
+Oklahoma,Security First National Bank of Hugo,103112426
 Iowa,Security Trust & Savings Bank,
 Minnesota,Sherburne State Bank,091915201
 Louisiana,Simmesport State Bank,065204951
@@ -3888,21 +3888,21 @@ Colorado,The Dolores State Bank,102101218
 Ohio,The Fahey Banking Company,044101745
 Kansas,The Farmers State Bank of Blue Mound,101111490
 Kansas,The Fidelity State Bank and Trust Company,101101730
-Oklahoma,The First National Bank and Trust Company of Broken Arrow,
+Oklahoma,The First National Bank and Trust Company of Broken Arrow,103100218
 Colorado,The First National Bank in Trinidad,
-Texas,The First National Bank of Ballinger,
+Texas,The First National Bank of Ballinger,111302587
 Ohio,The First National Bank of Dennison,041209420
 Oklahoma,The First National Bank of Fort Smith,103112345
 Kansas,The First National Bank of Hope,
 Kansas,The First National Bank of Louisburg,101113812
-Texas,The First National Bank of Moody,
+Texas,The First National Bank of Moody,111907348
 Minnesota,The First National Bank of Proctor,
-Texas,The First National Bank of Stanton,
+Texas,The First National Bank of Stanton,112307222
 Illinois,The First State Bank of Dongola,
 Virginia,The Freedom Bank of Virginia,056009123
 Ohio,The Hamler State Bank,041209789
 Pennsylvania,The Honesdale National Bank,031308535
-Texas,The Karnes County National Bank of Karnes City,
+Texas,The Karnes County National Bank of Karnes City,114911234
 Kansas,The Lyndon State Bank,101104407
 Minnesota,The Miners National Bank of Eveleth,
 Virginia,The National Bank of Blacksburg,051403122
@@ -3914,10 +3914,10 @@ Iowa,The Shelby County State Bank,104903391
 Illinois,The State Bank of Pearl City,
 Nebraska,The Tri-County Bank,104113660
 Kansas,The Walton State Bank,101110763
-Tennessee,Thread Bank,
-Wisconsin,"Town Bank, National Association",
+Tennessee,Thread Bank,064209588
+Wisconsin,"Town Bank, National Association",075917843
 Wisconsin,Tri City National Bank,075001199
-Texas,"Trinity Bank, N.A.",
+Texas,"Trinity Bank, N.A.",111924716
 California,Tustin Community Bank,322286489
 Pennsylvania,UKRAINIAN SELFRELIANCE OF WEST. PA.,
 Texas,UNION FIDELITY,
@@ -3951,7 +3951,7 @@ Illinois,WILLIAMSON COUNTY CATHOLIC,
 North Carolina,WNC COMMUNITY  CU,
 Ohio,"WRIGHT-PATT CREDIT UNION, INC.",
 Massachusetts,Walpole Co-operative Bank,211373063
-Oklahoma,Watermark Bank,
+Oklahoma,Watermark Bank,103013376
 Minnesota,Welcome State Bank,091210993
 Michigan,West Michigan Community Bank,072413104
 Texas,WestStar Bank,112017619
@@ -4114,7 +4114,7 @@ Oklahoma,Arvest Bank,082900995
 Kansas,Bank 7,101111319
 Missouri,CATHOLIC FAMILY,
 North Carolina,CENTRA,
-Alabama,CITY,
+Alabama,CITY,262277202
 Minnesota,CONNEXUS,
 Wisconsin,COVANTAGE,
 Kansas,Central National Bank,101101293
@@ -4142,7 +4142,7 @@ Colorado,MERIWEST,
 Indiana,NOTRE DAME,
 New Jersey,NewBank,026014216
 Pennsylvania,"OceanFirst Bank, National Association",
-Alabama,PENAIR,
+Alabama,PENAIR,263281695
 North Carolina,Paragon Bank,084008947
 Virginia,Pioneer Bank,051404325
 New Jersey,Provident Bank,021205499
@@ -4161,21 +4161,21 @@ Minnesota,VERIDIAN,
 Utah,WaFd Bank,122106073
 Florida,"Wilmington Savings Fund Society, FSB",031100924
 North Carolina,Ameris Bank,053208066
-North Carolina,CAMPBELL,
-Tennessee,CITY & COUNTY,
+North Carolina,CAMPBELL,236077658
+Tennessee,CITY & COUNTY,296075810
 Illinois,"Capital Bank, National Association",053112806
 Pennsylvania,"Community Bank, National Association",011600020
 Ohio,EVEREST,
 Oklahoma,Equity Bank,082908599
-Georgia,FAMILY FIRST,
-Wisconsin,FIRST CHOICE,
+Georgia,FAMILY FIRST,261071373
+Wisconsin,FIRST CHOICE,275979393
 Iowa,Fidelity Bank & Trust,071112684
 Ohio,First Merchants Bank,044072243
 Kansas,First State Bank and Trust,101101992
 Utah,Goldman Sachs Bank USA,124085082
 North Carolina,HomeTrust Bank,053208147
-North Carolina,MARINE,
-Wisconsin,MEMBERS,
+North Carolina,MARINE,253174893
+Wisconsin,MEMBERS,275982584
 Georgia,Millennium Bank,064208518
 Texas,Origin Bank,111102758
 Florida,Safra National Bank of New York,026003023
@@ -4183,22 +4183,22 @@ Missouri,State Bank,101918101
 Michigan,TRI-COUNTY,
 Tennessee,The Farmers Bank,064105336
 Massachusetts,TrustCo Bank,021300912
-Texas,UNITED COMMUNITY,
+Texas,UNITED COMMUNITY,313082171
 Florida,"United Fidelity Bank, fsb",021606690
 Indiana,Alliance Bank,074912674
 Colorado,"BOKF, National Association",082901392
-California,CHEVRON,
+California,CHEVRON,321075947
 Louisiana,"Capital One, National Association",021200407
 Alabama,Citizens Community Bank,061209552
-Georgia,EMPEOPLE,
-Florida,EVERENCE,
-California,FARMERS INSURANCE,
-California,FIRST TECHNOLOGY,
+Georgia,EMPEOPLE,271186423
+Florida,EVERENCE,031389237
+California,FARMERS INSURANCE,322077795
+California,FIRST TECHNOLOGY,321180379
 Florida,First American Bank,067015928
 Illinois,"First Mid Bank & Trust, National Association",071102076
 Illinois,Flanagan State Bank,071118264
 California,"HSBC Bank USA, National Association",021001088
-Illinois,NATIONAL POLICE,
+Illinois,NATIONAL POLICE,271078146
 California,PCB Bank,122043602
 Iowa,Peoples State Bank,073901929
 Alabama,Renasant Bank,061103276
@@ -4206,8 +4206,8 @@ Florida,"Santander Bank, N.A.",011075202
 California,Shinhan Bank America,026011963
 California,"Sunflower Bank, National Association",101100621
 California,TIB National Association,111010170
-California,U S POSTAL SERVICE,
-Colorado,ALTRA,
+California,U S POSTAL SERVICE,254075441
+Colorado,ALTRA,291881216
 Nebraska,"Associated Bank, National Association",075000941
 Massachusetts,Cathay Bank,011001962
 Illinois,Citizens State Bank,071108106
@@ -4223,7 +4223,7 @@ Alabama,Valley National Bank,021201383
 Pennsylvania,"WesBanco Bank, Inc.",042202219
 Colorado,Austin Capital Bank SSB,114994031
 North Carolina,Bank OZK,026013291
-Florida,CREDIT UNION 1,
+Florida,CREDIT UNION 1,271188081
 New Jersey,"Citibank, National Association",026009645
 Wisconsin,Citizens Bank,031101143
 Michigan,Commercial Bank,072403554
@@ -4231,16 +4231,16 @@ Tennessee,Community Bank,284373760
 Illinois,First Financial Bank,041203811
 Missouri,First National Bank of Omaha,071902629
 California,Hanmi Bank,061106150
-Illinois,JUSTICE,
+Illinois,JUSTICE,254074413
 Utah,Northwest Bank,073902290
 Florida,"SouthState Bank, National Association",051408907
 Pennsylvania,"TD Bank, National Association",011103093
-Michigan,UNITED,
+Michigan,UNITED,272484894
 Ohio,United Bank,011110633
 Colorado,Busey Bank,071100117
 Illinois,Community State Bank,031317788
 New Jersey,Metro City Bank,061104848
-Utah,NORTHROP GRUMMAN,
+Utah,NORTHROP GRUMMAN,322276088
 Colorado,Commerce Bank,071100010
 Florida,First Horizon Bank,061120152
 Illinois,First National Bank,071122564
@@ -4248,19 +4248,19 @@ Michigan,"Flagstar Bank, National Association",065203648
 Michigan,KeyBank National Association,011807043
 Michigan,Liberty Bank and Trust Company,065002108
 North Carolina,Old National Bank,072413638
-Texas,PENTAGON,
+Texas,PENTAGON,256078446
 Pennsylvania,"Wilmington Trust, National Association",022313005
 Texas,CIBC National Trust Company,071006486
-Texas,COMMUNITYAMERICA,
+Texas,COMMUNITYAMERICA,301081508
 Virginia,"Citizens Bank, National Association",011001331
 Wisconsin,First Community Bank,075903226
-Virginia,TOGETHER,
+Virginia,TOGETHER,281082915
 Tennessee,United Community Bank,053105059
-Tennessee,AMERICAN AIRLINES,
+Tennessee,AMERICAN AIRLINES,311992904
 Ohio,"BNY Mellon, National Association",031300821
 Missouri,Farmers State Bank,101202503
 Nebraska,First State Bank,104102257
-Massachusetts,BAXTER,
+Massachusetts,BAXTER,271992400
 Iowa,First Bank,021214163
 Florida,Truist Bank,031204710
 Virginia,Truist Bank,031204710
@@ -4279,8 +4279,8 @@ Wisconsin,The Northern Trust Company,063111059
 Minnesota,The Huntington National Bank,041000153
 Florida,U.S. Bank National Association,011501747
 North Carolina,U.S. Bank National Association,011501747
-Georgia,NAVY FEDERAL CREDIT UNION,
-North Carolina,NAVY FEDERAL CREDIT UNION,
+Georgia,NAVY FEDERAL CREDIT UNION,256074974
+North Carolina,NAVY FEDERAL CREDIT UNION,256074974
 Florida,"PNC Bank, National Association",021200575
 Colorado,Bank of England,082902139
 New Jersey,Bank of England,082902139
@@ -4311,7 +4311,7 @@ Massachusetts,ATHOL,
 Virginia,AUGUSTA HEALTH CARE CREDIT UNION,
 Alabama,AVADIAN,
 Pennsylvania,A.B.,
-Texas,"Agility Bank, National Association",
+Texas,"Agility Bank, National Association",113026243
 Colorado,Alpine Bank,102103407
 Florida,"Amerant Bank, National Association",067010509
 Illinois,"American Commercial Bank & Trust, National Association",071902399
@@ -4328,14 +4328,14 @@ Colorado,BELLCO,
 Ohio,BEST REWARD,
 Oklahoma,BISON,
 Missouri,BLUCURRENT,
-Texas,BOC Bank,
+Texas,BOC Bank,111308442
 Pennsylvania,BRADFORD AREA SCHOOL EMPLOYEES,
 Texas,BRENTWOOD BAPTIST CHURCH,
 Wisconsin,BROKAW,
 Virginia,BRUNSWICK COUNTY TEACHERS,
 Illinois,BURLINGTON NORTHERN SANTA FE RAILWY,
 Wisconsin,Badger Bank,075902188
-Wisconsin,Bank Cmg,
+Wisconsin,Bank Cmg,075903161
 Iowa,Bank Plus,073922115
 Missouri,Bank of Billings,081505964
 Missouri,Bank of Crocker,081512928
@@ -4350,7 +4350,7 @@ Minnesota,BankCherokee,096000580
 Wisconsin,Bankers' Bank,075912479
 Nebraska,Battle Creek State Bank,104113521
 Indiana,Bedford Federal Savings Bank,283971600
-New Jersey,Bessemer Trust Company,
+New Jersey,Bessemer Trust Company,021203970
 Iowa,Blue Grass Savings Bank,073912086
 Louisiana,"Bonvenu Bank, National Association",111103524
 Iowa,Breda Savings Bank,073912196
@@ -4360,7 +4360,7 @@ California,CAHP,
 California,CALIFORNIA LITHUANIAN,
 Ohio,CANTON SCHOOL EMPLOYEES,
 Ohio,CAREY POVERELLO,
-Tennessee,CBBC Bank,
+Tennessee,CBBC Bank,064202501
 Georgia,CENTER PARC,
 Massachusetts,CENTRAL ONE,
 California,CERTIFIED,
@@ -4374,7 +4374,7 @@ Wisconsin,CLOVERBELT,
 Texas,COASTAL BEND P O,
 Ohio,CODE,
 Colorado,COLUMBINE,
-Oklahoma,COMMUNITY BANK OF OKLAHOMA,
+Oklahoma,COMMUNITY BANK OF OKLAHOMA,103105488
 Illinois,COMMUNITY PLUS,
 Texas,COMPLEX COMMUNITY,
 Georgia,CONNEX,
@@ -4389,7 +4389,7 @@ Minnesota,Castle Rock Bank,091913148
 Iowa,Cedar Valley Bank & Trust,073914864
 Illinois,Central Federal Savings and Loan Association,271971502
 New Jersey,Century Savings Bank,231270366
-Texas,"Charles Schwab Premier Bank, SSB",
+Texas,"Charles Schwab Premier Bank, SSB",111994377
 California,"Chino Commercial Bank, N.A.",122243062
 Louisiana,"Citizens Bank & Trust Company of Vivian, Louisiana",111101694
 Illinois,Citizens Bank of Edinburg,071123518
@@ -4404,11 +4404,11 @@ Minnesota,Community Bank Mankato,091915890
 Missouri,Community Bank of Marshall,101903637
 Virginia,Community Bankers' Bank,051005106
 Texas,Community National Bank & Trust of Texas,111913073
-Pennsylvania,Community State Bank of Orbisonia,
+Pennsylvania,Community State Bank of Orbisonia,031317788
 Missouri,Connections Bank,081519028
 Illinois,Cornerstone National Bank & Trust Company,071926155
 Michigan,County National Bank,072402694
-Wisconsin,Crossbridge Community Bank,
+Wisconsin,Crossbridge Community Bank,291571348
 Florida,Cypress Bank & Trust,063117024
 Ohio,DAY AIR,
 Minnesota,DEER RIVER COOPERATIVE,
@@ -4433,7 +4433,7 @@ New Jersey,ENERGY PEOPLE,
 Pennsylvania,EQT,
 California,ESCONDIDO,
 Illinois,EVERGREEN PARK SCHOOLS,
-Virginia,EagleBank,
+Virginia,EagleBank,055003298
 Florida,Echelon Bank,
 Pennsylvania,Embassy Bank for the Lehigh Valley,031318716
 Louisiana,Eureka Homestead,265070529
@@ -4460,7 +4460,7 @@ Minnesota,Falcon National Bank,091904908
 Illinois,"Farmers State Bank of Alto Pass, Ill.",
 California,Farmers & Merchants Bank of Central California,
 Kansas,"Farmers and Merchants Bank of Mound City, Kansas",
-Pennsylvania,Farmers and Merchants Trust Company of Chambersburg,
+Pennsylvania,Farmers and Merchants Trust Company of Chambersburg,031304306
 Illinois,First Bank Chicago,
 Alabama,First Bank of Boaz,062202163
 Illinois,"First Bankers Trust Company, National Association",081200586
@@ -4472,14 +4472,14 @@ California,First Federal Savings and Loan Association of San Rafael,
 Indiana,First Internet Bank of Indiana,074014187
 Colorado,First National Bank Colorado,102101292
 Kansas,First National Bank and Trust,101103356
-Wisconsin,First National Bank in Tigerton,
+Wisconsin,First National Bank in Tigerton,075906977
 Georgia,First National Bank of Griffin,
 Illinois,"First Neighbor Bank, National Association",071109082
 Oklahoma,First Pryority Bank,103102627
 Alabama,First Southern State Bank,062202477
 Illinois,First State Bank of Beecher City,081211669
-Texas,First State Bank of Livingston,
-Texas,First State Bank of Texas,
+Texas,First State Bank of Livingston,113105465
+Texas,First State Bank of Texas,114916705
 Illinois,First Trust Bank of Illinois,071925826
 Kentucky,First & Peoples Bank and Trust Company,042105882
 Missouri,Flat Branch Bank,101918101
@@ -4517,11 +4517,11 @@ Kentucky,Hart County Bank and Trust Company,083905656
 Texas,Henderson Federal Savings Bank,311971776
 North Carolina,"Hertford Savings Bank, SSB",253170677
 Michigan,Highpoint Community Bank,
-Tennessee,Home Federal Bank of Tennessee,
+Tennessee,Home Federal Bank of Tennessee,264271390
 Texas,HomeBank Texas,111922776
 Ohio,Hometown Bank,241271193
-Pennsylvania,Huntingdon Savings Bank,
-Nebraska,I3 Bank,
+Pennsylvania,Huntingdon Savings Bank,231372507
+Nebraska,I3 Bank,104913019
 Illinois,ILLIANA FINANCIAL,
 Indiana,INDIANA HEARTLAND,
 Pennsylvania,INGERSOLL-RAND,
@@ -4530,7 +4530,7 @@ Iowa,IOWA HEARTLAND,
 Kansas,Impact Bank,101101031
 Tennessee,InsBank,064008611
 Pennsylvania,Investment Savings Bank,231371618
-Pennsylvania,Iron Workers Savings Bank,
+Pennsylvania,Iron Workers Savings Bank,231371692
 California,JACOM,
 Louisiana,JEFFERSON PARISH EMPLOYEES,
 California,JONES METHODIST CHURCH,
@@ -4556,7 +4556,7 @@ Texas,LUFKIN,
 Alabama,L&N EMPLOYEES,
 Minnesota,Lake Region Bank,091911153
 Wisconsin,Laona State Bank,091508171
-Nebraska,Legends West Bank,
+Nebraska,Legends West Bank,104107786
 Illinois,"Libertyville Bank & Trust Company, National Association",071925567
 Iowa,Logan State Bank,
 Georgia,Loyal Trust Bank,
@@ -4592,7 +4592,7 @@ Alabama,Metro Bank,062204019
 Illinois,MidAmerica National Bank,071102238
 Missouri,Midwest Regional Bank,101911519
 Virginia,Miners Exchange Bank,051404684
-Utah,"Morgan Stanley Bank, National Association",
+Utah,"Morgan Stanley Bank, National Association",026014630
 Illinois,Municipal Trust and Savings Bank,071924979
 Texas,NATURAL RESOURCES CONSERVATION SERV,
 Texas,NEIGHBORHOOD,
@@ -4620,7 +4620,7 @@ Nebraska,ONENEBRASKA,
 Florida,ORLANDO,
 Oklahoma,OU,
 Missouri,O'Bannon Banking Company,081505702
-Oklahoma,Oklahoma Bank and Trust Company,
+Oklahoma,Oklahoma Bank and Trust Company,103101848
 Florida,OptimumBank,067015096
 Missouri,Ozarks Federal Savings and Loan Association,281972931
 Virginia,PAHO/WHO,
@@ -4643,11 +4643,11 @@ Illinois,Parkway Bank and Trust Company,
 Kentucky,Pbt Bancorp,
 Missouri,Peoples Bank & Trust Co.,042101268
 Tennessee,Peoples Bank of the South,064206031
-Texas,Peoples State Bank of Hallettsville,
+Texas,Peoples State Bank of Hallettsville,113121384
 Illinois,Philo Exchange Bank,071110369
 Minnesota,Pine River State Bank,091914121
 Nebraska,Platte Valley Bank,102306699
-Virginia,Potomac Bank,
+Virginia,Potomac Bank,057001418
 Virginia,"Presidential Bank, FSB",255073345
 Minnesota,PrinsBank,091216476
 Tennessee,Putnam 1st Mercantile Bank,064109031
@@ -4663,7 +4663,7 @@ Massachusetts,ROCKLAND,
 Georgia,Rabun County Bank,061102662
 Minnesota,Red River State Bank,091204682
 Illinois,"Resource Bank, National Association",071914358
-Ohio,Riverside Bank of Dublin,
+Ohio,Riverside Bank of Dublin,044015954
 Alabama,S R I EMPLOYEES,
 Texas,SALT EMPLOYEES,
 California,SANTA ANA,
@@ -4695,10 +4695,10 @@ Missouri,Security Bank of Southwest Missouri,081509737
 Texas,Security State Bank & Trust,114921949
 Missouri,Sherwood Community Bank,101209412
 Nebraska,Siouxland Bank,104901241
-New Jersey,Somerset Regal Bank,
+New Jersey,Somerset Regal Bank,221270211
 Massachusetts,South Shore Bank,211371447
 Alabama,Southern Independent Bank,062106573
-Oklahoma,Sovereign Bank,
+Oklahoma,Sovereign Bank,103103451
 Texas,Spur Security Bank,111305571
 Minnesota,Star Bank,081003275
 Illinois,State Bank of Cherry,071112176
@@ -4732,7 +4732,7 @@ Tennessee,The Bank of Milan,084304117
 Alabama,The Bank of Vernon,062203874
 Illinois,The Bradford National Bank of Greenville,
 Kentucky,The Cecilian Bank,083903056
-Ohio,The Citizens National Bank of Bluffton,
+Ohio,The Citizens National Bank of Bluffton,041212983
 Kansas,"The Citizens State Bank of Cheney, Kansas",101104494
 Illinois,The Clay City Banking Co.,081212273
 Missouri,The Corner Stone Bank,101207210
@@ -4741,35 +4741,35 @@ Illinois,The Fairfield National Bank,081205727
 Colorado,The Farmers State Bank of Brush,107003418
 Illinois,The First Bank and Trust Company of Murphysboro,
 Oklahoma,The First National Bank and Trust Company of Miami,103101754
-New Jersey,The First National Bank of Absecon,
-Wisconsin,The First National Bank of Bangor,
+New Jersey,The First National Bank of Absecon,031204804
+Wisconsin,The First National Bank of Bangor,091803957
 Kansas,The First National Bank of Dighton,101106560
-Ohio,The First National Bank of Germantown,
-Texas,The First National Bank of Hughes Springs,
+Ohio,The First National Bank of Germantown,042206503
+Texas,The First National Bank of Hughes Springs,111911033
 Kentucky,The First National Bank of Manchester,
 Minnesota,The First National Bank of Moose Lake,091914820
-Texas,The First National Bank of Quitaque,
-Texas,The First National Bank of Sterling City,
+Texas,The First National Bank of Quitaque,111319538
+Texas,The First National Bank of Sterling City,111307252
 Kansas,The First State Bank of Healy,101108649
 Indiana,The Friendship State Bank,074909988
-Tennessee,The Hardin County Bank,
-Oklahoma,The Hopeton State Bank,
+Tennessee,The Hardin County Bank,084302300
+Oklahoma,The Hopeton State Bank,103111197
 Ohio,The Killbuck Savings Bank Company,041210053
 Kansas,The Lyon County State Bank,101100786
 Michigan,The Miners State Bank,091109253
 Indiana,The National Bank of Indianapolis,074006674
 Minnesota,The Northern State Bank of Gonvick,
 New Jersey,The Pennsville National Bank,031201085
-Pennsylvania,The Philadelphia Trust Company,
+Pennsylvania,The Philadelphia Trust Company,036018587
 Indiana,The Riddell National Bank,074902228
 Michigan,The Shelby State Bank,072411708
 Iowa,The State Bank of Toledo,073920780
 Georgia,The Trust Bank,061206458
 Minnesota,The Wanda State Bank,091209797
-Utah,Thrivent Bank,
+Utah,Thrivent Bank,075972147
 Illinois,Town Center Bank,071926634
 California,Tri Counties Bank,121031673
-Texas,Trinity Capital Bank of Texas,
+Texas,Trinity Capital Bank of Texas,111920312
 Iowa,Twin Cedars Bank,
 Massachusetts,UMASSFIVE COLLEGE,
 Texas,UNION PACIFIC EMPLOYEES,
@@ -4800,7 +4800,7 @@ Pennsylvania,WESTERN PA,
 Texas,WHITE SANDS,
 Pennsylvania,WILLIAMSPORT TEACHERS,
 Iowa,WOLF POINT,
-Oklahoma,Walters Bank and Trust Company,
+Oklahoma,Walters Bank and Trust Company,103103121
 Wisconsin,Waukesha State Bank,075901341
 Texas,Wellington State Bank,111308552
 Missouri,West Plains Bank and Trust Company,081502530
@@ -4984,7 +4984,7 @@ Tennessee,First Commerce Bank,064108799
 Illinois,First Independence Bank,072001079
 Tennessee,First US Bank,051405803
 Virginia,"Fulton Bank, National Association",031100461
-Alabama,GUARDIAN,
+Alabama,GUARDIAN,262276410
 Massachusetts,HANSCOM,
 Tennessee,HORIZON,
 Illinois,Heartland Bank and Trust Company,071104427
@@ -5014,20 +5014,20 @@ Nebraska,VERIDIAN,
 California,Wallis Bank,113113392
 New Jersey,"Wilmington Savings Fund Society, FSB",031100924
 Florida,"BankUnited, National Association",026014588
-Ohio,CAMPBELL,
+Ohio,CAMPBELL,236077658
 North Carolina,"Capital Bank, National Association",053112806
 Iowa,Cornerstone Bank,273970941
 Texas,EVEREST,
 California,"EverBank, National Association",063092110
 Indiana,FAMILY FIRST,
-Illinois,FIRST COMMUNITY,
+Illinois,FIRST COMMUNITY,281081877
 Minnesota,Fidelity Bank & Trust,071112684
 North Carolina,First National Bank of Pennsylvania,031301053
 Minnesota,First State Bank and Trust,091911551
-Illinois,HEARTLAND,
+Illinois,HEARTLAND,271189446
 Tennessee,HomeTrust Bank,053208147
 California,Legacy Bank,073913836
-Virginia,MARINE,
+Virginia,MARINE,253174893
 Florida,METRO,
 Illinois,Millennium Bank,071926731
 Georgia,PromiseOne Bank,061121180
@@ -5040,18 +5040,18 @@ Illinois,"United Fidelity Bank, fsb",021606690
 California,"Zions Bancorporation, N.A.",011201762
 Minnesota,Alliance Bank,091901215
 Kansas,"BOKF, National Association",082901392
-Louisiana,CHEVRON,
+Louisiana,CHEVRON,321075947
 New Jersey,"Capital One, National Association",021200407
 Georgia,Citizens Community Bank,061209552
-Illinois,EMPEOPLE,
-Indiana,EVERENCE,
-Kansas,FARMERS INSURANCE,
-Colorado,FIRST TECHNOLOGY,
+Illinois,EMPEOPLE,271186423
+Indiana,EVERENCE,031389237
+Kansas,FARMERS INSURANCE,322077795
+Colorado,FIRST TECHNOLOGY,321180379
 Illinois,First American Bank,067015928
 Iowa,"First Mid Bank & Trust, National Association",071102076
 Iowa,Flanagan State Bank,071118264
 Florida,"HSBC Bank USA, National Association",021001088
-Indiana,NATIONAL POLICE,
+Indiana,NATIONAL POLICE,271078146
 Georgia,PCB Bank,122043602
 Ohio,Peoples State Bank,063114425
 Florida,Renasant Bank,061103276
@@ -5059,8 +5059,8 @@ Massachusetts,"Santander Bank, N.A.",011401135
 Georgia,Shinhan Bank America,026011963
 Colorado,"Sunflower Bank, National Association",101100621
 Georgia,TIB National Association,111010170
-Florida,U S POSTAL SERVICE,
-Minnesota,ALTRA,
+Florida,U S POSTAL SERVICE,254075441
+Minnesota,ALTRA,291881216
 Wisconsin,"Associated Bank, National Association",075000941
 New Jersey,Cathay Bank,011001962
 Iowa,Citizens State Bank,073907952
@@ -5076,40 +5076,40 @@ California,Valley National Bank,021201383
 Tennessee,"WesBanco Bank, Inc.",042202219
 Georgia,Austin Capital Bank SSB,114994031
 Tennessee,Bank OZK,026013291
-Georgia,CREDIT UNION 1,
+Georgia,CREDIT UNION 1,271188081
 California,City National Bank,026013958
 Missouri,Commercial Bank,081006201
 Texas,Community Bank,111901959
 Indiana,First Financial Bank,041203811
 Nebraska,First National Bank of Omaha,071902629
 Georgia,Hanmi Bank,061106150
-California,SELF-HELP,
+California,SELF-HELP,322273696
 Georgia,"SouthState Bank, National Association",051408907
 Virginia,"TD Bank, National Association",011103093
-Missouri,UNITED,
+Missouri,UNITED,281581063
 Pennsylvania,United Bank,011110633
 Florida,Busey Bank,071100117
 Indiana,Community State Bank,074906800
-Virginia,NORTHROP GRUMMAN,
+Virginia,NORTHROP GRUMMAN,322276088
 Florida,Commerce Bank,071100010
 Georgia,First Horizon Bank,061120152
 Indiana,First National Bank,074907126
 New Jersey,"Flagstar Bank, National Association",065203648
 Missouri,Liberty Bank and Trust Company,065002108
 Tennessee,Old National Bank,072413638
-Virginia,PENTAGON,
+Virginia,PENTAGON,256078446
 California,CIBC National Trust Company,071006486
-Alabama,COMMUNITYAMERICA,
+Alabama,COMMUNITYAMERICA,301081508
 California,"Citizens Bank, National Association",011001331
 Georgia,First Community Bank,043308277
-California,TOGETHER,
+California,TOGETHER,281082915
 Alabama,United Community Bank,053105059
-California,AMERICAN AIRLINES,
-Texas,AMERICAN AIRLINES,
+California,AMERICAN AIRLINES,311992904
+Texas,AMERICAN AIRLINES,311992904
 Pennsylvania,"BNY Mellon, National Association",031300821
 Ohio,Farmers State Bank,042210722
 Ohio,First State Bank,051502528
-Minnesota,BAXTER,
+Minnesota,BAXTER,271992400
 Kansas,First Bank,101102438
 Georgia,Truist Bank,031204710
 California,"UMB Bank, National Association",111015748
@@ -5127,8 +5127,8 @@ Alabama,The Huntington National Bank,041000153
 Missouri,The Huntington National Bank,041000153
 Georgia,U.S. Bank National Association,011501747
 Ohio,U.S. Bank National Association,011501747
-Illinois,NAVY FEDERAL CREDIT UNION,
-Ohio,NAVY FEDERAL CREDIT UNION,
+Illinois,NAVY FEDERAL CREDIT UNION,256074974
+Ohio,NAVY FEDERAL CREDIT UNION,256074974
 Georgia,"PNC Bank, National Association",021200575
 North Carolina,"PNC Bank, National Association",067012057
 Florida,Bank of England,082902139
@@ -5183,7 +5183,7 @@ Virginia,BRONCO,
 Ohio,BSE,
 Missouri,BURLINGTON NORTHTOWN COMMUNITY,
 California,Balboa Thrift and Loan Association,322284928
-Wisconsin,Bank Five Nine,
+Wisconsin,Bank Five Nine,075902421
 Illinois,Bank & Trust Company,081903537
 Pennsylvania,Bank of Bird-in-Hand,031319320
 Florida,Bank of Central Florida,063116261
@@ -5239,11 +5239,11 @@ Massachusetts,Canton Co-operative Bank,
 Missouri,"Carroll County Trust Company of Carrollton, Missouri",101915764
 Texas,Castroville State Bank,114923439
 Utah,Celtic Bank,124084805
-Pennsylvania,Central Penn Bank & Trust,
+Pennsylvania,Central Penn Bank & Trust,031309686
 Colorado,Century Savings and Loan Association,302170476
-Texas,Charles Schwab Trust Bank,
+Texas,Charles Schwab Trust Bank,111994416
 Wisconsin,Chippewa Valley Bank,091509468
-Oklahoma,Citizens Bank and Trust Company of Ardmore,
+Oklahoma,Citizens Bank and Trust Company of Ardmore,103102274
 Missouri,Citizens Bank of Eldon,081503380
 Kentucky,Citizens Guaranty Bank,042101475
 Kansas,Citizens State Bank and Trust Company,101101976
@@ -5257,9 +5257,9 @@ Missouri,Community Bank of Memphis,081518333
 Georgia,Community Banking Company,
 Illinois,Community National Bank in Monmouth,071108290
 Illinois,Community State Bank of Rock Falls,
-Wisconsin,Conservation First Bank,
+Wisconsin,Conservation First Bank,075904513
 Minnesota,Cornerstone State Bank,091905059
-Pennsylvania,County Savings Bank,
+Pennsylvania,County Savings Bank,231372329
 Texas,Crowell State Bank,111306088
 Texas,"Cypress Bank, SSB",311974032
 Ohio,DAY-MET,
@@ -5308,12 +5308,12 @@ Pennsylvania,FRICK FINANCIAL,
 Virginia,FVCbank,056009505
 Massachusetts,Fall River Five Cents Savings Bank,
 Colorado,Farmers State Bank of Calhan,102103562
-Virginia,Farmers & Merchants Bank of Craig County,
+Virginia,Farmers & Merchants Bank of Craig County,051405395
 Missouri,Farmers and Merchants Bank of St. Clair,081914131
-Wisconsin,Farmers and Merchants Union Bank,
+Wisconsin,Farmers and Merchants Union Bank,075902670
 Louisiana,Fifth District Savings Bank,
 Minnesota,First Bank Elk River,091903844
-Ohio,First Bank of Central Ohio,
+Ohio,First Bank of Central Ohio,044015967
 Oklahoma,First Bethany Bank & Trust,103009160
 Florida,First Colony Bank of Florida,063116504
 California,First Credit Bank,122237599
@@ -5325,13 +5325,13 @@ Minnesota,First National Bank Minnesota,091901338
 Louisiana,First National Bank in DeRidder,
 Michigan,First National Bank of America,072412435
 Texas,First National Bank of Hereford,111324293
-Texas,First National Bank of South Padre Island,
+Texas,First National Bank of South Padre Island,114912479
 Nebraska,First Northeast Bank of Nebraska,104902949
 North Carolina,First Savings and Loan Association,
 Colorado,First Southwest Bank,102107034
-Texas,"First State Bank of Ben Wheeler, Texas",
+Texas,"First State Bank of Ben Wheeler, Texas",111909443
 Michigan,First State Bank of Michigan,
-Texas,First State Bank of Uvalde,
+Texas,First State Bank of Uvalde,114902405
 Iowa,First Trust and Savings Bank,073921213
 Florida,FirstBank Puerto Rico,021502354
 Colorado,FlatIrons Bank,107006839
@@ -5409,7 +5409,7 @@ Texas,LOCAL 20 IBEW,
 Kansas,LOCAL UNION 1186 IBEW,
 Louisiana,LOUISIANA CENTRAL,
 New Jersey,L'OREAL USA,
-Wisconsin,Lake Ridge Bank,
+Wisconsin,Lake Ridge Bank,075904953
 Oklahoma,Latimer State Bank,103102300
 Iowa,Leighton State Bank,073907389
 North Carolina,LifeStore Bank,253171676
@@ -5446,7 +5446,7 @@ Michigan,Mercantile Bank,081200531
 Minnesota,MidCountry Bank,291970033
 Utah,Milestone Bank,031919209
 Minnesota,"Minnesota First Credit and Savings, Incorporated",091971627
-Ohio,Monroe Federal Savings and Loan Association,
+Ohio,Monroe Federal Savings and Loan Association,242272861
 California,Murphy Bank,321181501
 Texas,NAFT,
 Texas,NAVARRO,
@@ -5463,10 +5463,10 @@ Wisconsin,NORTHWESTERN MUTUAL,
 California,NOVO,
 New Jersey,N. J. LATVIAN,
 Kansas,National Advisors Trust Company,101059659
-Nebraska,Nebraskaland Bank,
+Nebraska,Nebraskaland Bank,104913970
 Minnesota,New Market Bank,091908726
-Texas,NexBank,
-Texas,North Dallas Bank & Trust Co.,
+Texas,NexBank,311973208
+Texas,North Dallas Bank & Trust Co.,111000960
 Georgia,Northeast Georgia Bank,061103030
 Wisconsin,Northwestern Bank,091801234
 Florida,OCALA COMMUNITY,
@@ -5479,7 +5479,7 @@ Louisiana,OUACHITA VALLEY,
 Wisconsin,Oak Bank,075917924
 Oklahoma,Oklahoma Capital Bank,103101013
 Utah,"Optum Bank, Inc.",051500520
-Texas,Ozona Bank,
+Texas,Ozona Bank,111312182
 Ohio,PAINESVILLE CREDIT UNION,
 Texas,PARIS DISTRICT,
 Texas,PASADENA MUNICIPAL,
@@ -5503,11 +5503,11 @@ Tennessee,Peoples Bank & Trust Company,064102384
 Kentucky,"Peoples Bank, Mt. Washington",
 Michigan,Peoples State Bank of Munising,
 Pennsylvania,Phoenixville Federal Bank and Trust,231374916
-Nebraska,Pinnacle Bank - Wyoming,
+Nebraska,Pinnacle Bank - Wyoming,102301513
 California,Plumas Bank,121138288
 Illinois,Prairie Community Bank,071925758
-Wisconsin,Prevail Bank,
-Oklahoma,Prism Bank,
+Wisconsin,Prevail Bank,291571270
+Oklahoma,Prism Bank,103012908
 Missouri,Putnam County State Bank,101903763
 Wisconsin,RACINE MUNICIPAL EMPLOYEES,
 Louisiana,RAPIDES GENERAL HOSPITAL EMPL,
@@ -5519,7 +5519,7 @@ Virginia,ROANOKE VALLEY COMMUNITY,
 California,ROGUE,
 Iowa,Raccoon Valley Bank,073920887
 Utah,Redemption Bank,
-North Carolina,"Riverside Savings Bank, SSB",
+North Carolina,"Riverside Savings Bank, SSB",253171197
 Texas,Round Top State Bank,113114896
 Louisiana,S T S P,
 Texas,SAN ANGELO,
@@ -5545,25 +5545,25 @@ Michigan,ST. FRANCIS X,
 Iowa,ST. LUDMILA S,
 Kansas,SUNFLOWER,
 Florida,SUWANNEE RIVER,
-Texas,"Sage Capital Bank,",
+Texas,"Sage Capital Bank,",114913711
 Massachusetts,Savers Co-operative Bank,211371311
 Nebraska,Scribner Bank,104911422
-Texas,Security Bank of Texas,
+Texas,Security Bank of Texas,111906349
 Minnesota,Security State Bank of Aitkin,091916527
 Minnesota,Sentry Bank,091909466
-Virginia,"Shore United Bank, National Association",
+Virginia,"Shore United Bank, National Association",052100932
 Iowa,Sloan State Bank,073909361
 Ohio,Somerville Bank,042211572
 Iowa,South Story Bank & Trust,073922238
 Michigan,Southern Michigan Bank & Trust,072402283
 Texas,Spectra Bank,111916915
-Utah,"Square Financial Services, Inc.",
+Utah,"Square Financial Services, Inc.",124085396
 Wisconsin,Starion Bank,075972202
 Wisconsin,State Bank of Chilton,075903200
 Missouri,State Bank of Missouri,101908577
 Minnesota,State Bank of Taunton,091209535
 Illinois,Stillman BancCorp N.A.,071916042
-New Jersey,Sumitomo Mitsui Trust Bank (U.S.A.) Limited,
+New Jersey,Sumitomo Mitsui Trust Bank (U.S.A.) Limited,026011167
 Wisconsin,Superior Savings Bank,291871336
 Florida,T M H,
 Massachusetts,TAUPA LITHUANIAN,
@@ -5581,35 +5581,35 @@ Ohio,TOWPATH,
 Texas,TRAVIS COUNTY,
 Oklahoma,TRUE SKY,
 Iowa,TS Bank,
-Texas,TXN Bank,
+Texas,TXN Bank,114909165
 Louisiana,Tensas State Bank,111103948
-Texas,Texas Exchange Bank,
+Texas,Texas Exchange Bank,111903232
 Texas,Texas State Bank,111323906
 Ohio,The Baltic State Bank,041208803
 Tennessee,The Bank of Fayette County,084304230
 Missouri,The Bank of Missouri,081509902
 Missouri,The Bank of Versailles,101203971
 Texas,The Brady National Bank,111303492
-Ohio,The Cincinnatus Savings & Loan Co.,
+Ohio,The Cincinnatus Savings & Loan Co.,242071033
 Colorado,The Citizens State Bank of Ouray,102103258
 Iowa,The Clinton National Bank,073900441
-Ohio,The Covington Savings and Loan Association,
+Ohio,The Covington Savings and Loan Association,242271969
 Pennsylvania,The Ephrata National Bank,031308250
 Indiana,The Fairmount State Bank,074904365
 Kansas,"The Farmers State Bank of Bucklin, Kansas",101104711
 Texas,The First Bank of Celeste,111907717
 Alabama,The First National Bank and Trust,062104520
 Illinois,The First National Bank of Allendale,081227077
-Texas,The First National Bank of Bastrop,
+Texas,The First National Bank of Bastrop,114904953
 Minnesota,The First National Bank of Gilbert,
 Kansas,The First National Bank of Hutchinson,101105600
 Iowa,The First National Bank of Manning,
 Florida,The First National Bank of Mount Dora,
 Illinois,The First National Bank of Raymond,
 Ohio,The First National Bank of Sycamore,041212899
-Oklahoma,"The First State Bank of Pond Creek, Oklahoma",
+Oklahoma,"The First State Bank of Pond Creek, Oklahoma",103103749
 Indiana,The Garrett State Bank,074903803
-Ohio,The Harrison Building and Loan Association,
+Ohio,The Harrison Building and Loan Association,242272214
 Kansas,"The Howard State Bank, Howard, Kansas",101103547
 Texas,The Lamesa National Bank,111308730
 Missouri,The Missouri Bank,081905768
@@ -5635,7 +5635,7 @@ Louisiana,UNIVERSITY OF LOUISIANA,
 Tennessee,UPS EMPLOYEES,
 California,USC,
 Iowa,United Bank and Trust Company,073918608
-Ohio,"United Midwest Savings Bank, National Association",
+Ohio,"United Midwest Savings Bank, National Association",244170877
 Missouri,United Security Bank,081517729
 North Carolina,Uwharrie Bank,053111690
 California,VALLEY FIRST,
@@ -5643,9 +5643,9 @@ Virginia,VANTAGE POINT,
 Tennessee,VERITAS,
 Indiana,VIGO COUNTY,
 Iowa,VISIONBANK OF IOWA,073905187
-Utah,"Varo Bank, National Association",
+Utah,"Varo Bank, National Association",124303201
 Minnesota,VersaBank USA National Association,
-Oklahoma,Vision Bank,
+Oklahoma,Vision Bank,103101026
 New Jersey,WAKEFERN,
 California,WATER AND POWER COMMUNITY,
 Tennessee,WCG EMPLOYEES,
@@ -5658,7 +5658,7 @@ Michigan,WOLVERINE STATE,
 Louisiana,WYMAR,
 Illinois,Warren-Boynton State Bank,071109846
 Iowa,Waukon State Bank,073903985
-Texas,"Wells Fargo Bank South Central, National Association",
+Texas,"Wells Fargo Bank South Central, National Association",113093852
 Nebraska,West Plains Bank,104109739
 Wisconsin,Westbury Bank,275971825
 Kentucky,Wilson & Muir Bank & Trust Company,083902044
@@ -5852,7 +5852,7 @@ Tennessee,INTERFAITH,
 Indiana,KEMBA,
 Oklahoma,Legacy Bank & Trust Company,081511631
 Pennsylvania,MEMBERS 1ST,
-Alabama,MOBILE GOVERNMENT EMP.,
+Alabama,MOBILE GOVERNMENT EMP.,265176216
 Minnesota,Midwest Bank,091201643
 Minnesota,NOTRE DAME,
 Colorado,Oakstar Bank,081512355
@@ -5877,22 +5877,22 @@ New Jersey,VISIONS,
 Georgia,Wallis Bank,113113392
 Pennsylvania,"Wilmington Savings Fund Society, FSB",031100924
 Georgia,"BankUnited, National Association",026014588
-Pennsylvania,CAMPBELL,
+Pennsylvania,CAMPBELL,236077658
 Ohio,CNB Bank,031306278
 Virginia,"Capital Bank, National Association",053112806
 Kansas,Cornerstone Bank,101014953
 Virginia,EVEREST,
 Florida,"EverBank, National Association",063092110
-Michigan,FAMILY FIRST,
-Minnesota,FIRST COMMUNITY,
+Michigan,FAMILY FIRST,272484674
+Minnesota,FIRST COMMUNITY,291378693
 Wisconsin,Fidelity Bank & Trust,071112684
 Ohio,First National Bank of Pennsylvania,041202511
 Wisconsin,First State Bank and Trust,081504855
-Kansas,HEARTLAND,
+Kansas,HEARTLAND,301178372
 Virginia,HomeTrust Bank,053208147
 Kansas,Legacy Bank,101101662
-Wisconsin,MARINE,
-Illinois,METRO,
+Wisconsin,MARINE,275977489
+Illinois,METRO,271975401
 Tennessee,Millennium Bank,064208518
 Massachusetts,State Street Bank and Trust Company,011000028
 Wisconsin,TRI-COUNTY,
@@ -5902,17 +5902,17 @@ Indiana,"United Fidelity Bank, fsb",021606690
 Colorado,"Zions Bancorporation, N.A.",011201762
 Missouri,Alliance Bank,081518773
 Missouri,"BOKF, National Association",082901392
-Texas,CHEVRON,
+Texas,CHEVRON,321075947
 Illinois,Citizens Community Bank,081025363
-Iowa,EMPEOPLE,
-Ohio,EVERENCE,
-Michigan,FARMERS INSURANCE,
-Georgia,FIRST TECHNOLOGY,
+Iowa,EMPEOPLE,271186423
+Ohio,EVERENCE,031389237
+Michigan,FARMERS INSURANCE,322077795
+Georgia,FIRST TECHNOLOGY,321180379
 Oklahoma,First American Bank,067015928
 Missouri,"First Mid Bank & Trust, National Association",071102076
 Missouri,Flanagan State Bank,071118264
 New Jersey,"HSBC Bank USA, National Association",021001088
-Missouri,NATIONAL POLICE,
+Missouri,NATIONAL POLICE,271078146
 New Jersey,PCB Bank,122043602
 Oklahoma,Peoples State Bank,063114425
 Georgia,Renasant Bank,061103276
@@ -5920,8 +5920,8 @@ New Jersey,"Santander Bank, N.A.",011075202
 New Jersey,Shinhan Bank America,026011963
 Florida,"Sunflower Bank, National Association",101100621
 Illinois,TIB National Association,111010170
-North Carolina,U S POSTAL SERVICE,
-New Jersey,ALTRA,
+North Carolina,U S POSTAL SERVICE,254075441
+New Jersey,ALTRA,291881216
 California,Beal Bank USA,122487459
 Michigan,Citizens State Bank,061210541
 Georgia,"FSNB, National Association",103112675
@@ -5936,7 +5936,7 @@ Florida,Valley National Bank,021201383
 Colorado,"Armed Forces Bank, National Association",122243017
 Ohio,Austin Capital Bank SSB,114994031
 Texas,Bank OZK,026013291
-Illinois,CREDIT UNION 1,
+Illinois,CREDIT UNION 1,271188081
 Texas,"Citibank, National Association",021000089
 Florida,City National Bank,066016889
 Nebraska,Commercial Bank,104102642
@@ -5944,11 +5944,11 @@ Alabama,Farmers and Merchants Bank,062204530
 Kentucky,First Financial Bank,041203811
 Texas,First National Bank of Omaha,071902629
 Illinois,Hanmi Bank,061106150
-Texas,JUSTICE,
-Florida,SELF-HELP,
+Texas,JUSTICE,254074413
+Florida,SELF-HELP,253184841
 North Carolina,"SouthState Bank, National Association",051408907
 Colorado,The Central Trust Bank,086519609
-North Carolina,UNITED,
+North Carolina,UNITED,272484894
 Virginia,United Bank,043316942
 Illinois,Busey Bank,071100117
 Iowa,Community State Bank,073908317
@@ -5962,17 +5962,17 @@ Tennessee,Liberty Bank and Trust Company,065002108
 Wisconsin,Old National Bank,072413638
 California,"Wilmington Trust, National Association",022313005
 Colorado,CIBC National Trust Company,071006486
-California,COMMUNITYAMERICA,
+California,COMMUNITYAMERICA,301081508
 Florida,"Citizens Bank, National Association",011001331
 Iowa,First Community Bank,073907897
-Colorado,TOGETHER,
+Colorado,TOGETHER,281082915
 Florida,United Community Bank,053105059
-Florida,AMERICAN AIRLINES,
+Florida,AMERICAN AIRLINES,311992904
 California,"BNY Mellon, National Association",031300821
 Texas,"BNY Mellon, National Association",031300821
 Tennessee,Farmers State Bank,064202844
 Oklahoma,First State Bank,103008404
-North Carolina,BAXTER,
+North Carolina,BAXTER,271992400
 Missouri,First Bank,063114946
 Indiana,Truist Bank,031204710
 Colorado,"UMB Bank, National Association",111015748
@@ -5991,8 +5991,8 @@ Colorado,The Huntington National Bank,041000153
 North Carolina,The Huntington National Bank,041000153
 Illinois,U.S. Bank National Association,011501747
 Tennessee,U.S. Bank National Association,011501747
-Kansas,NAVY FEDERAL CREDIT UNION,
-Oklahoma,NAVY FEDERAL CREDIT UNION,
+Kansas,NAVY FEDERAL CREDIT UNION,256074974
+Oklahoma,NAVY FEDERAL CREDIT UNION,256074974
 Illinois,"PNC Bank, National Association",021200575
 Ohio,"PNC Bank, National Association",041001246
 Georgia,Bank of England,082902139
@@ -6030,10 +6030,10 @@ Illinois,Albank National Association,
 Georgia,Altamaha Bank & Trust Company,061212439
 Missouri,America's Community Bank,101907196
 Indiana,American Community Bank of Indiana,271974017
-Wisconsin,American National Bank - Fox Cities,
+Wisconsin,American National Bank - Fox Cities,075912738
 Texas,Amistad Bank,111316829
 Georgia,Apex Banking Company of Georgia,
-New Jersey,Ascendia Bank,
+New Jersey,Ascendia Bank,221271964
 Iowa,Audubon State Bank,073904159
 California,BAC Community Bank,121125660
 Texas,BAPTIST,
@@ -6104,28 +6104,28 @@ Louisiana,Caldwell Bank & Trust Company,111101652
 Massachusetts,Cape Ann Savings Bank,211370862
 Kentucky,Carrollton Federal Bank,
 Louisiana,Catalyst Bank,265270772
-Texas,Cendera Bank,
+Texas,Cendera Bank,111909391
 Michigan,Central Savings Bank,091101280
 Nebraska,CerescoBank,104909201
 Michigan,Charlevoix State Bank,072413683
 Minnesota,Choice Financial Group,091017196
-Tennessee,Citizens Bank and Trust Company of Grainger County,
+Tennessee,Citizens Bank and Trust Company of Grainger County,064206426
 Kansas,Citizens Bank of Kansas,101102108
 Minnesota,Citizens Independent Bank,091016566
 Wisconsin,Citizens State Bank of La Crosse,091804833
-Texas,City Bank,
-Texas,"Clear Fork Bank, National Association",
+Texas,City Bank,111301737
+Texas,"Clear Fork Bank, National Association",111306198
 Tennessee,Coffee County Bank,064102902
 Texas,Columbus State Bank,113118630
 Georgia,Commercial Banking Company,061211171
-Texas,"Community Bank & Trust, Waco, Texas",
+Texas,"Community Bank & Trust, Waco, Texas",111900594
 Missouri,Community Bank of Missouri,101918965
 California,Community Commerce Bank,322271407
 Alabama,Community Neighbor Bank,062102386
 Michigan,Community Unity Bank,072414514
 Illinois,"Constitution Bank, National Association",
 Nebraska,Cornhusker Bank,104907025
-Oklahoma,Cowboy Bank,
+Oklahoma,Cowboy Bank,103108045
 Illinois,"Crystal Lake Bank and Trust Company, National Association",
 Florida,DADE COUNTY,
 Missouri,DE SOTO MO PAC,
@@ -6178,20 +6178,20 @@ Illinois,Farmers State Bank of Emden,
 Illinois,Farmers & Merchants Bank of Hutsonville,
 Iowa,Farmers and Merchants Savings Bank,073902672
 Virginia,Farmers and Miners Bank,051404545
-Utah,FinWise Bank,
+Utah,FinWise Bank,124303036
 Iowa,First Bank Hampton,073903325
 Georgia,First Bank of Coastal Georgia,061206843
 Alabama,First Cahawba Bank,062206648
 Texas,First Command Bank,111993695
 Illinois,First Eagle  Bank,071925017
-Texas,"First Federal Bank Littlefield, Texas",
+Texas,"First Federal Bank Littlefield, Texas",311372252
 Kentucky,First Federal Savings Bank of Kentucky,
-Ohio,First Federal Savings and Loan Association of Van Wert,
+Ohio,First Federal Savings and Loan Association of Van Wert,241271928
 Kansas,First Kansas Bank,101102564
 Minnesota,First National Bank North,091209755
 Kansas,First National Bank in Frankfort,101113935
 Texas,First National Bank of Bosque County,111913329
-Texas,First National Bank of Huntsville,
+Texas,First National Bank of Huntsville,113104000
 Illinois,First National Bank of Steeleville,
 Pennsylvania,First Northern Bank and Trust Company,031312929
 Illinois,First Secure Bank and Trust Co.,071924681
@@ -6201,7 +6201,7 @@ Indiana,First State Bank of Middlebury,071214472
 Illinois,First State Bank of Van Orin,071119975
 Texas,First United Bank,111308727
 Texas,FirstBank Southwest,111308057
-Nebraska,Flatwater Bank,
+Nebraska,Flatwater Bank,104901607
 Wisconsin,Fortifi Bank,075902007
 Oklahoma,Frazer Bank,103100959
 Oklahoma,Frontier State Bank,103001977
@@ -6217,9 +6217,9 @@ Colorado,GUADALUPE PARISH,
 California,Genesis Bank,
 Iowa,Glenwood State Bank,104902347
 Texas,Grandview Bank,111906996
-Texas,Greater State Bank,
+Texas,Greater State Bank,314973548
 Iowa,Grinnell State Bank,073901725
-Texas,Gulf Capital Bank,
+Texas,Gulf Capital Bank,113026201
 Virginia,HALIFAX COUNTY COMMUNITY,
 New Jersey,HARRISON POLICE & FIREMEN'S,
 Indiana,HAYNES COMMUNITY,
@@ -6236,7 +6236,7 @@ Minnesota,Harvest Bank,091908179
 Indiana,Hendricks County Bank and Trust Company,074906091
 Wisconsin,Hiawatha National Bank,091809362
 Massachusetts,Hingham Institution for Savings,
-Nebraska,Home Federal Savings and Loan Association of Grand Island,
+Nebraska,Home Federal Savings and Loan Association of Grand Island,304971945
 Minnesota,HomeTown  Bank,291270461
 Illinois,Hometown National Bank,071902030
 Michigan,Huron State Bank,
@@ -6247,7 +6247,7 @@ California,INLAND VALLEY,
 Oklahoma,INTEGRIS,
 Michigan,IRON MOUNTAIN KINGSFORD COMMUNITY,
 Pennsylvania,I.B.E.W. - LOCAL NO. 5,
-Pennsylvania,InFirst Bank,
+Pennsylvania,InFirst Bank,243373358
 Minnesota,Integrity Bank Plus,
 Texas,Inwood National Bank,111001040
 Michigan,Isabella Bank,072403004
@@ -6255,7 +6255,7 @@ Louisiana,"JAMES WARD, JR.",
 New Jersey,JERSEY CITY FIREMEN,
 Utah,JORDAN,
 Texas,Jefferson Bank,114000763
-Pennsylvania,"Jonestown Bank and Trust Company, of Jonestown, Pennsylvania",
+Pennsylvania,"Jonestown Bank and Trust Company, of Jonestown, Pennsylvania",031312055
 Missouri,KANSAS CITY,
 Nebraska,KELLOGG MIDWEST,
 California,KEYPOINT,
@@ -6276,10 +6276,10 @@ Texas,LONGVIEW,
 Louisiana,LOUISIANA MACHINERY EMPLOYEES,
 Massachusetts,LUSO,
 Illinois,La Salle State Bank,071902043
-Tennessee,Lawrence Bank,
+Tennessee,Lawrence Bank,064009474
 Kentucky,Lewisburg Banking Company,083905342
-Nebraska,Lincoln FSB of Nebraska,
-Texas,"Lone Oak Bank, National Association",
+Nebraska,Lincoln FSB of Nebraska,304971990
+Texas,"Lone Oak Bank, National Association",111307841
 North Carolina,Lumbee Guaranty Bank,053103682
 Wisconsin,MADISON,
 Massachusetts,MARBLEHEAD MUNICIPAL,
@@ -6374,8 +6374,8 @@ Iowa,Pocahontas State Bank,073920683
 Illinois,Prairie State Bank and Trust,071114763
 Utah,Prime Alliance Bank,124303081
 Minnesota,ProGrowth Bank,091908768
-Wisconsin,"PyraMax Bank, FSB",
-Oklahoma,Quail Creek Bank,
+Wisconsin,"PyraMax Bank, FSB",275071327
+Oklahoma,Quail Creek Bank,103001809
 Florida,RADIANT,
 Louisiana,RAPIDES,
 Minnesota,RED WING,
@@ -6387,7 +6387,7 @@ California,ROLLING F,
 Minnesota,Randall State Bank,091909084
 Colorado,Redstone Bank,107007391
 Wisconsin,Richland County Bank,075902609
-Nebraska,Riverstone Bank,
+Nebraska,Riverstone Bank,104908859
 North Carolina,"Roxboro Savings Bank, SSB",253171294
 Louisiana,SABINE SCHOOL EMPLOYEES,
 Pennsylvania,SAINT NICHOLAS,
@@ -6418,7 +6418,7 @@ Missouri,Security Bank of the Ozarks,081512232
 Minnesota,Security State Bank of Hibbing,
 Illinois,"Servbank, National Association",
 Iowa,Sibley State Bank,073905116
-Pennsylvania,Slovenian Savings and Loan Association of Canonsburg,
+Pennsylvania,Slovenian Savings and Loan Association of Canonsburg,243374153
 Oklahoma,Sooner State Bank,103109015
 Tennessee,SouthEast Bank,064208767
 Illinois,SouthernTrust Bank,081226421
@@ -6428,7 +6428,7 @@ Wisconsin,State Bank Financial,091800316
 Minnesota,State Bank of Cold Spring,091904830
 Illinois,State Bank of Nauvoo,
 Illinois,State Bank of Toulon,071107987
-Texas,Stockmens National Bank in Cotulla,
+Texas,Stockmens National Bank in Cotulla,114904461
 California,Summit Bank,121138958
 Florida,Surety Bank,263187320
 Texas,T & P LONGVIEW,
@@ -6451,14 +6451,14 @@ Oklahoma,TTCU,
 Illinois,Table Grove State Bank,071110424
 Florida,"Terrabank, National Association",066012333
 Texas,Texas Financial Bank,111907979
-Texas,Texas Traditions Bank,
+Texas,Texas Traditions Bank,113126318
 Texas,"The Bank and Trust, S.S.B.",114901370
 Missouri,The Bank of Grain Valley,101210090
 Wisconsin,The Bank of New Glarus,075903912
 Oklahoma,The Bank of the West,103112073
 Texas,The Brenham National Bank,113117194
 Ohio,The Citizens Bank Company,044208936
-Texas,The Citizens National Bank of Hillsboro,
+Texas,The Citizens National Bank of Hillsboro,111901690
 Kansas,The Citizens State Bank,101101594
 Colorado,The Colorado Bank and Trust Company of La Junta,
 Texas,The Cowboy Bank of Texas,111908787
@@ -6466,23 +6466,23 @@ Wisconsin,"The Equitable Bank, S.S.B.",275071259
 Texas,The Falls City National Bank,114910523
 Kansas,"The Farmers State Bank of Oakley, Kansas",101104795
 Minnesota,The First National Bank at St. James,
-Texas,The First National Bank of Anderson,
-Ohio,The First National Bank of Bellevue,
+Texas,The First National Bank of Anderson,113109131
+Ohio,The First National Bank of Bellevue,041204726
 Texas,The First National Bank of Eagle Lake,113125953
 Nebraska,The First National Bank of Gordon,104102781
 Louisiana,The First National Bank of Jeanerette,065200984
-Ohio,The First National Bank of McConnelsville,
+Ohio,The First National Bank of McConnelsville,044106384
 Missouri,"The First National Bank of Nevada, Missouri",101201164
-Wisconsin,The First National Bank of River Falls,
-Texas,The First National Bank of Tom Bean,
+Wisconsin,The First National Bank of River Falls,091802877
+Texas,The First National Bank of Tom Bean,111913248
 Kansas,The First State Bank of Ransom,101110080
 Ohio,The Genoa Banking Company,041209624
 Illinois,The Harvard State Bank,071905082
 Oklahoma,The Idabel National Bank,103111744
-Tennessee,The Lauderdale County Bank,
-Texas,"The Lytle State Bank of Lytle, Texas",
+Tennessee,The Lauderdale County Bank,084303118
+Texas,"The Lytle State Bank of Lytle, Texas",114911519
 Kentucky,The Monticello Banking Company,042107806
-Virginia,The National Capital Bank of Washington,
+Virginia,The National Capital Bank of Washington,054000056
 Illinois,The Old Exchange National Bank of Okawville,
 Georgia,The Peoples Bank of Georgia,061103920
 Ohio,The Pioneer Savings Bank,241070475
@@ -6490,7 +6490,7 @@ Kentucky,The Sacramento Deposit Bank,083904589
 Kansas,The Solomon State Bank,101103974
 Iowa,The State Bank,073920997
 Ohio,The Twin Valley Bank,042208174
-Ohio,The Waterford Commercial and Savings Bank,
+Ohio,The Waterford Commercial and Savings Bank,044211910
 Colorado,Timberline Bank,102107063
 Minnesota,Tradition Capital Bank,091017471
 Michigan,Tri-County Bank,072404977
@@ -6513,8 +6513,8 @@ Pennsylvania,VANTAGE TRUST,
 Louisiana,VERMILION EMPLOYEES,
 Minnesota,"VIKING BANK, NATIONAL ASSOCIATION",
 Missouri,VOLT,
-Oklahoma,"Vast Bank, National Association",
-Ohio,Versailles Savings and Loan Company,
+Oklahoma,"Vast Bank, National Association",103902717
+Ohio,Versailles Savings and Loan Company,242272887
 Minnesota,VisionBank,091017484
 Minnesota,WAKOTA,
 Virginia,WATERBURY POSTAL EMPLOYEES,
@@ -6527,7 +6527,7 @@ Ohio,WHITEWATER COMMUNITY,
 Louisiana,WILLIS KNIGHTON,
 Nebraska,WOODMEN,
 Pennsylvania,WYOMING VALLEY EDUCATIONAL EMPL,
-Ohio,Warsaw Federal Savings and Loan Association,
+Ohio,Warsaw Federal Savings and Loan Association,242071855
 Wisconsin,Waumandee State Bank,091808347
 Tennessee,Wellworth Bank,
 Missouri,West Plains Savings and Loan Association,281573686
@@ -6535,7 +6535,7 @@ Texas,Western Bank,111317789
 Massachusetts,Winchester Co-operative Bank,211371573
 Minnesota,Woodlands National Bank,091908881
 Texas,YOAKUM COUNTY,
-Texas,Yoakum Bank,
+Texas,Yoakum Bank,114902227
 Texas,1ST COMMUNITY,
 Massachusetts,42 North Private Bank,
 Illinois,ABBOTT LABORATORIES,
@@ -6610,7 +6610,7 @@ Kentucky,Hearthside Bank Corporation,242170426
 Colorado,High Plains Bank,102102000
 Georgia,Hyperion Bank,036018969
 Missouri,INTERNAL REVENUE EMPLOYEES,
-New Jersey,Industrial Bank,
+New Jersey,Industrial Bank,054000959
 Oklahoma,International Bank of Commerce,103012869
 Florida,JEFFERSON COUNTY TEACHERS,
 Indiana,Jackson County Bank,083902992
@@ -6728,7 +6728,7 @@ Nebraska,Midwest Bank,071124902
 Georgia,New Millennium Bank,021213371
 Kansas,Oakstar Bank,081512355
 Virginia,Old Dominion National Bank,051409414
-Alabama,PLATINUM,
+Alabama,PLATINUM,061192274
 Texas,Planters Bank & Trust Company,084206176
 Louisiana,RED RIVER EMPLOYEES,
 Michigan,SAN JUAN MOUNTAINS,
@@ -6744,23 +6744,23 @@ Tennessee,TowneBank,051408910
 Texas,UNITY ONE,
 Alabama,U.P. CONNECTION,
 Texas,Wallis Bank,113113392
-Louisiana,ADVANCIAL,
+Louisiana,ADVANCIAL,311078857
 Florida,CIBC Bank USA,061020113
 Pennsylvania,CNB Bank,031306278
 California,Commonwealth Business Bank,122043864
 Massachusetts,Cornerstone Bank,211371735
 California,Enterprise Bank & Trust,081006162
 Missouri,"EverBank, National Association",063092110
-California,FIREFIGHTERS FIRST,
-Missouri,FIRST COMMUNITY,
+California,FIREFIGHTERS FIRST,322078341
+Missouri,FIRST COMMUNITY,281081877
 Colorado,First Interstate Bank,092901683
 Pennsylvania,First National Bank of Pennsylvania,031301053
 Colorado,Gateway First Bank,103112552
-Minnesota,HEARTLAND,
+Minnesota,HEARTLAND,296075535
 Florida,Independent Bank,062203858
 Oklahoma,Legacy Bank,073913836
-Kentucky,MEMBERS CHOICE,
-Massachusetts,METRO,
+Kentucky,MEMBERS CHOICE,242175528
+Massachusetts,METRO,211381990
 California,Open Bank,122043958
 Texas,PromiseOne Bank,061121180
 Nebraska,Security Bank,104113039
@@ -6773,23 +6773,23 @@ Minnesota,Unity Bank,091903608
 Texas,"Zions Bancorporation, N.A.",011201762
 Texas,Alliance Bank,111901975
 Oklahoma,"BOKF, National Association",082901392
-Utah,CHEVRON,
+Utah,CHEVRON,321075947
 Texas,"Capital One, National Association",021200407
 Missouri,Citizens Community Bank,101914286
-North Carolina,EMPEOPLE,
-Pennsylvania,EVERENCE,
-Oklahoma,FARMERS INSURANCE,
-Massachusetts,FIRST TECHNOLOGY,
+North Carolina,EMPEOPLE,271186423
+Pennsylvania,EVERENCE,031389237
+Oklahoma,FARMERS INSURANCE,322077795
+Massachusetts,FIRST TECHNOLOGY,321180379
 Texas,First American Bank,067015928
 Texas,"First Mid Bank & Trust, National Association",071102076
 Pennsylvania,Flanagan State Bank,071118264
-Ohio,NATIONAL POLICE,
+Ohio,NATIONAL POLICE,271078146
 Texas,Peoples State Bank,113120291
 Louisiana,Renasant Bank,061103276
 Kansas,"Sunflower Bank, National Association",101100621
 Oklahoma,TIB National Association,111010170
-Pennsylvania,U S POSTAL SERVICE,
-Tennessee,ALTRA,
+Pennsylvania,U S POSTAL SERVICE,254075441
+Tennessee,ALTRA,291881216
 Colorado,Beal Bank USA,122487459
 Texas,Cathay Bank,011001962
 Nebraska,Citizens State Bank,101111348
@@ -6805,7 +6805,7 @@ Illinois,Valley National Bank,021201383
 Illinois,"Armed Forces Bank, National Association",122243017
 Tennessee,Austin Capital Bank SSB,114994031
 Alabama,Bank of Hope,021214325
-Indiana,CREDIT UNION 1,
+Indiana,CREDIT UNION 1,271188081
 Virginia,"Citibank, National Association",021000089
 Georgia,City National Bank,026013958
 North Carolina,Commercial Bank,042103460
@@ -6813,11 +6813,11 @@ Georgia,Farmers and Merchants Bank,061110557
 Michigan,First Financial Bank,041203811
 Iowa,Great Southern Bank,065303784
 New Jersey,Hanmi Bank,061106150
-Virginia,JUSTICE,
-Georgia,SELF-HELP,
+Virginia,JUSTICE,254074413
+Georgia,SELF-HELP,253184841
 Texas,"SouthState Bank, National Association",051408907
 Florida,The Central Trust Bank,086519609
-Ohio,UNITED,
+Ohio,UNITED,272484894
 California,Woori America Bank,122044229
 Indiana,Busey Bank,071100117
 Missouri,Community State Bank,031317788
@@ -6828,20 +6828,20 @@ Minnesota,First National Bank,091200738
 North Carolina,"Flagstar Bank, National Association",065203648
 Pennsylvania,KeyBank National Association,011807043
 Texas,Liberty Bank and Trust Company,065002108
-Florida,PENTAGON,
+Florida,PENTAGON,256078446
 Florida,"Wilmington Trust, National Association",022313005
 Florida,CIBC National Trust Company,071006486
-Indiana,COMMUNITYAMERICA,
+Indiana,COMMUNITYAMERICA,301081508
 Kentucky,"Citizens Bank, National Association",011001331
 Michigan,First Community Bank,072406771
-Florida,TOGETHER,
+Florida,TOGETHER,281082915
 Georgia,United Community Bank,053105059
-Illinois,AMERICAN AIRLINES,
+Illinois,AMERICAN AIRLINES,311992904
 Colorado,"BNY Mellon, National Association",031300821
 Georgia,Farmers State Bank,061108161
 Texas,Farmers State Bank,111915039
 Texas,First State Bank,111308633
-Texas,BAXTER,
+Texas,BAXTER,271992400
 New Jersey,First Bank,021214163
 Kentucky,Truist Bank,031204710
 Illinois,"UMB Bank, National Association",111015748
@@ -6860,8 +6860,8 @@ Florida,The Huntington National Bank,041000153
 Ohio,The Huntington National Bank,041000153
 Indiana,U.S. Bank National Association,011501747
 Texas,U.S. Bank National Association,011501747
-Kentucky,NAVY FEDERAL CREDIT UNION,
-Pennsylvania,NAVY FEDERAL CREDIT UNION,
+Kentucky,NAVY FEDERAL CREDIT UNION,256074974
+Pennsylvania,NAVY FEDERAL CREDIT UNION,256074974
 Indiana,"PNC Bank, National Association",021200575
 Pennsylvania,"PNC Bank, National Association",021200575
 Illinois,Bank of England,082902139
@@ -6975,12 +6975,12 @@ Iowa,Chelsea Savings Bank,073921776
 Michigan,ChoiceOne Bank,072406975
 Virginia,Citizens Bank and Trust Company,051402233
 Kentucky,"Citizens Bank of Kentucky, Inc.",042103253
-Texas,Citizens National Bank at Brownwood,
-Wisconsin,Citizens State Bank of Loyal,
+Texas,Citizens National Bank at Brownwood,111901580
+Wisconsin,Citizens State Bank of Loyal,075903983
 California,"City First Bank, National Association",
 Iowa,Clear Lake Bank and Trust Company,073904036
 Florida,Cogent Bank,063114661
-Utah,Comenity Capital Bank,
+Utah,Comenity Capital Bank,124085150
 Louisiana,Commercial Capital Bank,111105302
 Iowa,Community Bank and Trust Company,
 Iowa,Community Bank of Oelwein,073922678
@@ -7012,7 +7012,7 @@ Tennessee,ENBRIGHT,
 Utah,ENFIELD COMMUNITY,
 Texas,ESTACADO,
 Indiana,EWEB EMPLOYEES,
-Wisconsin,East Wisconsin Savings Bank,
+Wisconsin,East Wisconsin Savings Bank,275971029
 California,"El Dorado Savings Bank, F.S.B.",
 California,EverTrust Bank,122242296
 Texas,"Extraco Banks, National Association",111900581
@@ -7046,7 +7046,7 @@ Nebraska,First Central Bank McCook,104113990
 California,First Commercial Bank (USA),
 Utah,First Electronic Bank,124384974
 Louisiana,First Federal Bank of Louisiana,265270345
-North Carolina,First Federal Savings Bank of Lincolnton,
+North Carolina,First Federal Savings Bank of Lincolnton,253170884
 Kansas,First Federal Savings and Loan Bank,
 Kentucky,"First Kentucky Bank, Inc.",083901113
 Texas,First National Bank Texas,111906271
@@ -7058,12 +7058,12 @@ California,First Northern Bank of Dixon,121105156
 Illinois,First Secure Community Bank,071926058
 Nebraska,First State Bank Nebraska,104908189
 Georgia,First State Bank of Blakely,261270417
-Texas,First State Bank of Odem,
+Texas,First State Bank of Odem,114922265
 Missouri,First State Bank of the Ozarks,081519303
-Pennsylvania,First United National Bank,
+Pennsylvania,First United National Bank,043311662
 Nebraska,FirstBank of Nebraska,104901238
 Pennsylvania,Fleetwood Bank,031311593
-Ohio,Fortuna Bank,
+Ohio,Fortuna Bank,044016005
 Illinois,"Frederick Community Bank, The",
 Texas,Frost  Bank,111900251
 Tennessee,GALLATIN STEAM PLANT,
@@ -7097,7 +7097,7 @@ Texas,Haskell National Bank,111303748
 Minnesota,Heritage Bank Minnesota,091915133
 Louisiana,Hibernia Bank,265070590
 Illinois,"Hinsdale Bank & Trust Company, National Association",071924513
-Ohio,Home Federal Savings and Loan Association of Niles,
+Ohio,Home Federal Savings and Loan Association of Niles,241271614
 Texas,"HomeTown Bank, National Association",113100570
 Michigan,Honor  Bank,072406865
 Michigan,Huron Valley State Bank,072414190
@@ -7108,12 +7108,12 @@ Ohio,INTEGRITY,
 Pennsylvania,IRON WORKERS,
 Illinois,I.B.E.W. LOCAL #146,
 Texas,"Incommons Bank, N.A.",111903465
-Texas,Integrity Bank SSB,
+Texas,Integrity Bank SSB,113094479
 New Jersey,Ion Bank,211174178
 Illinois,Itasca Bank & Trust Co.,071922175
 New Jersey,JERSEY SHORE,
 Illinois,Jersey State Bank,081904468
-Pennsylvania,Journey Bank,
+Pennsylvania,Journey Bank,031305936
 Kansas,KANSAS STATE UNIVERSITY,
 Texas,KELLY COMMUNITY,
 Florida,KEYS,
@@ -7189,7 +7189,7 @@ Texas,NSPIRE,
 Pennsylvania,N.F.G. #2,
 Illinois,National Bank of St. Anne,071922337
 Missouri,Neighbors Bank,081518210
-North Carolina,New Republic Bank,
+North Carolina,New Republic Bank,053174051
 Texas,Normangee State Bank,111914881
 Minnesota,North Shore Bank of Commerce,091900106
 Iowa,Northeast Security Bank,073909222
@@ -7200,7 +7200,7 @@ Georgia,ON THE GRID FINANCIAL,
 Illinois,OSB Community Bank,072407741
 Nebraska,OUR FAMILY SOCIAL,
 Virginia,Oak View National Bank,051409582
-Oklahoma,Old Glory Bank,
+Oklahoma,Old Glory Bank,103113441
 Pennsylvania,Orrstown Bank,031309259
 New Jersey,P S E,
 Pennsylvania,PALCO FCU,
@@ -7265,13 +7265,13 @@ Illinois,ST. MARK,
 Texas,SWEETEX,
 Massachusetts,Salem Five Cents Savings Bank,211372284
 Iowa,Savings Bank,073907868
-Pennsylvania,Second Federal Savings and Loan Association of Philadelphia,
+Pennsylvania,Second Federal Savings and Loan Association of Philadelphia,236072378
 Illinois,"Security Bank, s.b.",271173452
 Minnesota,Security State Bank of Kenyon,
 Pennsylvania,Sewickley Savings Bank,243374124
 Louisiana,Sicily Island State Bank,111103281
-Pennsylvania,Slovenian Savings and Loan Association of Franklin-Conemaugh,
-Nebraska,South Central State Bank,
+Pennsylvania,Slovenian Savings and Loan Association of Franklin-Conemaugh,231372073
+Nebraska,South Central State Bank,104113738
 Alabama,SouthPoint Bank,062006534
 Texas,Southside Bank,111923607
 New Jersey,"Spencer Savings Bank, SLA",031276049
@@ -7282,7 +7282,7 @@ Minnesota,State Bank of New Richland,
 Illinois,State Bank of Whittington,
 Massachusetts,"StonehamBank,  A Co-operative Bank",211371586
 California,Summit State Bank,321181307
-Texas,Susser Bank,
+Texas,Susser Bank,311978818
 Michigan,TAHQUAMENON AREA,
 Wisconsin,TAYLOR,
 Minnesota,TEAMSTERS,
@@ -7302,13 +7302,13 @@ California,TUCOEMAS,
 Missouri,Table Rock Community Bank,081519248
 Illinois,Teutopolis State Bank,
 Texas,Texas First Bank,111902275
-Texas,TexasBank,
+Texas,TexasBank,111902424
 Illinois,The Bank of Bourbonnais,071924160
 Missouri,The Bank of Old Monroe,081011461
 Oklahoma,"The Bank, National Association",103100250
-Ohio,The Brookville Building and Savings Association,
+Ohio,The Brookville Building and Savings Association,242270737
 Georgia,The Citizens Bank of Cochran,061211346
-Ohio,The Citizens National Bank of McConnelsville,
+Ohio,The Citizens National Bank of McConnelsville,044106397
 Missouri,The Citizens-Farmers Bank of Cole Camp,101205445
 Alabama,The Commercial Bank Of Ozark,062106120
 Ohio,The Croghan Colonial Bank,041202744
@@ -7317,29 +7317,29 @@ Ohio,The Farmers Bank and Savings Company,044205146
 Wisconsin,The Farmers State Bank of Waupaca,075902573
 Oklahoma,The First Bank of Okarche,103108443
 Illinois,The First National Bank in Amboy,071911364
-Texas,The First National Bank of Anson,
+Texas,The First National Bank of Anson,111304608
 Minnesota,The First National Bank of Bemidji,
-Texas,The First National Bank of East Texas,
-Texas,The First National Bank of Granbury,
-Nebraska,The First National Bank of Johnson,
-Texas,The First National Bank of McGregor,
+Texas,The First National Bank of East Texas,111905609
+Texas,The First National Bank of Granbury,111906161
+Nebraska,The First National Bank of Johnson,104905881
+Texas,The First National Bank of McGregor,111904480
 Illinois,The First National Bank of Okawville,
 Kentucky,The First National Bank of Russell Springs,
-Texas,The First National Bank of Trinity,
+Texas,The First National Bank of Trinity,113113868
 Minnesota,The First State Bank of Red Wing,091912547
 Georgia,The Geo. D. Warthen Bank,061102332
 Illinois,The Havana National Bank,071104731
 Wisconsin,The International Bank of Amherst,075904380
-Texas,The Liberty National Bank in Paris,
+Texas,The Liberty National Bank in Paris,111900578
 Texas,The MINT National Bank,113025972
 Texas,The Moody National Bank,113100091
 Massachusetts,The National Grand Bank of Marblehead,011304300
 Ohio,The Old Fort Banking Company,041212637
 Wisconsin,The Peoples Community Bank,075906016
-Utah,"The Pitney Bowes Bank, Inc.",
+Utah,"The Pitney Bowes Bank, Inc.",124084627
 Kentucky,The Salyersville National Bank,042105947
 Alabama,The Southern Bank Company,262285663
-Texas,The State National Bank of Big Spring,
+Texas,The State National Bank of Big Spring,111302370
 Ohio,The Union Bank Company,041213759
 Iowa,The Watkins Savings Bank,073916406
 Kentucky,"Traditional Bank, Inc.",042101514
@@ -7356,7 +7356,7 @@ Texas,U. S. EMPLOYEES,
 Massachusetts,UniBank for Savings,211372378
 Michigan,United Bank of Michigan,072408805
 Louisiana,United Mississippi Bank,
-Texas,"United Texas Bank, National Association",
+Texas,"United Texas Bank, National Association",111016501
 Pennsylvania,VA PITTSBURGH EMPLOYEES,
 Ohio,VALLEY ONE COMMUNITY,
 Missouri,VANTAGE,
@@ -7365,7 +7365,7 @@ Minnesota,VIRGINIA COOP,
 Indiana,VULCRAFT EMPLOYEES,
 Kansas,Ventura National Bank & Trust,
 Colorado,Verus Bank of Commerce,107007074
-Tennessee,Volunteer Federal Savings Bank,
+Tennessee,Volunteer Federal Savings Bank,264271468
 Georgia,WALKER COUNTY EDUCATORS,
 Iowa,WATERLOO FIREMEN'S,
 Florida,WE FLORIDA FINANCIAL,
@@ -7588,23 +7588,23 @@ California,UNIVERSITY,
 Iowa,U.P. CONNECTION,
 Pennsylvania,VISIONS,
 Illinois,Washington State Bank,071122276
-North Carolina,ADVANCIAL,
+North Carolina,ADVANCIAL,311078857
 Texas,"BankUnited, National Association",026014588
 Illinois,CIBC Bank USA,061020113
 Virginia,CNB Bank,031306278
 New Jersey,Commonwealth Business Bank,122043864
 Nebraska,Cornerstone Bank,104102707
 Florida,Enterprise Bank & Trust,081006162
-Florida,FIREFIGHTERS FIRST,
-Texas,FIRST COMMUNITY,
+Florida,FIREFIGHTERS FIRST,322078341
+Texas,FIRST COMMUNITY,313084674
 Iowa,First Interstate Bank,092901683
 Virginia,First National Bank of Pennsylvania,031301053
 Louisiana,Gateway First Bank,103112552
-Wisconsin,HEARTLAND,
+Wisconsin,HEARTLAND,275978886
 Michigan,Independent Bank,072402652
 Virginia,Legacy Bank,073913836
 Missouri,MEMBERS CHOICE,
-Missouri,METRO,
+Missouri,METRO,286582737
 Colorado,Open Bank,122043958
 Virginia,PromiseOne Bank,061121180
 Oklahoma,Security Bank,103102216
@@ -7617,18 +7617,18 @@ New Jersey,Unity Bank,021210057
 Utah,"Zions Bancorporation, N.A.",011201762
 Wisconsin,Alliance Bank,074912674
 Texas,"BOKF, National Association",082901392
-Virginia,CHEVRON,
+Virginia,CHEVRON,321075947
 Virginia,"Capital One, National Association",021200407
 Tennessee,Citizens Community Bank,064104036
-Wisconsin,EMPEOPLE,
-Virginia,EVERENCE,
-Texas,FARMERS INSURANCE,
-Texas,FIRST TECHNOLOGY,
+Wisconsin,EMPEOPLE,271186423
+Virginia,EVERENCE,031389237
+Texas,FARMERS INSURANCE,322077795
+Texas,FIRST TECHNOLOGY,321180379
 Wisconsin,First American Bank,067015928
 Wisconsin,"First Mid Bank & Trust, National Association",071102076
 Texas,Flanagan State Bank,071118264
 Virginia,"HSBC Bank USA, National Association",021001088
-Texas,NATIONAL POLICE,
+Texas,NATIONAL POLICE,271078146
 Texas,PCB Bank,122043602
 Wisconsin,Peoples State Bank,075905965
 Tennessee,Renasant Bank,061103276
@@ -7636,8 +7636,8 @@ Pennsylvania,"Santander Bank, N.A.",011075202
 Texas,Shinhan Bank America,026011963
 Texas,"Sunflower Bank, National Association",101100621
 Texas,TIB National Association,111010170
-Virginia,U S POSTAL SERVICE,
-Texas,ALTRA,
+Virginia,U S POSTAL SERVICE,254075441
+Texas,ALTRA,291881216
 Florida,Beal Bank USA,122487459
 Florida,Central Bank,063116203
 Texas,Citizens State Bank,111321856
@@ -7648,26 +7648,26 @@ New Jersey,Manufacturers and Traders Trust Company,221272316
 Colorado,Nicolet National Bank,075901642
 Ohio,Republic Bank & Trust Company,042287027
 New Jersey,The Bank of New York Mellon,011001234
-California,UKRAINIAN,
+California,UKRAINIAN,222382221
 New Jersey,Valley National Bank,021201383
 Kansas,"Armed Forces Bank, National Association",122243017
 Texas,Austin Capital Bank SSB,114994031
 California,Bank of Hope,021214325
-Michigan,CREDIT UNION 1,
+Michigan,CREDIT UNION 1,271188081
 Indiana,Citizens Bank,074905225
 Tennessee,Commercial Bank,064205388
 Indiana,Farmers and Merchants Bank,074906211
 Ohio,First Financial Bank,041203811
 Kansas,Great Southern Bank,065303784
 Indiana,Northwest Bank,073902290
-Illinois,SELF-HELP,
+Illinois,SELF-HELP,322273696
 Virginia,"SouthState Bank, National Association",051408907
 Illinois,The Central Trust Bank,086519609
-Pennsylvania,UNITED,
+Pennsylvania,UNITED,272484894
 Georgia,Woori America Bank,021210073
 Kansas,Busey Bank,071100117
 Oklahoma,Community State Bank,103101518
-Alabama,NORTHROP GRUMMAN,
+Alabama,NORTHROP GRUMMAN,322276088
 Illinois,"The Bank of New York Mellon Trust Company, National Association",
 Minnesota,Commerce Bank,091912576
 North Carolina,First Horizon Bank,061120152
@@ -7675,20 +7675,20 @@ Tennessee,First National Bank,064101194
 Ohio,"Flagstar Bank, National Association",065203648
 Utah,KeyBank National Association,011807043
 Illinois,Old National Bank,072413638
-Georgia,PENTAGON,
+Georgia,PENTAGON,256078446
 Georgia,"Wilmington Trust, National Association",022313005
 Georgia,CIBC National Trust Company,071006486
-Kansas,COMMUNITYAMERICA,
+Kansas,COMMUNITYAMERICA,301081508
 Massachusetts,"Citizens Bank, National Association",011001331
 Missouri,First Community Bank,101205063
-Georgia,TOGETHER,
+Georgia,TOGETHER,281082915
 Illinois,United Community Bank,071109163
-Massachusetts,AMERICAN AIRLINES,
+Massachusetts,AMERICAN AIRLINES,311992904
 Florida,"BNY Mellon, National Association",031300821
 Illinois,Farmers State Bank,071112817
 Florida,First State Bank,063113523
 Wisconsin,First State Bank,075907497
-Utah,BAXTER,
+Utah,BAXTER,271992400
 North Carolina,First Bank,053104568
 New Jersey,Truist Bank,031204710
 Iowa,"UMB Bank, National Association",111015748
@@ -7707,8 +7707,8 @@ Georgia,The Huntington National Bank,041000153
 Pennsylvania,The Huntington National Bank,041000153
 Iowa,U.S. Bank National Association,011501747
 Utah,U.S. Bank National Association,011501747
-Louisiana,NAVY FEDERAL CREDIT UNION,
-Tennessee,NAVY FEDERAL CREDIT UNION,
+Louisiana,NAVY FEDERAL CREDIT UNION,256074974
+Tennessee,NAVY FEDERAL CREDIT UNION,256074974
 Kansas,"PNC Bank, National Association",021200575
 Tennessee,"PNC Bank, National Association",021200575
 Indiana,Bank of England,082902139
@@ -7741,7 +7741,7 @@ Ohio,ATOMIC,
 Illinois,AURORA POSTAL EMPLOYEES,
 Pennsylvania,AVH,
 Nebraska,Access Bank,104001138
-Oklahoma,All Capital Bank,
+Oklahoma,All Capital Bank,103112730
 Pennsylvania,Altoona First Savings Bank,231371595
 Kentucky,"American Bank & Trust Company, Inc.",083908323
 Illinois,American Eagle Bank,071926281
@@ -7768,7 +7768,7 @@ Alabama,Bank Independent,062203858
 California,"Bank of America California, National Association",121000358
 Missouri,"Bank of Brookfield - Purdin, National Association",101908014
 Kentucky,Bank of Clarkson,083904660
-Texas,"Bank of DeSoto, National Association",
+Texas,"Bank of DeSoto, National Association",111916698
 Oklahoma,Bank of Eufaula,103103338
 Tennessee,Bank of Halls,084302452
 Georgia,Bank of Madison,061102442
@@ -7817,7 +7817,7 @@ Pennsylvania,CROSS VALLEY,
 Illinois,CTA-74TH STREET DEPOT,
 California,California Business Bank,122044119
 California,Capital Bank and Trust Company,
-Oklahoma,Carson Community Bank,
+Oklahoma,Carson Community Bank,103112507
 Nebraska,Cattle Bank and Trust,104901348
 Minnesota,Center National Bank,091901891
 Indiana,CentreBank,074911219
@@ -7827,18 +7827,18 @@ Texas,Ciera Bank,111905227
 Kentucky,"Citizens Bank and Trust of Lebanon, Inc.",
 Texas,Citizens Bank of Las Cruces,112201289
 Illinois,Citizens National Bank of Albion,081221549
-Texas,Citizens State Bank of Luling,
+Texas,Citizens State Bank of Luling,114916488
 Florida,City National Bank of Florida,066004367
 Oklahoma,Cleo State Bank,103104175
 Texas,Coleman County State Bank,111321814
 Texas,Commerce Bank Texas,114921622
-Texas,Commercial National Bank of Texarkana,
+Texas,Commercial National Bank of Texarkana,111924282
 Wisconsin,Community Bank of Cameron,091804723
 Georgia,Community Bank of Pickens County,061119985
 Kentucky,Community Financial Services Bank,083903328
 Missouri,Community Point Bank,081511990
-Pennsylvania,Compass Savings Bank,
-Utah,Continental Bank,
+Pennsylvania,Compass Savings Bank,243374263
+Utah,Continental Bank,124003077
 Louisiana,Cottonport Bank,065201666
 Iowa,Crawford County Trust and Savings Bank,073911278
 Wisconsin,"Cumberland Federal Bank, FSB",291871226
@@ -7852,7 +7852,7 @@ Florida,DLP Bank,063106352
 Michigan,DOW,
 Minnesota,DULUTH FIRE DEPARTMENT,
 Minnesota,Dakota Heritage Bank,
-Tennessee,Decatur County Bank,
+Tennessee,Decatur County Bank,084303639
 Illinois,Devon Bank,071004271
 Georgia,"Durden Banking Company, Incorporated",061211443
 Pennsylvania,EARNING TREE,
@@ -7866,7 +7866,7 @@ Tennessee,ENLIGHTEN,
 Pennsylvania,ERIE FIREFIGHTERS,
 Illinois,ETHICON SUTURE,
 Georgia,EXCEL,
-Pennsylvania,Elderton State Bank,
+Pennsylvania,Elderton State Bank,043315147
 California,Endeavor Bank,122245235
 Indiana,Everence Trust Company,031389237
 Georgia,F A B CHURCH,
@@ -7889,35 +7889,35 @@ Louisiana,FOURTH WARD,
 Virginia,FREEDOM FIRST,
 Texas,FRIO COUNTY,
 Missouri,F&M Bank and Trust Company,081500477
-Texas,Farm Bureau Bank FSB,
+Texas,Farm Bureau Bank FSB,121281892
 Illinois,Farmers State Bank of Medora,
 Wisconsin,Farmers & Merchants State Bank,075907099
 Minnesota,Farmers and Merchants State Bank of Appleton,041207341
 Illinois,Federated Bank,071107783
-Oklahoma,First  Bank of Thomas,
+Oklahoma,First  Bank of Thomas,103103147
 Oklahoma,First Bank & Trust Co.,103101631
 Ohio,First Bank of Ohio,041202540
 Nebraska,First Central Bank,104102587
 Texas,"First Commercial Bank, National Association",114016524
 Oklahoma,First Enterprise Bank,103000680
-Ohio,First Federal Bank of Ohio,
+Ohio,First Federal Bank of Ohio,241271041
 Indiana,First Federal Savings Bank of Washington,286371676
 Pennsylvania,First Keystone Community Bank,031307125
 Louisiana,First National Bank USA,065402517
-Ohio,First National Bank in New Bremen,
-Texas,First National Bank of Burleson,
-Texas,First National Bank of Lake Jackson,
+Ohio,First National Bank in New Bremen,042306720
+Texas,First National Bank of Burleson,111909281
+Texas,First National Bank of Lake Jackson,113101317
 Illinois,First National Bank of Waterloo,
 Oklahoma,First Oklahoma Bank,103112015
 Illinois,First Secure State Bank,
 Illinois,First State Bank Shannon-Polo,071115801
-Texas,First State Bank of Brownsboro,
+Texas,First State Bank of Brownsboro,111917590
 Illinois,First State Bank of Olmsted,
 Alabama,"First State Bank of the South, Inc.",062202257
 Utah,First Utah Bank,124302613
 Alabama,FirstState Bank,062201892
 Georgia,Flint Community Bank,061220654
-Tennessee,Foundation Bank,
+Tennessee,Foundation Bank,084302180
 Kentucky,Fredonia Valley Bank,
 Texas,GALVESTON GOVERNMENT EMPLOYEES,
 Tennessee,GATEWAY,
@@ -7930,12 +7930,12 @@ Utah,GRANITE,
 Pennsylvania,GREATER PITTSBURGH,
 Tennessee,GREENEVILLE WORKS EMPLS. SAV. ASSN.,
 North Carolina,GUCO,
-Ohio,Galion Building and Loan Bank,
+Ohio,Galion Building and Loan Bank,241271054
 Georgia,Georgia Banking Company,061019975
 Minnesota,Global Innovations Bank,
 Minnesota,Grand Marais State Bank,091213314
 Indiana,Grant County State Bank,074909218
-Utah,Green Dot Bank DBA Bonneville Bank,
+Utah,Green Dot Bank DBA Bonneville Bank,124302529
 Minnesota,Grove Bank,
 Florida,Gulf Coast Business Bank,067017065
 Indiana,HAMMOND FIREFIGHTERS ASSN.,
@@ -7950,7 +7950,7 @@ Massachusetts,HOLYOKE,
 Wisconsin,HOPESOUTH,
 Indiana,HOWARD COUNTY SCHOOL EM,
 Michigan,H.P.C.,
-Pennsylvania,"Hatboro Federal Savings, FA",
+Pennsylvania,"Hatboro Federal Savings, FA",231372400
 Minnesota,Heritage Bank National Association,073908731
 Illinois,Hickory Point Bank and Trust,071124805
 Louisiana,Hodge Bank & Trust Company,111101128
@@ -7992,13 +7992,13 @@ Pennsylvania,LOCOMOTIVE & CONTROL EMPLOYEES,
 Ohio,LORMET COMMUNITY,
 Massachusetts,LOWELL FIREFIGHTERS,
 Massachusetts,LYNN FIREMENS,
-Wisconsin,Ladysmith Federal Savings and Loan Association,
+Wisconsin,Ladysmith Federal Savings and Loan Association,291571267
 Oklahoma,Lakeside Bank of Salina,103101767
 Missouri,Lead Bank,101206101
 Illinois,Liberty Bank for Savings,271071004
-Tennessee,Lineage Bank,
+Tennessee,Lineage Bank,064109536
 Texas,Lone Star National Bank,114911687
-New Jersey,Lusitania Savings Bank,
+New Jersey,Lusitania Savings Bank,221283347
 Ohio,MAHONING VALLEY,
 Illinois,MAROON FINANCIAL,
 Tennessee,MARYVILLE MUNICIPAL,
@@ -8036,7 +8036,7 @@ California,Montecito Bank & Trust,122234783
 Georgia,Moultrie Bank & Trust,
 Kansas,Mutual Savings Association,301170956
 Tennessee,NASHVILLE FIREMEN'S,
-Texas,NBT Financial Bank,
+Texas,NBT Financial Bank,111900549
 Pennsylvania,NEW ALLIANCE,
 Missouri,NEW FRONTIER BANK,081018956
 Louisiana,NEW ORLEANS CLERK & CHECKERS,
@@ -8049,7 +8049,7 @@ Minnesota,NORTHWOODS,
 Alabama,NUCOR EMPLOYEES,
 Illinois,N.I.C.E.,
 Wisconsin,National Exchange Bank and Trust,075900766
-Wisconsin,Nekoosa Port Edwards State Bank,
+Wisconsin,Nekoosa Port Edwards State Bank,075908043
 Pennsylvania,New Tripoli Bank,031312796
 Alabama,North Alabama Bank,062204022
 Illinois,North Shore Trust and Savings,271973762
@@ -8062,7 +8062,7 @@ Wisconsin,OSHKOSH COMMUNITY,
 Missouri,OUR LADY OF SNOWS,
 Florida,Ocean Bank,066011392
 Illinois,Old Second National Bank,071926867
-Ohio,Osgood Bank,
+Ohio,Osgood Bank,042212568
 Pennsylvania,P & G MEHOOPANY EMPLOYEES,
 California,PARISHIONERS,
 California,PATELCO,
@@ -8088,7 +8088,7 @@ Texas,Plains State Bank,111323207
 Missouri,Pony Express Bank,101905004
 Minnesota,Premier Bank Minnesota,091905680
 Minnesota,Prime Security Bank,091215587
-Texas,Producer Bank of Texas,
+Texas,Producer Bank of Texas,111912388
 Georgia,Queensborough National Bank & Trust Company,
 Texas,RAVE FINANCIAL ,
 Texas,REDEEMER,
@@ -8133,11 +8133,11 @@ Minnesota,Security Bank Midwest,
 Georgia,Security Federal Bank,253271822
 Minnesota,Security State Bank of Marine,091914561
 Oklahoma,"Shamrock Bank, N.A.",103101547
-Nebraska,Sidney Federal Savings and Loan Association,
+Nebraska,Sidney Federal Savings and Loan Association,304172210
 Illinois,"SmartBiz Bank, National Association",
 Georgia,South Coast Bank & Trust,061221310
 Texas,"SouthStar Bank, S.S.B.",111903546
-Oklahoma,Southwest Bank of Weatherford,
+Oklahoma,Southwest Bank of Weatherford,103104298
 Oklahoma,SpiritBank,103110376
 Missouri,St. Clair County State Bank,101204792
 Louisiana,State Bank & Trust Company,041203594
@@ -8174,33 +8174,33 @@ Kansas,The Baxter State Bank,101102933
 Texas,The Buckholts State Bank,111909773
 Missouri,The Citizens Bank of Edina,081504172
 Minnesota,The Citizens National Bank of Park Rapids,091202325
-Texas,The City National Bank of Colorado City,
+Texas,The City National Bank of Colorado City,111304637
 Kentucky,The Commercial Bank of Grayson,
 Michigan,The Dart Bank,072410903
 Louisiana,The Evangeline Bank and Trust Company,065200531
-Virginia,The Farmers Bank of Appomattox,
+Virginia,The Farmers Bank of Appomattox,051405528
 Kansas,The Farmers State Bank of Westmoreland,101105927
-Ohio,The First Central National Bank of St. Paris,
+Ohio,The First Central National Bank of St. Paris,044107163
 Kansas,The First National Bank in Cimarron,101105257
 Illinois,The First National Bank of Arenzville,
-Ohio,The First National Bank of Blanchester,
-New Jersey,The First National Bank of Elmer,
+Ohio,The First National Bank of Blanchester,042206422
+New Jersey,The First National Bank of Elmer,031203915
 Kentucky,The First National Bank of Grayson,
 Illinois,The First National Bank of Lacon,
 Minnesota,The First National Bank of McIntosh,
-Tennessee,The First National Bank of Oneida,
+Tennessee,The First National Bank of Oneida,064204444
 Kansas,The First National Bank of Scott City,101104041
 Michigan,The First National Bank of Wakefield,
 Minnesota,The First State Bank of Rosemount,091909217
 Illinois,The Gerber State Bank,
-Pennsylvania,The Haverford Trust Company,
+Pennsylvania,The Haverford Trust Company,031919348
 Illinois,The Iuka State Bank,081213780
 Kansas,"The Liberty Savings Association, FSA",301170707
 Missouri,The Maries County Bank,081501353
 Ohio,The Mt. Victory State Bank,041213704
-Pennsylvania,The Neffs National Bank,
+Pennsylvania,The Neffs National Bank,031316608
 Ohio,The Ottoville Bank Company,041210943
-Oklahoma,The Peoples National Bank of Checotah,
+Oklahoma,The Peoples National Bank of Checotah,103109264
 Massachusetts,The Pittsfield Co-operative Bank,211870142
 Alabama,"The Samson Banking Company, Inc.",062105493
 Ohio,The St. Henry Bank,042311650
@@ -8211,7 +8211,7 @@ Texas,"Titan Bank, N.A.",111910762
 Alabama,Traditions Bank,062206457
 Tennessee,TriStar Bank,064108553
 Massachusetts,TruNorth Bank,211870935
-Utah,"UBS Bank USA, National Association",
+Utah,"UBS Bank USA, National Association",026073192
 California,UNCLE,
 Wisconsin,UNISON,
 Missouri,UNITED LABOR,
@@ -8230,7 +8230,7 @@ Utah,VAREX,
 Michigan,VIBE,
 Virginia,VIRGINIA EDUCATORS CREDIT UNION,
 Georgia,Vallant Bank,061101294
-Texas,"VeraBank, National Association",
+Texas,"VeraBank, National Association",111913170
 Texas,Victory Bank,031919128
 Kentucky,W B H EMPLOYEES,
 Texas,WALKER COUNTY,
@@ -8250,7 +8250,7 @@ Illinois,West Central Bank,071103389
 Wisconsin,West Pointe Bank,075912835
 Massachusetts,Westfield Bank,211871604
 Louisiana,Winnsboro State Bank & Trust Company,111101306
-Texas,Worthington Bank,
+Texas,Worthington Bank,111924622
 California,YOLO,
 Colorado,Young Americans Bank,102006012
 Illinois,1ST GATEWAY,
@@ -8454,14 +8454,14 @@ Florida,UNIVERSITY,
 Nebraska,U.P. CONNECTION,
 California,W S S C,
 Iowa,Washington State Bank,073902216
-Oklahoma,ADVANCIAL,
+Oklahoma,ADVANCIAL,311078857
 California,Byline Bank,071001533
 Michigan,CIBC Bank USA,061020113
-California,CORPORATE AMERICA FAMILY,
-Georgia,DELTA COMMUNITY,
+California,CORPORATE AMERICA FAMILY,271987075
+Georgia,DELTA COMMUNITY,261071315
 Kansas,Enterprise Bank & Trust,081006162
 California,Exchange Bank,121101985
-Tennessee,FIREFIGHTERS FIRST,
+Tennessee,FIREFIGHTERS FIRST,322078341
 Georgia,F&M Bank,061112830
 Missouri,First Interstate Bank,092901683
 Alabama,First Southern Bank,062206787
@@ -8469,7 +8469,7 @@ Oklahoma,Gateway First Bank,103112552
 Alabama,Hancock Whitney Bank,062101219
 Tennessee,Independent Bank,084008426
 Alabama,Liberty Bank,011110659
-Ohio,MEMBERS CHOICE,
+Ohio,MEMBERS CHOICE,242278331
 Colorado,Members Trust Company,063192612
 Georgia,Open Bank,122043958
 California,Royal Business Bank,026013408
@@ -8483,27 +8483,27 @@ Pennsylvania,Unity Bank,021210057
 Colorado,AMG National Trust Bank,107007346
 Colorado,American Bank of Freedom,081518058
 Illinois,Banterra Bank,081215597
-California,COMMUNITY FIRST,
+California,COMMUNITY FIRST,321177599
 Alabama,Centennial Bank,063107623
 California,Columbia Bank,055000165
 Colorado,ENCORE BANK,082008583
 California,East West Bank,011002877
-California,FEDEX EMPLOYEES CREDIT ASSOCIATION,
+California,FEDEX EMPLOYEES CREDIT ASSOCIATION,284084350
 Georgia,Farmers & Merchants Bank,061110557
 Georgia,"First Financial Bank, National Association",071100858
 Florida,First Security Bank,082901774
-Alabama,HONDA,
+Alabama,HONDA,322275746
 California,MidFirst Bank,102007008
-Alabama,NUCOR EMPLOYEE'S,
-Florida,POLISH & SLAVIC,
+Alabama,NUCOR EMPLOYEE'S,253278980
+Florida,POLISH & SLAVIC,226082022
 California,Preferred Bank,026013990
-Illinois,SELFRELIANCE,
+Illinois,SELFRELIANCE,271080817
 Iowa,Security State Bank,073907127
 Kansas,Simmons Bank,064201612
 Colorado,"TBK BANK, SSB",102100552
 Indiana,The Farmers State Bank,074910854
 Alabama,Union State Bank,062202697
-Wisconsin,ALTRA,
+Wisconsin,ALTRA,291881216
 Georgia,Beal Bank USA,122487459
 Georgia,Central Bank,063116203
 Wisconsin,Citizens State Bank,091803889
@@ -8512,11 +8512,11 @@ Georgia,FirstBank,061107010
 Texas,Gulf Coast Bank and Trust Company,265070435
 Florida,Nicolet National Bank,075901642
 Tennessee,Republic Bank & Trust Company,042287027
-Florida,UKRAINIAN,
+Florida,UKRAINIAN,222382221
 Kentucky,"Armed Forces Bank, National Association",122243017
 Utah,Austin Capital Bank SSB,114994031
 Georgia,Bank of Hope,021214325
-Minnesota,CREDIT UNION 1,
+Minnesota,CREDIT UNION 1,271188081
 Kansas,Citizens Bank,031101143
 Tennessee,City National Bank,026013958
 Illinois,Community Bank,071118798
@@ -8525,14 +8525,14 @@ Texas,First Financial Bank,111322457
 Minnesota,Great Southern Bank,065303784
 Texas,Hanmi Bank,061106150
 Iowa,Northwest Bank,073902290
-North Carolina,SELF-HELP,
+North Carolina,SELF-HELP,253184841
 Florida,"TD Bank, National Association",011103093
 Kansas,The Central Trust Bank,086519609
-Texas,UNITED,
+Texas,UNITED,314088860
 New Jersey,Woori America Bank,021210073
 Missouri,Busey Bank,071100117
 Wisconsin,Community State Bank,075907002
-California,NORTHROP GRUMMAN,
+California,NORTHROP GRUMMAN,322276088
 Indiana,"The Bank of New York Mellon Trust Company, National Association",
 Missouri,Commerce Bank,071100010
 Tennessee,First Horizon Bank,061120152
@@ -8540,20 +8540,20 @@ Texas,First National Bank,111302587
 Wisconsin,"Flagstar Bank, National Association",065203648
 Alabama,Liberty Bank and Trust Company,065002108
 Indiana,Old National Bank,072413638
-Nebraska,PENTAGON,
+Nebraska,PENTAGON,256078446
 Massachusetts,"Wilmington Trust, National Association",022313005
 Illinois,CIBC National Trust Company,071006486
-Kentucky,COMMUNITYAMERICA,
+Kentucky,COMMUNITYAMERICA,301081508
 Michigan,"Citizens Bank, National Association",011001331
 Nebraska,First Community Bank,104105733
-Illinois,TOGETHER,
+Illinois,TOGETHER,281082915
 Iowa,United Community Bank,073921323
-New Jersey,AMERICAN AIRLINES,
+New Jersey,AMERICAN AIRLINES,311992904
 Georgia,"BNY Mellon, National Association",031300821
 Indiana,Farmers State Bank,074910854
 Georgia,First State Bank,061101113
-California,BAXTER,
-Virginia,BAXTER,
+California,BAXTER,271992400
+Virginia,BAXTER,271992400
 Oklahoma,First Bank,103104120
 North Carolina,Truist Bank,031204710
 Kansas,"UMB Bank, National Association",111015748
@@ -8572,8 +8572,8 @@ Illinois,The Huntington National Bank,041000153
 Tennessee,The Huntington National Bank,041000153
 Kansas,U.S. Bank National Association,011501747
 Wisconsin,U.S. Bank National Association,011501747
-Michigan,NAVY FEDERAL CREDIT UNION,
-Texas,NAVY FEDERAL CREDIT UNION,
+Michigan,NAVY FEDERAL CREDIT UNION,256074974
+Texas,NAVY FEDERAL CREDIT UNION,256074974
 Kentucky,"PNC Bank, National Association",021200575
 Texas,"PNC Bank, National Association",021200575
 Kansas,Bank of England,082902139
