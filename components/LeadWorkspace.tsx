@@ -638,8 +638,13 @@ export default function LeadWorkspace({
       const MAX_REDIAL_ATTEMPTS = 2;
       const isRedialOutcome = outcome === 'no_answer' || outcome === 'voicemail' || outcome === 'google_voice';
       const isForcedRedial = disposition === 'call_again';
+      // Scoped to today only (isSameAgentDay) -- calls is the lead's FULL
+      // history, and without this a lead with old no-answers from days or
+      // weeks ago got treated as already "maxed out" the instant it's
+      // touched today, skipping straight past its fresh 2-attempt allowance
+      // for today instead of actually redialing it.
       const priorRedialAttempts = calls.filter(
-        (c) => c.id !== pendingCallId && (c.outcome === 'no_answer' || c.outcome === 'voicemail' || c.outcome === 'google_voice')
+        (c) => c.id !== pendingCallId && isSameAgentDay(c.occurred_at) && (c.outcome === 'no_answer' || c.outcome === 'voicemail' || c.outcome === 'google_voice')
       ).length;
       const redialAttemptsSoFar = priorRedialAttempts + (isRedialOutcome ? 1 : 0);
       // dailyLimitReached (todayCount >= MAX_CALLS_PER_DAY) already covers
