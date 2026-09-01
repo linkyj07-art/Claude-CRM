@@ -404,5 +404,6 @@ CREATE TABLE IF NOT EXISTS dial_sessions (
   session_dials INTEGER NOT NULL DEFAULT 0, -- dials placed this Power Dial session (manual + auto)
   session_connects INTEGER NOT NULL DEFAULT 0,
   consecutive_no_answer INTEGER NOT NULL DEFAULT 0, -- resets on any other outcome; auto-pauses Auto-Dial past a threshold
+  categories TEXT NOT NULL DEFAULT '', -- comma-separated statuses this queue was built from; empty = all
   updated_at TEXT NOT NULL DEFAULT (datetime('now'))
 );

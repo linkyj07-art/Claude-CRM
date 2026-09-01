@@ -1,10 +1,11 @@
 import Link from 'next/link';
 import { getDb } from '@/lib/db';
-import { US_STATES } from '@/lib/util';
+import { US_STATES, promoteAgingLeads } from '@/lib/util';
 import { Customer, LeadVendor } from '@/lib/types';
 import NewLeadButton from '@/components/NewLeadButton';
 import ImportLeadsButton from '@/components/ImportLeadsButton';
 import FixMisalignedButton from '@/components/FixMisalignedButton';
+import DialCategoryButton from '@/components/DialCategoryButton';
 import LeadsTable from '@/components/LeadsTable';
 import { getCurrentUser } from '@/lib/currentUser';
 import { redirect } from 'next/navigation';
@@ -26,6 +27,12 @@ export default async function LeadsPage({ searchParams }: { searchParams: { stat
   if (!user) redirect('/login');
 
   const db = getDb();
+  // Status is a snapshot from import/last-touch, not something that
+  // advances on its own -- catch it up to the leads' real age before
+  // reading counts, so both the filter dropdown and the Dial Categories
+  // picker reflect where a lead actually stands today, not where it stood
+  // when it was imported.
+  promoteAgingLeads(db, user.id);
   const vendors = db.prepare('SELECT * FROM lead_vendors ORDER BY name').all() as LeadVendor[];
 
   let sql = `SELECT c.*, v.name as vendor_name FROM customers c LEFT JOIN lead_vendors v ON v.id = c.lead_vendor_id WHERE c.archived = 0 AND c.owner_id = ?`;
@@ -60,6 +67,14 @@ export default async function LeadsPage({ searchParams }: { searchParams: { stat
           <NewLeadButton vendors={vendors} />
           <ImportLeadsButton vendors={vendors} />
           <Link href="/leads/review" className="btn-secondary">🔎 Review Queue</Link>
+          <DialCategoryButton
+            counts={{
+              fresh: countMap.fresh || 0,
+              working: countMap.working || 0,
+              aging_45_90: countMap.aging_45_90 || 0,
+              aging_90_plus: countMap.aging_90_plus || 0
+            }}
+          />
           <a href="/dial" className="btn-primary">⚡ Power Dial</a>
         </div>
       </div>

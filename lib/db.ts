@@ -84,6 +84,13 @@ function migrate(db: Database.Database) {
   // eligibility check treats a 'lost' lead as callable again once this
   // passes, so it doesn't need a manual status reset to come back around.
   addColumnIfMissing(db, 'customers', 'retry_after', 'TEXT');
+  // Comma-separated statuses (fresh/working/aging_45_90/aging_90_plus) this
+  // session's queue was built from -- empty means "all of them," the prior
+  // default. Persisted so the live "new lead ready" banner (fetchEligibleLeads,
+  // called mid-session) only offers leads from the same categories the agent
+  // actually chose when they hit Power Dial, instead of silently pulling in
+  // a category they deliberately excluded.
+  addColumnIfMissing(db, 'dial_sessions', 'categories', "TEXT NOT NULL DEFAULT ''");
   db.exec('CREATE INDEX IF NOT EXISTS idx_customers_owner ON customers(owner_id);');
 
   const defaultUserId = seedDefaultUser(db);
