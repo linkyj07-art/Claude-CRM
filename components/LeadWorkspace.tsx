@@ -6,7 +6,7 @@ import Badge from './Badge';
 import {
   Customer, NoteVersion, CallRecord, Policy, Commission, Carrier, CarrierRule, LeadVendor
 } from '@/lib/types';
-import { fmtMoney, fmtMoney0, leadAgeLabel, localTimeForState, agentLocalTime, statusBadge, isValidRoutingNumber, callsToday, MAX_CALLS_PER_DAY, isWithinCallingHours, callingWindowStatus, isTestLead, AGENT_TIMEZONE } from '@/lib/util';
+import { fmtMoney, fmtMoney0, leadAgeLabel, localTimeForState, agentLocalTime, statusBadge, isValidRoutingNumber, callsToday, MAX_CALLS_PER_DAY, isWithinCallingHours, callingWindowStatus, isTestLead, AGENT_TIMEZONE, isSameAgentDay } from '@/lib/util';
 import { suggestCarriers, detectTobaccoUse, extractBuild, countDistinctConditions } from '@/lib/underwriting';
 import RoutingLookup from './RoutingLookup';
 import SellModal from './SellModal';
@@ -177,6 +177,7 @@ export default function LeadWorkspace({
 
   const attemptCount = calls.length;
   const todayCount = callsToday(calls);
+  const todaysCalls = calls.filter((c) => isSameAgentDay(c.occurred_at));
   const dailyLimitReached = todayCount >= MAX_CALLS_PER_DAY;
   const lastNote = notes[0];
   const [callError, setCallError] = useState('');
@@ -1338,7 +1339,13 @@ export default function LeadWorkspace({
 
         {activeTab === 'calls' && (
           <div className="space-y-2">
-            {calls.map((c) => (
+            {/* Today only -- a lead worked over weeks/months piles up a long
+                list here that buries what actually happened today under old
+                attempts. The all-time total still shows in Call Attempts
+                below (attemptCount/todayCount both read the full, unfiltered
+                calls array), so nothing about "how many times has this lead
+                been called" is lost -- only this list narrows to today. */}
+            {todaysCalls.map((c) => (
               <div key={c.id} className="flex items-center gap-3 rounded-lg border border-line p-2.5 text-sm">
                 <span className="w-40 shrink-0 text-xs text-slate-400 tabular-nums">{c.occurred_at}</span>
                 <span className="font-medium">Attempt #{c.attempt_number}</span>
@@ -1346,7 +1353,11 @@ export default function LeadWorkspace({
                 {c.disposition && <span className="text-slate-500">Disposition: {c.disposition}</span>}
               </div>
             ))}
-            {calls.length === 0 && <div className="text-sm text-slate-400">No calls logged yet.</div>}
+            {todaysCalls.length === 0 && (
+              <div className="text-sm text-slate-400">
+                No calls today.{calls.length > 0 ? ` (${calls.length} total on this lead.)` : ''}
+              </div>
+            )}
           </div>
         )}
 
