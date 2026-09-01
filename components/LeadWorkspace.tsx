@@ -6,7 +6,7 @@ import Badge from './Badge';
 import {
   Customer, NoteVersion, CallRecord, Policy, Commission, Carrier, CarrierRule, LeadVendor
 } from '@/lib/types';
-import { fmtMoney, fmtMoney0, leadAgeLabel, localTimeForState, agentLocalTime, statusBadge, isValidRoutingNumber, callsToday, MAX_CALLS_PER_DAY, isWithinCallingHours, callingWindowStatus, isTestLead, AGENT_TIMEZONE, isSameAgentDay } from '@/lib/util';
+import { fmtMoney, fmtMoney0, leadAgeLabel, localTimeForState, agentLocalTime, statusBadge, isValidRoutingNumber, callsToday, MAX_CALLS_PER_DAY, isWithinCallingHours, callingWindowStatus, isTestLead, AGENT_TIMEZONE, isSameAgentDay, stateFullName } from '@/lib/util';
 import { suggestCarriers, detectTobaccoUse, extractBuild, countDistinctConditions } from '@/lib/underwriting';
 import RoutingLookup from './RoutingLookup';
 import SellModal from './SellModal';
@@ -989,7 +989,7 @@ export default function LeadWorkspace({
             {customer.military ? <Badge label={`🎖 ${customer.military_branch || 'Military'}`} color="brand" /> : null}
           </div>
           <div className="mt-1 flex flex-wrap gap-x-4 gap-y-0.5 text-sm text-slate-500">
-            <span>📍 {customer.city ? `${customer.city}, ` : ''}{customer.state}</span>
+            <span>📍 {customer.city ? `${customer.city}, ` : ''}{stateFullName(customer.state)}</span>
             <span>🕐 {localTimeForState(customer.state)} local</span>
             <span>🕐 {agentLocalTime()} your time (Mountain)</span>
             {isTestLead(customer) ? (

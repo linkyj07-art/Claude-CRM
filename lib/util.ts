@@ -128,6 +128,35 @@ const STATE_NAME_TO_ABBR: Record<string, string> = {
   'district of columbia': 'DC', 'washington dc': 'DC', 'washington d.c.': 'DC'
 };
 
+// Reverse of STATE_NAME_TO_ABBR, for display -- a lead sheet that only ever
+// gave a 2-letter code (very common) gets normalized to that same code on
+// import (normalizeState always stores the abbreviation, never the full
+// name, so timezone/area-code lookups keyed by abbreviation stay simple).
+// This is what turns that stored abbreviation back into a readable full
+// name wherever a lead's state is actually shown to the agent.
+const ABBR_TO_STATE_NAME: Record<string, string> = {
+  AL: 'Alabama', AK: 'Alaska', AZ: 'Arizona', AR: 'Arkansas', CA: 'California',
+  CO: 'Colorado', CT: 'Connecticut', DE: 'Delaware', FL: 'Florida', GA: 'Georgia',
+  HI: 'Hawaii', ID: 'Idaho', IL: 'Illinois', IN: 'Indiana', IA: 'Iowa',
+  KS: 'Kansas', KY: 'Kentucky', LA: 'Louisiana', ME: 'Maine', MD: 'Maryland',
+  MA: 'Massachusetts', MI: 'Michigan', MN: 'Minnesota', MS: 'Mississippi', MO: 'Missouri',
+  MT: 'Montana', NE: 'Nebraska', NV: 'Nevada', NH: 'New Hampshire', NJ: 'New Jersey',
+  NM: 'New Mexico', NY: 'New York', NC: 'North Carolina', ND: 'North Dakota', OH: 'Ohio',
+  OK: 'Oklahoma', OR: 'Oregon', PA: 'Pennsylvania', RI: 'Rhode Island', SC: 'South Carolina',
+  SD: 'South Dakota', TN: 'Tennessee', TX: 'Texas', UT: 'Utah', VT: 'Vermont',
+  VA: 'Virginia', WA: 'Washington', WV: 'West Virginia', WI: 'Wisconsin', WY: 'Wyoming',
+  DC: 'Washington D.C.'
+};
+
+// Falls back to returning the input unchanged for anything unrecognized
+// (bad/foreign data) rather than hiding it -- an agent seeing an odd code
+// verbatim is more useful than the state silently disappearing from the page.
+export function stateFullName(abbr: string | null | undefined): string | null {
+  if (!abbr) return null;
+  const trimmed = abbr.trim();
+  return ABBR_TO_STATE_NAME[trimmed.toUpperCase()] || trimmed;
+}
+
 // NANPA area code -> primary state, for the common (non-split, non-overlay)
 // codes. This is a best-effort fallback only — cell numbers move with people
 // and some codes are shared across state lines — never a substitute for a
