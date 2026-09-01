@@ -29,6 +29,22 @@ export default function RoutingLookup({
     } finally { setLoading(false); }
   }
 
+  // Live search: picking a state pulls up its whole list immediately (no
+  // extra click), and typing a bank name filters as you go, same as an
+  // autocomplete field. Debounced so a fast typist doesn't fire a request
+  // per keystroke -- the button below still works too, for re-running the
+  // same search on demand.
+  useEffect(() => {
+    if (!bankName && !state) {
+      setResults([]);
+      setSearched(false);
+      return;
+    }
+    const timer = setTimeout(() => { search(); }, 250);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bankName, state]);
+
   const routingValid = routingNumber ? isValidRoutingNumber(routingNumber) : null;
 
   return (
