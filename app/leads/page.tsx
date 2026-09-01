@@ -75,7 +75,6 @@ export default async function LeadsPage({ searchParams }: { searchParams: { stat
               aging_90_plus: countMap.aging_90_plus || 0
             }}
           />
-          <a href="/dial" className="btn-primary">⚡ Power Dial</a>
         </div>
       </div>
 
