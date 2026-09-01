@@ -23,7 +23,14 @@ export async function GET(req: NextRequest) {
     sql += ' AND state = ?';
     params.push(state);
   }
-  sql += ' ORDER BY bank_name LIMIT 25';
+  // A live bank-name search stays capped tight -- typing more narrows it
+  // further, so 25 is plenty. Browsing by state alone is different: the
+  // whole point is "show me every bank on file for this state," and a
+  // bigger state (Texas alone has ~900 entries in the current sheet) was
+  // getting silently truncated to the alphabetically-first 25 with no
+  // indication anything was missing. 2000 comfortably covers every state's
+  // real count while still bounding a pathological query.
+  sql += bank ? ' ORDER BY bank_name LIMIT 25' : ' ORDER BY bank_name LIMIT 2000';
   const rows = db.prepare(sql).all(...params);
   return NextResponse.json(rows);
 }
