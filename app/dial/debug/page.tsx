@@ -1,7 +1,7 @@
 import { getDb } from '@/lib/db';
 import { getCurrentUser } from '@/lib/currentUser';
 import { redirect } from 'next/navigation';
-import { isWithinCallingHours, minutesUntilCallingWindowCloses, MAX_CALLS_PER_DAY, isTestLead, agentMidnightUTC } from '@/lib/util';
+import { isWithinCallingHours, minutesUntilCallingWindowCloses, MAX_CALLS_PER_DAY, isTestLead, agentMidnightUTC, promoteAgingLeads } from '@/lib/util';
 
 export const dynamic = 'force-dynamic';
 
@@ -14,6 +14,7 @@ export default async function DialDebugPage() {
   if (!user) redirect('/login');
 
   const db = getDb();
+  promoteAgingLeads(db, user.id);
   const todayStart = agentMidnightUTC(0).toISOString().slice(0, 19).replace('T', ' ');
 
   const allRows = db

@@ -12,6 +12,7 @@ export type DialSessionRow = {
   session_dials: number;
   session_connects: number;
   consecutive_no_answer: number;
+  categories: string;
   updated_at: string;
 };
 

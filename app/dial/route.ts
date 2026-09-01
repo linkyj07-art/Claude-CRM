@@ -1,7 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
 import { getCurrentUser } from '@/lib/currentUser';
-import { isWithinCallingHours, minutesUntilCallingWindowCloses, MAX_CALLS_PER_DAY, isTestLead, agentMidnightUTC } from '@/lib/util';
+import { isWithinCallingHours, minutesUntilCallingWindowCloses, MAX_CALLS_PER_DAY, isTestLead, agentMidnightUTC, promoteAgingLeads } from '@/lib/util';
+
+// The full eligible set, and the default when no ?categories= is given
+// (a plain "⚡ Power Dial" click with no picker used) -- keeps every
+// existing bookmark/link behaving exactly as before this filter existed.
+const ALL_CATEGORIES = ['fresh', 'working', 'aging_45_90', 'aging_90_plus'] as const;
+type Category = (typeof ALL_CATEGORIES)[number];
+
+function parseCategories(raw: string | null): Category[] {
+  if (!raw) return [...ALL_CATEGORIES];
+  const requested = raw.split(',').map((s) => s.trim()).filter((s): s is Category => (ALL_CATEGORIES as readonly string[]).includes(s));
+  return requested.length > 0 ? requested : [...ALL_CATEGORIES];
+}
 
 // A lead whose state is closing for the day within this many minutes jumps
 // to the front of the queue, ahead of even genuinely never-called leads --
@@ -42,6 +54,15 @@ export async function GET(req: NextRequest) {
     db.prepare('DELETE FROM dial_sessions WHERE user_id = ?').run(user.id);
   }
 
+  // Status is a snapshot taken at import time (or whenever it was last
+  // touched) -- it doesn't advance on its own as a lead sits untouched, so
+  // this catches it up to its real age before the query below (or the
+  // categories picker's own counts) reads it, same as every other queue
+  // build.
+  promoteAgingLeads(db, user.id);
+
+  const categories = parseCategories(req.nextUrl.searchParams.get('categories'));
+
   // Was `date(occurred_at) = date('now')` -- a UTC calendar day, while the
   // actual per-call cap check (app/api/leads/[id]/calls/route.ts) and every
   // other "today" in this app use the agent's own Mountain-time day. During
@@ -49,6 +70,7 @@ export async function GET(req: NextRequest) {
   // mismatch let an already-maxed-out lead look freshly eligible again here
   // only to have the real dial rejected by the per-call check moments later.
   const todayStart = agentMidnightUTC(0).toISOString().slice(0, 19).replace('T', ' ');
+  const categoryParams = Object.fromEntries(categories.map((c, i) => [`cat${i}`, c]));
   const allRows = db
     .prepare(
       `SELECT id, status, state, first_name, last_name,
@@ -57,13 +79,16 @@ export async function GET(req: NextRequest) {
        FROM customers
        WHERE archived = 0 AND owner_id = @ownerId
          AND (
-           status IN ('fresh','working','aging_45_90','aging_90_plus')
+           status IN (${categories.map((_, i) => `@cat${i}`).join(',')})
            -- A Not Interested disposition sets status='lost' with a
            -- 3-day retry_after (lib/audit.ts) instead of dropping the
            -- lead for good like other 'lost' reasons (Broke, Connected
            -- HU) -- once that date passes, it's eligible again same as
-           -- any other status, no manual reset needed.
-           OR (status = 'lost' AND retry_after IS NOT NULL AND retry_after <= datetime('now'))
+           -- any other status, no manual reset needed. Only offered when
+           -- 'working' is one of the selected categories -- a lead that
+           -- came back from a Not Interested cooldown is exactly a working
+           -- lead, not a fresh/aging one.
+           OR (@workingSelected = 1 AND status = 'lost' AND retry_after IS NOT NULL AND retry_after <= datetime('now'))
          )
          AND phone IS NOT NULL AND TRIM(phone) != ''
          AND id NOT IN (
@@ -95,7 +120,7 @@ export async function GET(req: NextRequest) {
          -- to clear before it ages further, not new arrivals to rush to.
          CASE WHEN status = 'fresh' THEN -CAST(strftime('%s', purchased_at) AS INTEGER) ELSE CAST(strftime('%s', purchased_at) AS INTEGER) END`
     )
-    .all({ ownerId: user.id, todayStart }) as { id: string; status: string; state: string | null; first_name: string; last_name: string; calls_today: number; calls_ever: number }[];
+    .all({ ownerId: user.id, todayStart, workingSelected: categories.includes('working') ? 1 : 0, ...categoryParams }) as { id: string; status: string; state: string | null; first_name: string; last_name: string; calls_today: number; calls_ever: number }[];
 
   // Leads whose local time is outside the 8am-9pm calling window get held
   // back rather than queued dead-on-arrival — they'll be picked up again on
@@ -132,18 +157,23 @@ export async function GET(req: NextRequest) {
     return NextResponse.redirect(new URL(`/leads?empty=1${reason}`, origin));
   }
   const [first, ...rest] = rows;
+  // Stored empty (not the literal list) when every category was selected --
+  // matches how an absent ?categories= is already read back as "all," and
+  // keeps a plain Power Dial click from ever persisting a stale explicit
+  // list that a later default-behavior change wouldn't pick up.
+  const storedCategories = categories.length === ALL_CATEGORIES.length ? '' : categories.join(',');
   // A brand-new session always starts Auto-Dial off and its stats at zero —
   // even if the user's last session left it on, so Auto-Dial never carries
   // over silently into a session the user hasn't looked at yet.
   db.prepare(
-    `INSERT INTO dial_sessions (user_id, current_lead_id, queue, recycle, pass, auto_dial, auto_dial_pace_ms, session_dials, session_connects, consecutive_no_answer, updated_at)
-     VALUES (?, ?, ?, '', 1, 0, 2000, 0, 0, 0, datetime('now'))
+    `INSERT INTO dial_sessions (user_id, current_lead_id, queue, recycle, pass, auto_dial, auto_dial_pace_ms, session_dials, session_connects, consecutive_no_answer, categories, updated_at)
+     VALUES (?, ?, ?, '', 1, 0, 2000, 0, 0, 0, ?, datetime('now'))
      ON CONFLICT(user_id) DO UPDATE SET
        current_lead_id = excluded.current_lead_id, queue = excluded.queue,
        recycle = '', pass = 1, auto_dial = 0, auto_dial_pace_ms = 2000,
        session_dials = 0, session_connects = 0, consecutive_no_answer = 0,
-       updated_at = excluded.updated_at`
-  ).run(user.id, first.id, rest.map((r) => r.id).join(','));
+       categories = excluded.categories, updated_at = excluded.updated_at`
+  ).run(user.id, first.id, rest.map((r) => r.id).join(','), storedCategories);
 
   return NextResponse.redirect(new URL(`/leads/${first.id}?dialing=1`, origin));
 }

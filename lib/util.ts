@@ -41,6 +41,31 @@ export function leadAgeBucket(dateStr: string): 'fresh' | 'aging_45_90' | 'aging
   return 'aging_90_plus';
 }
 
+// statusBadge() below already computes what bucket a 'fresh' lead LOOKS
+// like once it's aged past 48 hours, but that's purely a display override --
+// the real customers.status column just sat at 'fresh' forever, so the
+// dial queue's own status-based sort (fresh gets newest-first priority,
+// aging tiers get oldest-first "clear the backlog" priority -- see
+// app/dial/route.ts) kept treating a lead that's actually months old as a
+// brand-new arrival. Call this wherever the queue or lead counts are read
+// so status actually catches up to age before anything sorts or counts by
+// it. Deliberately only moves fresh -> aging_45_90 -> aging_90_plus --
+// 'working' is an engagement track, not an age one, and every other status
+// (sold/lost/dnc/disputed/invalid/archived) is a deliberate terminal state
+// that age should never override.
+export function promoteAgingLeads(db: import('better-sqlite3').Database, ownerId: string): void {
+  db.prepare(
+    `UPDATE customers SET status = 'aging_45_90', updated_at = datetime('now')
+     WHERE owner_id = ? AND archived = 0 AND status = 'fresh'
+       AND julianday('now') - julianday(purchased_at) > 2`
+  ).run(ownerId);
+  db.prepare(
+    `UPDATE customers SET status = 'aging_90_plus', updated_at = datetime('now')
+     WHERE owner_id = ? AND archived = 0 AND status = 'aging_45_90'
+       AND julianday('now') - julianday(purchased_at) > 90`
+  ).run(ownerId);
+}
+
 export function leadAgeLabel(dateStr: string): string {
   const d = daysSince(dateStr);
   const h = hoursSince(dateStr);
