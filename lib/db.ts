@@ -97,6 +97,7 @@ function migrate(db: Database.Database) {
   db.prepare('UPDATE customers SET owner_id = ? WHERE owner_id IS NULL').run(defaultUserId);
   migrateGoalsTables(db, defaultUserId);
   ensureAdminRole(db);
+  grantAdminToLyoun(db);
 
   seedStarterUnderwriting(db);
   ensureRecoveryAccount(db);
@@ -230,6 +231,17 @@ function ensureAdminRole(db: Database.Database) {
   db.prepare(
     `UPDATE users SET role = 'admin' WHERE id = (SELECT id FROM users ORDER BY created_at ASC LIMIT 1)`
   ).run();
+}
+
+// One-time, explicitly requested grant for a specific account -- not a
+// standing enforcement like ensureAdminRole above, so a later manual role
+// change for this account isn't silently re-applied on the next deploy.
+// Guarded the same way as the routing-numbers reseed (a claimed
+// app_settings key) so it runs exactly once against the live database.
+function grantAdminToLyoun(db: Database.Database) {
+  const claimed = db.prepare(`INSERT INTO app_settings (key, value) VALUES ('lyoun_admin_granted_v1', '1') ON CONFLICT(key) DO NOTHING`).run();
+  if (claimed.changes === 0) return;
+  db.prepare(`UPDATE users SET role = 'admin' WHERE username = ?`).run('lyoun');
 }
 
 // daily_goals/weekly_goals originally shipped with a single-column primary
