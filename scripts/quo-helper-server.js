@@ -252,6 +252,20 @@ function ocrWords(imgPath) {
 
 const PHONE_PATTERN = /\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}/;
 
+// The word "Incoming" alone was firing false positives -- confirmed live,
+// notifications popping up with no actual ring in Quo. That word isn't
+// unique to the live ring popup; Quo's UI can show it elsewhere on screen
+// (a call-history entry, a tab/filter label, anything) with no call
+// actually coming in. The real popup always ALSO shows "<name> is calling
+// you" right on it (read at ~96% OCR confidence in every real capture
+// confirmed so far -- see findButtonRowCenter below), so require that
+// second, more specific phrase nearby too before treating this as a real
+// ring -- a stray "Incoming" elsewhere on screen won't have "calling" right
+// next to it.
+function hasLiveRingSignal(words, incomingWord) {
+  return words.some((w) => /calling/i.test(w.text) && Math.abs(w.top - incomingWord.top) < 250);
+}
+
 // Prefers the same OCR "block" as the "Incoming" text (Quo's popup usually
 // renders as one contiguous block distinct from the rest of the UI), so a
 // different number elsewhere on screen — an old call in the sidebar's
@@ -262,6 +276,7 @@ const PHONE_PATTERN = /\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}/;
 function findIncomingCallPhone(words) {
   const incomingWord = words.find((w) => /incoming/i.test(w.text));
   if (!incomingWord) return null;
+  if (!hasLiveRingSignal(words, incomingWord)) return null;
 
   const sameBlock = words.filter((w) => w.blockNum === incomingWord.blockNum);
   let match = sameBlock.map((w) => w.text).join(' ').match(PHONE_PATTERN);
