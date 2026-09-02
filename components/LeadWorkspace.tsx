@@ -1017,6 +1017,16 @@ export default function LeadWorkspace({
               </span>
             )}
             <span>{leadAgeLabel(customer.purchased_at)}</span>
+            {/* A lead imported directly as "45-90 Day" has purchased_at
+                backdated 45 days (app/api/leads/import/route.ts) so the
+                existing 90-day aging math treats it as already partway
+                through that bucket -- which means the age label above no
+                longer reads as "days since I actually got this lead." The
+                real import timestamp (created_at, never adjusted) stays
+                visible right here in the always-on header -- not just the
+                collapsible Lead Information panel below -- specifically so
+                that doesn't get confusing mid-dial. */}
+            {fmtImportedAt(customer.created_at) && <span>📥 Imported {fmtImportedAt(customer.created_at)}</span>}
           </div>
         </div>
         <div className="flex flex-wrap gap-2">

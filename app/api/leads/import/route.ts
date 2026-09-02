@@ -209,6 +209,25 @@ function parsePurchaseDate(value: string | Date): string | null {
   return d.toISOString().slice(0, 19).replace('T', ' ');
 }
 
+// A lead imported directly into the 45-90 Day bucket is telling the CRM
+// "this is already partway through that age range," not freshly arrived --
+// so the existing age-based promotion to 90+ (promoteAgingLeads, lib/util.ts,
+// which counts 90 real days from purchased_at) should count from that
+// implied starting point, not from today. Backdating purchased_at by 45
+// days is what makes that same age-math machinery treat it that way with
+// no separate tracking column needed: the lead reaches aging_90_plus 45
+// REAL days after import instead of a full 90. Deliberately only applies
+// to the 45-90 Day tag -- a Fresh import (no tag) always keeps its real
+// purchase date for the fresh -> 45-90 promotion to count from, and 90+ Day
+// is already a terminal bucket with nothing further to count down to.
+function backdatePurchasedAtForAgingBucket(purchasedAt: string, status: string): string {
+  if (status !== 'aging_45_90') return purchasedAt;
+  const d = new Date(purchasedAt.replace(' ', 'T') + 'Z');
+  if (isNaN(d.getTime())) return purchasedAt;
+  d.setUTCDate(d.getUTCDate() - 45);
+  return d.toISOString().slice(0, 19).replace('T', ' ');
+}
+
 function normalizeDupeKey(first: string, last: string, phone: string, dob: string): string | null {
   const f = first.trim().toLowerCase();
   const l = last.trim().toLowerCase();
@@ -488,6 +507,9 @@ export async function POST(req: NextRequest) {
       const rowCostDigits = get('lead_cost').replace(/[^0-9.]/g, '');
       const batchCostDigits = batchLeadCost.replace(/[^0-9.]/g, '');
 
+      const initialStatus = rowStatus || batchStatus || 'fresh';
+      const initialPurchasedAt = rowPurchasedAt || batchPurchasedAt || nowStr;
+
       const data = {
         first_name: first_name || 'New',
         last_name: last_name || 'Lead',
@@ -509,8 +531,8 @@ export async function POST(req: NextRequest) {
         best_time: get('best_time') || null,
         lead_cost: rowCostDigits ? Number(rowCostDigits) : (batchCostDigits ? Number(batchCostDigits) : 0),
         trusted_form_url: get('trusted_form_url') || null,
-        status: rowStatus || batchStatus || 'fresh',
-        purchased_at: rowPurchasedAt || batchPurchasedAt || nowStr
+        status: initialStatus,
+        purchased_at: backdatePurchasedAtForAgingBucket(initialPurchasedAt, initialStatus)
       };
 
       if (findDncMatch(phone)) {
