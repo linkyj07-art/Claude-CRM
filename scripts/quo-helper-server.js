@@ -472,8 +472,22 @@ async function dialCall(phone) {
   // before the next poll tick ever gets to detect and report it,
   // exactly the kind of "second call sometimes doesn't get detected"
   // symptom that only shows up while Auto-Dial is actively cycling.
+  //
+  // Bounded by MAX_RING_BLOCK_MS -- confirmed live, currentRingingPhone
+  // can stay stuck non-null for minutes at a stretch (OCR persistently
+  // matching something other than an actual live ring: a call-history
+  // entry, a lingering notification, etc.), and both this guard and its
+  // callers deliberately stay silent about a genuine brief ring -- so a
+  // stuck one silently killed dialing entirely, with no visible error
+  // anywhere, until it happened to clear on its own. A real Quo ring is
+  // answered, declined, or times out well within this window; past it,
+  // treat the block as stale rather than trust it forever.
   if (currentRingingPhone) {
-    throw new Error('A call appears to be ringing in right now -- not auto-dialing over it.');
+    if (Date.now() - currentRingingSince < MAX_RING_BLOCK_MS) {
+      throw new Error('A call appears to be ringing in right now -- not auto-dialing over it.');
+    }
+    console.log(`[dial-call] Ignoring stale ring block for ${currentRingingPhone} (active ${Math.round((Date.now() - currentRingingSince) / 1000)}s, over the ${MAX_RING_BLOCK_MS / 1000}s cap) -- proceeding with dial.`);
+    currentRingingPhone = null;
   }
   actionInFlight = true;
   try {
@@ -529,8 +543,13 @@ async function dialCall(phone) {
 // absorbs a single flaky OCR read mid-call — confirmed via real logs to
 // happen — without waiting for the call to still actually be ringing.
 let currentRingingPhone = null;
+let currentRingingSince = 0;
 let consecutiveMisses = 0;
 const MISSES_BEFORE_RESET = 2;
+// See the comment on this in dialCall's guard above -- the ceiling on how
+// long a detected ring is trusted to still be real before dialing is
+// allowed to proceed anyway.
+const MAX_RING_BLOCK_MS = 45000;
 let pollBusy = false;
 
 function notifyIncomingCall(phone) {
@@ -560,6 +579,7 @@ async function pollOnce() {
       consecutiveMisses = 0;
       if (normalized !== currentRingingPhone) {
         currentRingingPhone = normalized;
+        currentRingingSince = Date.now();
         console.log(`[incoming-call] Detected: ${phone}`);
         await notifyIncomingCall(phone);
       }
