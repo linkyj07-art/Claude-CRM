@@ -515,10 +515,23 @@ export default function LeadWorkspace({
       return;
     }
 
-    if (session.pass !== 2 && updatedRecycle.length > 0) {
-      const [next, ...rest] = updatedRecycle;
-      await moveTo(next, rest, [], 2);
-      return;
+    // Never immediately re-select the lead that was JUST maxed out this
+    // same call -- if the main queue just emptied out and this was the
+    // only (or first) lead in recycle, updatedRecycle above is literally
+    // [maxedOutId], so the old code below would pop it right back off and
+    // "advance" to the exact same lead/URL it's already on. That's
+    // indistinguishable from nothing happening: same page, same content,
+    // no visible change. Recycling exists to give OTHER leads a turn
+    // before circling back -- so skip straight past this lead to whatever
+    // ELSE is in recycle, and only actually land on it again once
+    // something else has had a turn first.
+    if (session.pass !== 2) {
+      const nextFromRecycle = updatedRecycle.find((id) => id !== maxedOutId);
+      if (nextFromRecycle) {
+        const rest = updatedRecycle.filter((id) => id !== nextFromRecycle);
+        await moveTo(nextFromRecycle, rest, [], 2);
+        return;
+      }
     }
 
     try {
@@ -569,17 +582,18 @@ export default function LeadWorkspace({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isDialing, customer.id]);
 
-  // Outcomes where the call is definitely over the instant this button is
-  // clicked — nobody picked up, so there's nothing left to hang up on
-  // manually. Other outcomes (Connected, Busy, etc.) don't auto-hang-up
-  // since the agent might still be on the line or need to act on it
-  // themselves; the End Quo Call button stays available for those.
-  const AUTO_HANGUP_OUTCOMES = ['no_answer', 'voicemail', 'google_voice', 'disconnected'];
-
   async function logCall(outcome: string, disposition?: string) {
-    // "Connected (HU)" -- they picked up, then hung up -- is also
-    // definitely over the instant it's logged, same as the no-answer-like
-    // outcomes above, even though the outcome itself is 'connected'.
+    // Picking ANY disposition means the agent has already decided this
+    // call is done -- whatever they clicked, there's nothing left to do on
+    // it. This used to only auto-hang-up for no_answer/voicemail/
+    // google_voice/disconnected/hung_up, leaving Busy, Wrong Number, DNC,
+    // and every other connected disposition (Not Interested, Qualified,
+    // Callback, ...) requiring a separate manual End Quo Call click even
+    // though the conversation the disposition describes is already over.
+    // Sold is the one exception: the Sell modal that opens next often
+    // means still collecting bank/policy details from the client, so that
+    // call is left up for the agent to end themselves once it's actually
+    // finished.
     //
     // Kicked off here (not awaited yet) so it runs alongside logging the
     // disposition below rather than adding its latency on top -- but
@@ -588,9 +602,7 @@ export default function LeadWorkspace({
     // this first. Without that, a slow hangup command could still be in
     // flight to the helper once the next dial's already gone out, and land
     // on THAT live call instead of the dead one it was meant for.
-    const hangupPromise = AUTO_HANGUP_OUTCOMES.includes(outcome) || (outcome === 'connected' && disposition === 'hung_up')
-      ? endQuoCall(true)
-      : null;
+    const hangupPromise = disposition === 'sold' ? null : endQuoCall(true);
     setBusy(true);
     setCallError('');
     try {
