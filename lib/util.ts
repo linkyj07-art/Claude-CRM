@@ -34,20 +34,24 @@ export function hoursSince(dateStr: string): number {
   return Math.floor((now.getTime() - then.getTime()) / (1000 * 60 * 60));
 }
 
+// A lead only actually becomes a "45-90 day" lead at 45 days -- anything
+// younger than that stays 'fresh' no matter how many days old it is, full
+// stop. Kept in sync with promoteAgingLeads/statusBadge/leadAgeLabel below,
+// which all draw the same line.
 export function leadAgeBucket(dateStr: string): 'fresh' | 'aging_45_90' | 'aging_90_plus' {
   const d = daysSince(dateStr);
-  if (d <= 2) return 'fresh';
+  if (d < 45) return 'fresh';
   if (d <= 90) return 'aging_45_90';
   return 'aging_90_plus';
 }
 
 // statusBadge() below already computes what bucket a 'fresh' lead LOOKS
-// like once it's aged past 48 hours, but that's purely a display override --
-// the real customers.status column just sat at 'fresh' forever, so the
-// dial queue's own status-based sort (fresh gets newest-first priority,
-// aging tiers get oldest-first "clear the backlog" priority -- see
-// app/dial/route.ts) kept treating a lead that's actually months old as a
-// brand-new arrival. Call this wherever the queue or lead counts are read
+// like once it's aged past the 45-day line, but that's purely a display
+// override -- the real customers.status column just sat at 'fresh' forever,
+// so the dial queue's own status-based sort (fresh gets newest-first
+// priority, aging tiers get oldest-first "clear the backlog" priority --
+// see app/dial/route.ts) kept treating a lead that's actually months old as
+// a brand-new arrival. Call this wherever the queue or lead counts are read
 // so status actually catches up to age before anything sorts or counts by
 // it. Deliberately only moves fresh -> aging_45_90 -> aging_90_plus --
 // 'working' is an engagement track, not an age one, and every other status
@@ -57,7 +61,7 @@ export function promoteAgingLeads(db: import('better-sqlite3').Database, ownerId
   db.prepare(
     `UPDATE customers SET status = 'aging_45_90', updated_at = datetime('now')
      WHERE owner_id = ? AND archived = 0 AND status = 'fresh'
-       AND julianday('now') - julianday(purchased_at) > 2`
+       AND julianday('now') - julianday(purchased_at) >= 45`
   ).run(ownerId);
   db.prepare(
     `UPDATE customers SET status = 'aging_90_plus', updated_at = datetime('now')
@@ -70,7 +74,7 @@ export function leadAgeLabel(dateStr: string): string {
   const d = daysSince(dateStr);
   const h = hoursSince(dateStr);
   if (d < 1) return h <= 1 ? `${h || 1} HOUR OLD` : `${h} HOURS OLD`;
-  if (d <= 2) return `${d} DAY${d === 1 ? '' : 'S'} OLD`;
+  if (d < 45) return `${d} DAY${d === 1 ? '' : 'S'} OLD`;
   if (d <= 90) return `${d} DAYS OLD (45-90)`;
   return `${d} DAYS OLD (90+)`;
 }
@@ -90,7 +94,7 @@ export function statusBadge(status: string, purchasedAt: string): { label: strin
   };
   if (status === 'fresh') {
     const h = hoursSince(purchasedAt);
-    if (h > 48) return map.aging_45_90;
+    if (h >= 45 * 24) return map.aging_45_90;
   }
   return map[status] || { label: status.toUpperCase(), color: 'brand' };
 }

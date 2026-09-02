@@ -302,7 +302,7 @@ export function getRoiByAge(db: Database.Database, ownerId: string): AgeBucketRo
   }
 
   const buckets: Record<string, AgeBucketRoi> = {
-    fresh: { bucket: 'Fresh (0-2 days)', leads: 0, spend: 0, issued: 0, commission: 0, roi: null },
+    fresh: { bucket: 'Fresh (0-44 days)', leads: 0, spend: 0, issued: 0, commission: 0, roi: null },
     aging_45_90: { bucket: '45-90 Days', leads: 0, spend: 0, issued: 0, commission: 0, roi: null },
     aging_90_plus: { bucket: '90+ Days', leads: 0, spend: 0, issued: 0, commission: 0, roi: null }
   };
@@ -310,7 +310,9 @@ export function getRoiByAge(db: Database.Database, ownerId: string): AgeBucketRo
   const now = Date.now();
   for (const c of customers) {
     const days = Math.floor((now - new Date(c.purchased_at.replace(' ', 'T') + 'Z').getTime()) / 86400000);
-    const key = days <= 2 ? 'fresh' : days <= 90 ? 'aging_45_90' : 'aging_90_plus';
+    // Kept in sync with lib/util.ts's leadAgeBucket/promoteAgingLeads -- a
+    // lead isn't really a "45-90 day" lead until it's actually 45 days old.
+    const key = days < 45 ? 'fresh' : days <= 90 ? 'aging_45_90' : 'aging_90_plus';
     buckets[key].leads += 1;
     buckets[key].spend += c.lead_cost || 0;
     const pols = policyByCustomer[c.id] || [];

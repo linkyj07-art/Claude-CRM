@@ -102,6 +102,26 @@ function migrate(db: Database.Database) {
   seedStarterUnderwriting(db);
   ensureRecoveryAccount(db);
   seedRoutingNumbers(db);
+  revertPrematurelyAgedLeads(db);
+}
+
+// promoteAgingLeads (lib/util.ts) originally moved fresh -> aging_45_90 at
+// just 2 days old, later corrected to the actual 45-day line -- but it only
+// ever moves a lead FORWARD, so any lead that already got bumped to
+// aging_45_90 under the old 2-day rule during that window stays stuck
+// there forever under the new logic, since its WHERE clause only acts on
+// status = 'fresh'. One-time correction: anything currently sitting at
+// aging_45_90 that isn't actually 45 days old yet moves back to fresh.
+// Guarded so this never fights a legitimate later manual status change --
+// it only ever needs to run once, to clean up the specific bad window.
+function revertPrematurelyAgedLeads(db: Database.Database) {
+  const claimed = db.prepare(`INSERT INTO app_settings (key, value) VALUES ('aging_45_90_threshold_fix_v1', '1') ON CONFLICT(key) DO NOTHING`).run();
+  if (claimed.changes === 0) return;
+  db.exec(`
+    UPDATE customers SET status = 'fresh', updated_at = datetime('now')
+    WHERE archived = 0 AND status = 'aging_45_90'
+      AND julianday('now') - julianday(purchased_at) < 45
+  `);
 }
 
 // User-supplied bank routing-number directory — a real sourced dataset the
