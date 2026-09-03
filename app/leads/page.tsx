@@ -67,14 +67,7 @@ export default async function LeadsPage({ searchParams }: { searchParams: { stat
           <NewLeadButton vendors={vendors} />
           <ImportLeadsButton vendors={vendors} />
           <Link href="/leads/review" className="btn-secondary">🔎 Review Queue</Link>
-          <DialCategoryButton
-            counts={{
-              fresh: countMap.fresh || 0,
-              working: countMap.working || 0,
-              aging_45_90: countMap.aging_45_90 || 0,
-              aging_90_plus: countMap.aging_90_plus || 0
-            }}
-          />
+          <DialCategoryButton />
         </div>
       </div>
 

@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { getDb } from '@/lib/db';
 import Badge from '@/components/Badge';
+import DialCategoryButton from '@/components/DialCategoryButton';
 import { getCurrentUser } from '@/lib/currentUser';
 import { redirect } from 'next/navigation';
 
@@ -48,7 +49,7 @@ export default async function CallsPage({ searchParams }: { searchParams: { outc
           <h1 className="text-xl font-bold">📞 Recent Calls</h1>
           <p className="text-sm text-slate-500">{todayCount} dial{todayCount === 1 ? '' : 's'} today · showing your most recent {calls.length}</p>
         </div>
-        <a href="/dial" className="btn-primary">⚡ Power Dial</a>
+        <DialCategoryButton />
       </div>
 
       <form className="card flex flex-wrap items-end gap-2 p-3" action="/calls">

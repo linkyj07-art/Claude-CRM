@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
 type CategoryCounts = { fresh: number; working: number; aging_45_90: number; aging_90_plus: number };
@@ -14,10 +14,16 @@ const AGE_CATEGORIES: { key: 'fresh' | 'aging_45_90' | 'aging_90_plus'; label: s
 // Which lead categories feed the dialer, with a live count per category so
 // it's clear how many leads a choice actually includes before starting a
 // session -- rather than only finding out after Power Dial is already
-// running which leads it picked up.
-export default function DialCategoryButton({ counts }: { counts: CategoryCounts }) {
+// running which leads it picked up. Fetches its own counts (from
+// /api/leads/status-counts) rather than requiring a server-computed prop,
+// so this same button can drop into any page -- the dashboard, Calls,
+// Leads -- with just the import; every other "⚡ Power Dial" link used to
+// be a plain <a href="/dial"> on pages besides Leads, silently skipping
+// this picker (and the import-date filter) entirely.
+export default function DialCategoryButton() {
   const router = useRouter();
   const [open, setOpen] = useState(false);
+  const [counts, setCounts] = useState<CategoryCounts | null>(null);
   const [selected, setSelected] = useState<Record<string, boolean>>({ fresh: true, aging_45_90: true, aging_90_plus: true });
   // Independent of the age-status categories above -- filters by when a
   // lead was actually imported (customers.created_at), for a batch bought
@@ -25,6 +31,20 @@ export default function DialCategoryButton({ counts }: { counts: CategoryCounts 
   // Both optional; blank means no bound on that side.
   const [importedFrom, setImportedFrom] = useState('');
   const [importedTo, setImportedTo] = useState('');
+
+  useEffect(() => {
+    if (!open || counts) return;
+    let cancelled = false;
+    fetch('/api/leads/status-counts')
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (!cancelled && data) setCounts(data);
+      })
+      .catch(() => {
+        // best-effort -- the picker still works without counts, just shows 0s
+      });
+    return () => { cancelled = true; };
+  }, [open, counts]);
 
   function toggle(key: string) {
     setSelected((s) => ({ ...s, [key]: !s[key] }));
@@ -46,7 +66,8 @@ export default function DialCategoryButton({ counts }: { counts: CategoryCounts 
     router.push(`/dial?${params.toString()}`);
   }
 
-  const selectedTotal = counts.working + AGE_CATEGORIES.reduce((sum, c) => sum + (selected[c.key] ? counts[c.key] : 0), 0);
+  const c = counts || { fresh: 0, working: 0, aging_45_90: 0, aging_90_plus: 0 };
+  const selectedTotal = c.working + AGE_CATEGORIES.reduce((sum, cat) => sum + (selected[cat.key] ? c[cat.key] : 0), 0);
 
   return (
     <>
@@ -56,16 +77,16 @@ export default function DialCategoryButton({ counts }: { counts: CategoryCounts 
           <div className="w-full max-w-sm rounded-xl bg-panel p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
             <h2 className="mb-1 text-lg font-bold">Choose Dialer Categories</h2>
             <p className="mb-3 text-sm text-slate-500">
-              Pick which lead ages Power Dial pulls from. Working leads ({counts.working}) are always included.
+              Pick which lead ages Power Dial pulls from. Working leads ({counts ? c.working : '…'}) are always included.
             </p>
             <div className="mb-4 space-y-2">
-              {AGE_CATEGORIES.map((c) => (
-                <label key={c.key} className="flex cursor-pointer items-center justify-between rounded-lg border border-line p-2.5 text-sm">
+              {AGE_CATEGORIES.map((cat) => (
+                <label key={cat.key} className="flex cursor-pointer items-center justify-between rounded-lg border border-line p-2.5 text-sm">
                   <span className="flex items-center gap-2">
-                    <input type="checkbox" checked={!!selected[c.key]} onChange={() => toggle(c.key)} />
-                    {c.label}
+                    <input type="checkbox" checked={!!selected[cat.key]} onChange={() => toggle(cat.key)} />
+                    {cat.label}
                   </span>
-                  <span className="text-xs font-semibold text-slate-500">{counts[c.key]} leads</span>
+                  <span className="text-xs font-semibold text-slate-500">{counts ? c[cat.key] : '…'} leads</span>
                 </label>
               ))}
             </div>
@@ -96,7 +117,7 @@ export default function DialCategoryButton({ counts }: { counts: CategoryCounts 
                 </button>
               )}
             </div>
-            <div className="mb-3 text-xs text-slate-500">{selectedTotal} leads match the categories above{(importedFrom || importedTo) ? ', before the import date filter' : ''}.</div>
+            <div className="mb-3 text-xs text-slate-500">{counts ? selectedTotal : '…'} leads match the categories above{(importedFrom || importedTo) ? ', before the import date filter' : ''}.</div>
             <div className="flex gap-2">
               <button className="btn-secondary flex-1" onClick={() => setOpen(false)}>Cancel</button>
               <button className="btn-primary flex-1" onClick={start}>⚡ Start Power Dial</button>
