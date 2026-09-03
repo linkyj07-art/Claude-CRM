@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useRouter } from 'next/navigation';
 
 type CategoryCounts = { fresh: number; working: number; aging_45_90: number; aging_90_plus: number };
@@ -23,6 +24,10 @@ const AGE_CATEGORIES: { key: 'fresh' | 'aging_45_90' | 'aging_90_plus'; label: s
 export default function DialCategoryButton() {
   const router = useRouter();
   const [open, setOpen] = useState(false);
+  // document doesn't exist during SSR/the first server-rendered pass, so
+  // the portal target can only be resolved once mounted in the browser --
+  // this flips true on the client after that first render.
+  const [mounted, setMounted] = useState(false);
   const [counts, setCounts] = useState<CategoryCounts | null>(null);
   const [selected, setSelected] = useState<Record<string, boolean>>({ fresh: true, aging_45_90: true, aging_90_plus: true });
   // Independent of the age-status categories above -- filters by when a
@@ -31,6 +36,10 @@ export default function DialCategoryButton() {
   // Both optional; blank means no bound on that side.
   const [importedFrom, setImportedFrom] = useState('');
   const [importedTo, setImportedTo] = useState('');
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     if (!open || counts) return;
@@ -69,11 +78,21 @@ export default function DialCategoryButton() {
   const c = counts || { fresh: 0, working: 0, aging_45_90: 0, aging_90_plus: 0 };
   const selectedTotal = c.working + AGE_CATEGORIES.reduce((sum, cat) => sum + (selected[cat.key] ? c[cat.key] : 0), 0);
 
-  return (
-    <>
-      <button className="btn-primary" onClick={() => setOpen(true)}>⚡ Power Dial</button>
-      {open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setOpen(false)}>
+  // Portaled straight to document.body rather than rendered inline --
+  // this button gets dropped into pages (the Dashboard's hero card, in
+  // particular) that wrap their content in a `fade-in` animation. That
+  // animation's fill-mode leaves a `transform` permanently applied to the
+  // wrapping element even after it finishes playing, which per the CSS
+  // spec turns it into the containing block for any `position: fixed`
+  // descendant -- so a plain inline-rendered modal doesn't actually anchor
+  // to the real browser viewport at all, it gets trapped inside that
+  // card's own (much smaller) box and clips at its edge no matter what
+  // height or overflow rules the modal itself is given. Portaling to
+  // document.body sidesteps the whole ancestor chain, so this can't
+  // silently break again if some other page wraps the button in its own
+  // transformed/animated container later.
+  const modal = open && (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setOpen(false)}>
           {/* max-h + overflow-y-auto -- without this, a shorter browser
               window clips the Imported date fields and the Start button
               below the visible screen with no way to scroll down and
@@ -128,7 +147,12 @@ export default function DialCategoryButton() {
             </div>
           </div>
         </div>
-      )}
+      );
+
+  return (
+    <>
+      <button className="btn-primary" onClick={() => setOpen(true)}>⚡ Power Dial</button>
+      {mounted && modal ? createPortal(modal, document.body) : null}
     </>
   );
 }
