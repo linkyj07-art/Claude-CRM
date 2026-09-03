@@ -1463,7 +1463,24 @@ export default function LeadWorkspace({
           customer={customer}
           carriers={carriers}
           onClose={() => setShowSell(false)}
-          onSaved={async () => { setShowSell(false); await refresh(); }}
+          onSaved={async () => {
+            setShowSell(false);
+            // logCall's 'sold' branch (above) deliberately left Power Dial
+            // parked here instead of auto-advancing, so the agent could
+            // finish collecting policy/bank details without the queue
+            // moving out from under them -- the sale being confirmed now
+            // is what actually finishes this lead, so THIS is where Power
+            // Dial should pick back up and move to the next one. Without
+            // this, confirming a sale mid-session silently stranded the
+            // agent on the now-sold lead with no way back into the queue
+            // short of manually hitting Power Dial again.
+            if (isDialing) {
+              await endQuoCall(true);
+              await advanceQueue();
+            } else {
+              await refresh();
+            }
+          }}
         />
       )}
     </div>
