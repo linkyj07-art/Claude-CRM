@@ -115,6 +115,8 @@ export interface ActivityStats {
   appointments: number;
   applications: number;
   issued: number;
+  ap: number;
+  issuedPaidAp: number;
   leads: number;
   leadSpend: number;
 }
@@ -144,6 +146,28 @@ export function getActivityStats(db: Database.Database, period: Period, ownerId:
   const issued = (
     db.prepare(`SELECT COUNT(*) n FROM policies p JOIN customers c ON c.id = p.customer_id WHERE c.owner_id = ? ${vendorClause} ${dateColClause('p', 'created_at')}`).get(...args) as { n: number }
   ).n;
+  // Annualized premium written this period, regardless of whether the
+  // commission on it has actually paid yet -- the top-line production
+  // number agencies track alongside (and separately from) net commission,
+  // since commission % and advance/chargeback terms vary policy to policy.
+  const ap = (
+    db.prepare(`SELECT COALESCE(SUM(p.annual_premium),0) s FROM policies p JOIN customers c ON c.id = p.customer_id WHERE c.owner_id = ? ${vendorClause} ${dateColClause('p', 'created_at')}`).get(...args) as { s: number }
+  ).s;
+  // "Issued & Paid" -- the subset of that AP whose commission has actually
+  // been paid out (commissions.status = 'paid', set on the Sell form once an
+  // Actual Pay Date is entered), not just booked/pending. The gap between
+  // this and ap above is exactly the AP still waiting on a carrier to pay,
+  // or at risk of not paying at all (not-taken, lapsed pre-issue, etc.).
+  const issuedPaidAp = (
+    db
+      .prepare(
+        `SELECT COALESCE(SUM(p.annual_premium),0) s FROM policies p
+         JOIN customers c ON c.id = p.customer_id
+         JOIN commissions cm ON cm.policy_id = p.id
+         WHERE c.owner_id = ? ${vendorClause} ${dateColClause('p', 'created_at')} AND cm.status = 'paid'`
+      )
+      .get(...args) as { s: number }
+  ).s;
   const leads = (
     db.prepare(`SELECT COUNT(*) n FROM customers c WHERE c.owner_id = ? ${vendorClause} ${dateColClause('c', 'purchased_at')}`).get(...args) as { n: number }
   ).n;
@@ -151,7 +175,7 @@ export function getActivityStats(db: Database.Database, period: Period, ownerId:
     db.prepare(`SELECT COALESCE(SUM(c.lead_cost),0) s FROM customers c WHERE c.owner_id = ? ${vendorClause} ${dateColClause('c', 'purchased_at')}`).get(...args) as { s: number }
   ).s;
 
-  return { calls, contacts: contactsRow.n, conversations, appointments, applications, issued, leads, leadSpend };
+  return { calls, contacts: contactsRow.n, conversations, appointments, applications, issued, ap, issuedPaidAp, leads, leadSpend };
 }
 
 export interface ConversionRates {

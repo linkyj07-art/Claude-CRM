@@ -238,13 +238,15 @@ export default async function DashboardPage({ searchParams }: { searchParams: { 
         <div className="mb-3 flex items-center justify-between">
           <div className="label">📞 Activity &amp; Conversion — {PERIOD_LABEL[period]}{vendorLabel ? ` · ${vendorLabel}` : ''}</div>
         </div>
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-8">
           <StatCard label="Calls" value={String(activity.calls)} />
           <StatCard label="Contacts" value={String(activity.contacts)} />
           <StatCard label="Conversations" value={String(activity.conversations)} />
           <StatCard label="Appointments" value={String(activity.appointments)} href="/calendar" />
           <StatCard label="Applications" value={String(activity.applications)} />
           <StatCard label="Issued" value={String(activity.issued)} tone="good" href="/leads?status=sold" />
+          <StatCard label="AP" value={fmtMoney0(activity.ap)} sub="Annual premium written" href="/policies" />
+          <StatCard label="IP" value={fmtMoney0(activity.issuedPaidAp)} tone="good" sub="Issued & paid AP" href="/commissions" />
         </div>
         <div className="my-4 border-t border-line" />
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
