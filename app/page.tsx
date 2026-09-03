@@ -8,6 +8,7 @@ import { quoteOfTheDay } from '@/lib/quotes';
 import { getCurrentUser } from '@/lib/currentUser';
 import { redirect } from 'next/navigation';
 import LineChart from '@/components/charts/LineChart';
+import DialCategoryButton from '@/components/DialCategoryButton';
 
 function GoalBar({ label, actual, target }: { label: string; actual: number; target: number | null; }) {
   if (!target || target <= 0) return null;
@@ -126,7 +127,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: { 
             <p className="mt-1.5 text-xs italic text-slate-400">&ldquo;{quote}&rdquo;</p>
           </div>
           <div className="flex gap-2">
-            <a href="/dial" className="btn-primary">⚡ Power Dial</a>
+            <DialCategoryButton />
             <Link href="/leads" className="btn-secondary">View Leads</Link>
           </div>
         </div>
