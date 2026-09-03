@@ -92,10 +92,18 @@ function migrate(db: Database.Database) {
   // a category they deliberately excluded.
   addColumnIfMissing(db, 'dial_sessions', 'categories', "TEXT NOT NULL DEFAULT ''");
   // YYYY-MM-DD bounds on the same session -- filters the queue build by
-  // when a lead was actually imported (customers.created_at), independent
+  // when a lead was actually bought (customers.lead_date), independent
   // of the age-status categories above. Empty = no bound on that side.
   addColumnIfMissing(db, 'dial_sessions', 'imported_from', "TEXT NOT NULL DEFAULT ''");
   addColumnIfMissing(db, 'dial_sessions', 'imported_to', "TEXT NOT NULL DEFAULT ''");
+  // The real, never-backdated "when this lead was actually bought" date --
+  // see the schema.sql comment on this column for why it's tracked
+  // separately from purchased_at (which the aging clock can backdate) and
+  // created_at (the CRM upload time, which can lag the real purchase by
+  // days on a batch imported after the fact). Nullable on an existing
+  // database (ALTER TABLE ADD COLUMN can't backfill a non-constant
+  // default), so every row gets its value filled in below instead.
+  addColumnIfMissing(db, 'customers', 'lead_date', 'TEXT');
   db.exec('CREATE INDEX IF NOT EXISTS idx_customers_owner ON customers(owner_id);');
 
   const defaultUserId = seedDefaultUser(db);
@@ -108,6 +116,18 @@ function migrate(db: Database.Database) {
   ensureRecoveryAccount(db);
   seedRoutingNumbers(db);
   revertPrematurelyAgedLeads(db);
+  backfillLeadDate(db);
+}
+
+// Self-healing, not versioned-guard gated: every row that already has a
+// lead_date is left untouched, so this only ever touches rows a write path
+// didn't set it on itself (a pre-existing row from before this column
+// existed, or a future insert path that forgets to). created_at is the best
+// available stand-in for those -- it's what the "imported" filter/label used
+// before lead_date existed, so this preserves today's behavior for old data
+// rather than silently changing it.
+function backfillLeadDate(db: Database.Database) {
+  db.exec(`UPDATE customers SET lead_date = created_at WHERE lead_date IS NULL`);
 }
 
 // promoteAgingLeads (lib/util.ts) originally moved fresh -> aging_45_90 at

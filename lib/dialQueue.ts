@@ -20,22 +20,27 @@ export type EligibleLead = {
 // errors on, either way skipping the filter without any sign why.
 const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/;
 
-// Filters the queue by customers.created_at (the real, never-backdated
-// import timestamp -- see backdatePurchasedAtForAgingBucket in the import
-// route for why purchased_at itself isn't always safe to use here) rather
-// than purchased_at, independent of and on top of the age-status category
+// Filters the queue by customers.lead_date -- the real date a lead was
+// actually bought (the lead sheet's own purchase-date column, or the import
+// batch's Purchase Date field), NOT customers.created_at (when it happened
+// to get uploaded into this CRM, which can lag the real purchase by days on
+// a batch imported after the fact) and NOT purchased_at (which
+// backdatePurchasedAtForAgingBucket in the import route can shift by 45
+// days to make the aging clock treat a 45-90 Day import correctly -- that
+// backdating is exactly what would make date-range filtering on purchased_at
+// misleading here). Independent of and on top of the age-status category
 // filter. Shared between /dial's own queue-build and fetchEligibleLeads
-// below so the two can't drift apart on what "imported between these
-// dates" means, same reason the category filter is shared.
+// below so the two can't drift apart on what "bought between these dates"
+// means, same reason the category filter is shared.
 export function buildImportDateFilter(importedFrom?: string | null, importedTo?: string | null): { clause: string; params: Record<string, string> } {
   let clause = '';
   const params: Record<string, string> = {};
   if (importedFrom && DATE_ONLY.test(importedFrom)) {
-    clause += ' AND date(created_at) >= date(@importedFrom)';
+    clause += ' AND date(lead_date) >= date(@importedFrom)';
     params.importedFrom = importedFrom;
   }
   if (importedTo && DATE_ONLY.test(importedTo)) {
-    clause += ' AND date(created_at) <= date(@importedTo)';
+    clause += ' AND date(lead_date) <= date(@importedTo)';
     params.importedTo = importedTo;
   }
   return { clause, params };

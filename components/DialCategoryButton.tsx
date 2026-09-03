@@ -31,9 +31,11 @@ export default function DialCategoryButton() {
   const [counts, setCounts] = useState<CategoryCounts | null>(null);
   const [selected, setSelected] = useState<Record<string, boolean>>({ fresh: true, aging_45_90: true, aging_90_plus: true });
   // Independent of the age-status categories above -- filters by when a
-  // lead was actually imported (customers.created_at), for a batch bought
-  // on a specific day/range rather than by its current fresh/aging bucket.
-  // Both optional; blank means no bound on that side.
+  // lead was actually bought (customers.lead_date, from the lead sheet's own
+  // purchase-date column or the import batch's Purchase Date field -- not
+  // whatever day it happened to get uploaded into the CRM), for a batch
+  // bought on a specific day/range rather than by its current fresh/aging
+  // bucket. Both optional; blank means no bound on that side.
   const [importedFrom, setImportedFrom] = useState('');
   const [importedTo, setImportedTo] = useState('');
 
@@ -114,7 +116,8 @@ export default function DialCategoryButton() {
               ))}
             </div>
             <div className="mb-4">
-              <div className="label mb-1">Imported (optional)</div>
+              <div className="label mb-1">Lead date (optional)</div>
+              <p className="mb-1 text-xs text-slate-400">When the lead was actually bought, per the lead sheet — not when it was uploaded here.</p>
               <div className="flex items-center gap-2">
                 <input
                   type="date"
@@ -122,7 +125,7 @@ export default function DialCategoryButton() {
                   value={importedFrom}
                   max={importedTo || undefined}
                   onChange={(e) => setImportedFrom(e.target.value)}
-                  aria-label="Imported on or after"
+                  aria-label="Bought on or after"
                 />
                 <span className="text-xs text-slate-400">to</span>
                 <input
@@ -131,7 +134,7 @@ export default function DialCategoryButton() {
                   value={importedTo}
                   min={importedFrom || undefined}
                   onChange={(e) => setImportedTo(e.target.value)}
-                  aria-label="Imported on or before"
+                  aria-label="Bought on or before"
                 />
               </div>
               {(importedFrom || importedTo) && (
@@ -140,7 +143,7 @@ export default function DialCategoryButton() {
                 </button>
               )}
             </div>
-            <div className="mb-3 text-xs text-slate-500">{counts ? selectedTotal : '…'} leads match the categories above{(importedFrom || importedTo) ? ', before the import date filter' : ''}.</div>
+            <div className="mb-3 text-xs text-slate-500">{counts ? selectedTotal : '…'} leads match the categories above{(importedFrom || importedTo) ? ', before the lead date filter' : ''}.</div>
             <div className="flex gap-2">
               <button className="btn-secondary flex-1" onClick={() => setOpen(false)}>Cancel</button>
               <button className="btn-primary flex-1" onClick={start}>⚡ Start Power Dial</button>

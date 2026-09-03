@@ -160,11 +160,11 @@ const products = ['Whole Life - Final Expense', 'Guaranteed Issue Whole Life', '
 const insCustomer = db.prepare(`
   INSERT INTO customers (id, first_name, last_name, phone, email, dob, gender, marital_status,
     military, military_branch, coverage_wanted, address, city, state, postal_code, timezone,
-    ad_type, platform, lead_vendor_id, best_time, lead_cost, status, purchased_at, sold_at,
+    ad_type, platform, lead_vendor_id, best_time, lead_cost, status, purchased_at, lead_date, sold_at,
     created_at, updated_at)
   VALUES (@id, @first_name, @last_name, @phone, @email, @dob, @gender, @marital_status,
     @military, @military_branch, @coverage_wanted, @address, @city, @state, @postal_code, @timezone,
-    @ad_type, @platform, @lead_vendor_id, @best_time, @lead_cost, @status, @purchased_at, @sold_at,
+    @ad_type, @platform, @lead_vendor_id, @best_time, @lead_cost, @status, @purchased_at, @purchased_at, @sold_at,
     @purchased_at, @purchased_at)
 `);
 const insNote = db.prepare(`

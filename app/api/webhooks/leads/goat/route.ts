@@ -171,6 +171,9 @@ export async function POST(req: NextRequest) {
     status: dncMatch ? 'dnc' : 'fresh',
     purchased_at: new Date().toISOString().slice(0, 19).replace('T', ' ')
   };
+  // A webhook lead is bought right as it's delivered -- no separate lead
+  // sheet date to reconcile against, so lead_date is just purchased_at.
+  const leadDate = customerData.purchased_at;
 
   // Same phone-based duplicate check as the CSV import path: route an
   // obvious repeat to the Review Queue instead of creating a second customer
@@ -198,11 +201,11 @@ export async function POST(req: NextRequest) {
   db.prepare(
     `INSERT INTO customers (id, owner_id, first_name, last_name, phone, email, dob, gender, marital_status,
       military, military_branch, coverage_wanted, address, city, state, postal_code, timezone,
-      ad_type, platform, lead_vendor_id, best_time, lead_cost, trusted_form_url, status, purchased_at, created_at, updated_at)
+      ad_type, platform, lead_vendor_id, best_time, lead_cost, trusted_form_url, status, purchased_at, lead_date, created_at, updated_at)
      VALUES (@id, @owner_id, @first_name, @last_name, @phone, @email, @dob, @gender, @marital_status,
       @military, @military_branch, @coverage_wanted, @address, @city, @state, @postal_code, NULL,
-      @ad_type, @platform, @lead_vendor_id, @best_time, @lead_cost, @trusted_form_url, @status, @purchased_at, datetime('now'), datetime('now'))`
-  ).run({ ...customerData, id });
+      @ad_type, @platform, @lead_vendor_id, @best_time, @lead_cost, @trusted_form_url, @status, @purchased_at, @lead_date, datetime('now'), datetime('now'))`
+  ).run({ ...customerData, id, lead_date: leadDate });
 
   logAudit(id, 'lead_purchased', 'Lead added — Goat Leads webhook');
   return NextResponse.json({ ok: true, id, dncMatch: !!dncMatch, receivedFields, mappedFields: map });

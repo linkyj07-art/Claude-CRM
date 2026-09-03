@@ -60,6 +60,18 @@ CREATE TABLE IF NOT EXISTS customers (
   status TEXT NOT NULL DEFAULT 'fresh',
     -- fresh | working | aging_45_90 | aging_90_plus | invalid | disputed | dnc | sold | lost | archived
   purchased_at TEXT NOT NULL DEFAULT (datetime('now')),
+    -- Drives the aging clock (fresh -> 45-90 -> 90+); deliberately backdated
+    -- on import for a lead tagged straight into 45-90 Day, so it is NOT
+    -- always the true date the lead was bought -- see lead_date below.
+  lead_date TEXT DEFAULT (datetime('now')),
+    -- The real, never-backdated date this lead was actually bought: the
+    -- lead sheet's own purchase-date column, or the import batch's Purchase
+    -- Date field, falling back to the moment it was imported/created if
+    -- neither is known. Independent of purchased_at (which the aging clock
+    -- can backdate) and created_at (when it happened to get uploaded into
+    -- this CRM, which can lag the real purchase by days). What Power Dial's
+    -- "Lead Date" filter and the "Imported" label on a lead's own page both
+    -- read from.
   sold_at TEXT,
   archived INTEGER DEFAULT 0,
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
