@@ -117,6 +117,22 @@ function migrate(db: Database.Database) {
   seedRoutingNumbers(db);
   revertPrematurelyAgedLeads(db);
   backfillLeadDate(db);
+  ensureEthosCarrier(db);
+}
+
+// One-time, explicitly requested addition of a single carrier -- seedStarterUnderwriting
+// above already ran (and claimed its own guard) on the live database before Ethos was
+// asked for, so adding it to that starter list wouldn't actually reach production;
+// this adds it directly instead, guarded the same "claim once" way so it doesn't
+// re-add itself if the user later renames or deletes it.
+function ensureEthosCarrier(db: Database.Database) {
+  const claimed = db.prepare(`INSERT INTO app_settings (key, value) VALUES ('ethos_carrier_seeded_v1', '1') ON CONFLICT(key) DO NOTHING`).run();
+  if (claimed.changes === 0) return;
+  const exists = db.prepare(`SELECT id FROM carriers WHERE lower(name) = 'ethos'`).get();
+  if (exists) return;
+  const maxOrder = (db.prepare('SELECT MAX(sort_order) m FROM carriers').get() as { m: number | null }).m ?? -1;
+  db.prepare(`INSERT INTO carriers (id, name, notes, sort_order) VALUES (?, ?, ?, ?)`)
+    .run(newId(), 'Ethos', 'Simplified-issue term/whole life -- verify current field guide before quoting.', maxOrder + 1);
 }
 
 // Self-healing, not versioned-guard gated: every row that already has a
