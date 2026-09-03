@@ -74,7 +74,11 @@ export default function DialCategoryButton() {
       <button className="btn-primary" onClick={() => setOpen(true)}>⚡ Power Dial</button>
       {open && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setOpen(false)}>
-          <div className="w-full max-w-sm rounded-xl bg-panel p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+          {/* max-h + overflow-y-auto -- without this, a shorter browser
+              window clips the Imported date fields and the Start button
+              below the visible screen with no way to scroll down and
+              reach them at all. */}
+          <div className="max-h-[90vh] w-full max-w-sm overflow-y-auto rounded-xl bg-panel p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
             <h2 className="mb-1 text-lg font-bold">Choose Dialer Categories</h2>
             <p className="mb-3 text-sm text-slate-500">
               Pick which lead ages Power Dial pulls from. Working leads ({counts ? c.working : '…'}) are always included.
