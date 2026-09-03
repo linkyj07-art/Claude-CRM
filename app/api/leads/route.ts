@@ -40,10 +40,10 @@ export async function POST(req: NextRequest) {
   db.prepare(
     `INSERT INTO customers (id, owner_id, first_name, last_name, phone, email, dob, gender, marital_status,
       military, military_branch, coverage_wanted, address, city, state, postal_code, timezone,
-      ad_type, platform, lead_vendor_id, best_time, lead_cost, status, purchased_at, created_at, updated_at)
+      ad_type, platform, lead_vendor_id, best_time, lead_cost, status, purchased_at, lead_date, created_at, updated_at)
      VALUES (@id, @owner_id, @first_name, @last_name, @phone, @email, @dob, @gender, @marital_status,
       @military, @military_branch, @coverage_wanted, @address, @city, @state, @postal_code, @timezone,
-      @ad_type, @platform, @lead_vendor_id, @best_time, @lead_cost, @status, datetime('now'), datetime('now'), datetime('now'))`
+      @ad_type, @platform, @lead_vendor_id, @best_time, @lead_cost, @status, datetime('now'), datetime('now'), datetime('now'), datetime('now'))`
   ).run({
     id,
     owner_id: user.id,

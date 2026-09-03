@@ -39,6 +39,7 @@ export interface Customer {
   retry_after: string | null;
   status: CustomerStatus;
   purchased_at: string;
+  lead_date: string;
   sold_at: string | null;
   archived: number;
   created_at: string;

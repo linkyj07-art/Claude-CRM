@@ -452,10 +452,10 @@ export async function POST(req: NextRequest) {
   const insertCustomer = db.prepare(
     `INSERT INTO customers (id, owner_id, first_name, last_name, phone, email, dob, gender, marital_status,
       military, military_branch, coverage_wanted, address, city, state, postal_code, timezone,
-      ad_type, platform, lead_vendor_id, best_time, lead_cost, trusted_form_url, status, purchased_at, created_at, updated_at)
+      ad_type, platform, lead_vendor_id, best_time, lead_cost, trusted_form_url, status, purchased_at, lead_date, created_at, updated_at)
      VALUES (@id, @owner_id, @first_name, @last_name, @phone, @email, @dob, @gender, @marital_status,
       @military, @military_branch, @coverage_wanted, @address, @city, @state, @postal_code, NULL,
-      @ad_type, @platform, @lead_vendor_id, @best_time, @lead_cost, @trusted_form_url, @status, @purchased_at, datetime('now'), datetime('now'))`
+      @ad_type, @platform, @lead_vendor_id, @best_time, @lead_cost, @trusted_form_url, @status, @purchased_at, @lead_date, datetime('now'), datetime('now'))`
   );
   const insertDupe = db.prepare(
     `INSERT INTO duplicate_leads (id, customer_id, first_name, last_name, phone, email, dob, state, raw_data, source, created_at)
@@ -532,7 +532,13 @@ export async function POST(req: NextRequest) {
         lead_cost: rowCostDigits ? Number(rowCostDigits) : (batchCostDigits ? Number(batchCostDigits) : 0),
         trusted_form_url: get('trusted_form_url') || null,
         status: initialStatus,
-        purchased_at: backdatePurchasedAtForAgingBucket(initialPurchasedAt, initialStatus)
+        purchased_at: backdatePurchasedAtForAgingBucket(initialPurchasedAt, initialStatus),
+        // The real date this lead was bought, per the lead sheet's own
+        // purchase-date column (or the batch Purchase Date field) -- unlike
+        // purchased_at above, this is never backdated, so it stays accurate
+        // for filtering/display even on a lead imported straight into the
+        // 45-90 Day bucket.
+        lead_date: initialPurchasedAt
       };
 
       if (findDncMatch(phone)) {

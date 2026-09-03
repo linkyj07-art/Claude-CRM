@@ -1022,11 +1022,13 @@ export default function LeadWorkspace({
                 existing 90-day aging math treats it as already partway
                 through that bucket -- which means the age label above no
                 longer reads as "days since I actually got this lead." The
-                real import timestamp (created_at, never adjusted) stays
-                visible right here in the always-on header -- not just the
-                collapsible Lead Information panel below -- specifically so
-                that doesn't get confusing mid-dial. */}
-            {fmtImportedAt(customer.created_at) && <span>📥 Imported {fmtImportedAt(customer.created_at)}</span>}
+                real bought date (lead_date, never backdated -- sourced from
+                the lead sheet's own purchase-date column, not whatever day
+                it happened to get uploaded into the CRM) stays visible right
+                here in the always-on header -- not just the collapsible Lead
+                Information panel below -- specifically so that doesn't get
+                confusing mid-dial. */}
+            {fmtImportedAt(customer.lead_date) && <span>📥 Imported {fmtImportedAt(customer.lead_date)}</span>}
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -1097,7 +1099,7 @@ export default function LeadWorkspace({
             <InfoRow label="🕐 Best Time" value={customer.best_time} />
             <InfoRow label="🏷 Vendor" value={vendors.find((v) => v.id === customer.lead_vendor_id)?.name} />
             <InfoRow label="💵 Lead Cost" value={fmtMoney(customer.lead_cost)} />
-            <InfoRow label="📥 Imported" value={fmtImportedAt(customer.created_at)} />
+            <InfoRow label="📥 Imported" value={fmtImportedAt(customer.lead_date)} />
           </dl>
 
           <div className="border-t border-line pt-3">
@@ -1512,21 +1514,21 @@ function fmtDob(dob: string | null): string | null {
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' });
 }
 
-// customer.created_at is a SQLite `datetime('now')` string ("2026-03-15
-// 14:23:00", no timezone) -- both when the lead was first added manually
-// and when it landed via CSV import/the Goat Leads webhook, so this is
-// genuinely "when did this become a lead in the CRM" regardless of
-// source. Unlike DOB (a pure date, deliberately kept at UTC midnight so
-// the calendar date never shifts), this has a real time-of-day that's
-// worth converting to the agent's own timezone -- same space-to-T-plus-Z
-// parsing lib/util.ts's own isSameAgentDay uses for this exact string
-// shape, since new Date() treats a bare space-separated string
-// ambiguously across browsers otherwise.
-function fmtImportedAt(createdAt: string | null): string | null {
-  if (!createdAt) return null;
-  const iso = createdAt.replace(' ', 'T') + (createdAt.includes('Z') ? '' : 'Z');
+// customer.lead_date is a SQLite `datetime('now')`-shaped string ("2026-03-15
+// 14:23:00", no timezone) -- the real, never-backdated date the lead was
+// bought: the lead sheet's own purchase-date column or the import batch's
+// Purchase Date field, falling back to when it landed (manual add, CSV
+// import, Goat Leads webhook) if neither is known. Unlike DOB (a pure date,
+// deliberately kept at UTC midnight so the calendar date never shifts),
+// this has a real time-of-day that's worth converting to the agent's own
+// timezone -- same space-to-T-plus-Z parsing lib/util.ts's own
+// isSameAgentDay uses for this exact string shape, since new Date() treats
+// a bare space-separated string ambiguously across browsers otherwise.
+function fmtImportedAt(leadDate: string | null): string | null {
+  if (!leadDate) return null;
+  const iso = leadDate.replace(' ', 'T') + (leadDate.includes('Z') ? '' : 'Z');
   const d = new Date(iso);
-  if (isNaN(d.getTime())) return createdAt;
+  if (isNaN(d.getTime())) return leadDate;
   return new Intl.DateTimeFormat('en-US', {
     month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true,
     timeZone: AGENT_TIMEZONE
