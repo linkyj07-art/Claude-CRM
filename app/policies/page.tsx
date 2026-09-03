@@ -1,7 +1,9 @@
 import Link from 'next/link';
 import { getDb } from '@/lib/db';
 import { fmtMoney, fmtMoney0 } from '@/lib/util';
+import { Carrier } from '@/lib/types';
 import Badge from '@/components/Badge';
+import AddPolicyButton from '@/components/AddPolicyButton';
 import { getCurrentUser } from '@/lib/currentUser';
 import { redirect } from 'next/navigation';
 
@@ -20,6 +22,7 @@ export default async function PoliciesPage() {
        ORDER BY p.created_at DESC`
     )
     .all(user.id) as any[];
+  const carriers = db.prepare('SELECT * FROM carriers ORDER BY sort_order, name').all() as Carrier[];
 
   const totalFace = rows.reduce((s, r) => s + (r.face_amount || 0), 0);
   const totalAnnual = rows.reduce((s, r) => s + (r.annual_premium || 0), 0);
@@ -31,6 +34,7 @@ export default async function PoliciesPage() {
           <h1 className="text-xl font-bold">Policies</h1>
           <p className="text-sm text-slate-500">{rows.length} issued · {fmtMoney0(totalFace)} total face amount · {fmtMoney0(totalAnnual)} annualized premium</p>
         </div>
+        <AddPolicyButton carriers={carriers} />
       </div>
       <div className="card overflow-x-auto">
         <table className="w-full min-w-[800px] text-sm">
