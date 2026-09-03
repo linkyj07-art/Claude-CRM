@@ -64,7 +64,7 @@ export async function GET() {
     // via this banner, ahead of leads never dialed at all today.
     const known = new Set([row.current_lead_id, ...cleanQueue, ...cleanRecycle].filter(Boolean) as string[]);
     const sessionCategories = row.categories ? row.categories.split(',').filter(Boolean) : undefined;
-    newLeads = fetchEligibleLeads(db, user.id, sessionCategories)
+    newLeads = fetchEligibleLeads(db, user.id, sessionCategories, row.imported_from || null, row.imported_to || null)
       .filter((c) => !known.has(c.id) && c.calls_today === 0)
       .map((c) => ({ id: c.id, firstName: c.first_name, lastName: c.last_name, phone: c.phone }));
   }

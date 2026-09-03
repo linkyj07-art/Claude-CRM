@@ -19,6 +19,12 @@ export default function DialCategoryButton({ counts }: { counts: CategoryCounts 
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [selected, setSelected] = useState<Record<string, boolean>>({ fresh: true, aging_45_90: true, aging_90_plus: true });
+  // Independent of the age-status categories above -- filters by when a
+  // lead was actually imported (customers.created_at), for a batch bought
+  // on a specific day/range rather than by its current fresh/aging bucket.
+  // Both optional; blank means no bound on that side.
+  const [importedFrom, setImportedFrom] = useState('');
+  const [importedTo, setImportedTo] = useState('');
 
   function toggle(key: string) {
     setSelected((s) => ({ ...s, [key]: !s[key] }));
@@ -34,7 +40,10 @@ export default function DialCategoryButton({ counts }: { counts: CategoryCounts 
       alert('Pick at least one category.');
       return;
     }
-    router.push(`/dial?categories=${['working', ...chosen].join(',')}`);
+    const params = new URLSearchParams({ categories: ['working', ...chosen].join(',') });
+    if (importedFrom) params.set('importedFrom', importedFrom);
+    if (importedTo) params.set('importedTo', importedTo);
+    router.push(`/dial?${params.toString()}`);
   }
 
   const selectedTotal = counts.working + AGE_CATEGORIES.reduce((sum, c) => sum + (selected[c.key] ? counts[c.key] : 0), 0);
@@ -60,7 +69,34 @@ export default function DialCategoryButton({ counts }: { counts: CategoryCounts 
                 </label>
               ))}
             </div>
-            <div className="mb-3 text-xs text-slate-500">{selectedTotal} leads will be in this dialer session.</div>
+            <div className="mb-4">
+              <div className="label mb-1">Imported (optional)</div>
+              <div className="flex items-center gap-2">
+                <input
+                  type="date"
+                  className="input flex-1"
+                  value={importedFrom}
+                  max={importedTo || undefined}
+                  onChange={(e) => setImportedFrom(e.target.value)}
+                  aria-label="Imported on or after"
+                />
+                <span className="text-xs text-slate-400">to</span>
+                <input
+                  type="date"
+                  className="input flex-1"
+                  value={importedTo}
+                  min={importedFrom || undefined}
+                  onChange={(e) => setImportedTo(e.target.value)}
+                  aria-label="Imported on or before"
+                />
+              </div>
+              {(importedFrom || importedTo) && (
+                <button type="button" className="mt-1 text-xs text-slate-400 hover:underline" onClick={() => { setImportedFrom(''); setImportedTo(''); }}>
+                  Clear dates
+                </button>
+              )}
+            </div>
+            <div className="mb-3 text-xs text-slate-500">{selectedTotal} leads match the categories above{(importedFrom || importedTo) ? ', before the import date filter' : ''}.</div>
             <div className="flex gap-2">
               <button className="btn-secondary flex-1" onClick={() => setOpen(false)}>Cancel</button>
               <button className="btn-primary flex-1" onClick={start}>⚡ Start Power Dial</button>

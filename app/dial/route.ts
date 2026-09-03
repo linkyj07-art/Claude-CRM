@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
 import { getCurrentUser } from '@/lib/currentUser';
 import { isWithinCallingHours, minutesUntilCallingWindowCloses, MAX_CALLS_PER_DAY, isTestLead, agentMidnightUTC, promoteAgingLeads } from '@/lib/util';
+import { buildImportDateFilter } from '@/lib/dialQueue';
 
 // The full eligible set, and the default when no ?categories= is given
 // (a plain "⚡ Power Dial" click with no picker used) -- keeps every
@@ -62,6 +63,9 @@ export async function GET(req: NextRequest) {
   promoteAgingLeads(db, user.id);
 
   const categories = parseCategories(req.nextUrl.searchParams.get('categories'));
+  const importedFrom = req.nextUrl.searchParams.get('importedFrom');
+  const importedTo = req.nextUrl.searchParams.get('importedTo');
+  const dateFilter = buildImportDateFilter(importedFrom, importedTo);
 
   // Was `date(occurred_at) = date('now')` -- a UTC calendar day, while the
   // actual per-call cap check (app/api/leads/[id]/calls/route.ts) and every
@@ -95,6 +99,7 @@ export async function GET(req: NextRequest) {
            SELECT customer_id FROM calls WHERE occurred_at >= @todayStart
            GROUP BY customer_id HAVING COUNT(*) >= ${MAX_CALLS_PER_DAY}
          )
+         ${dateFilter.clause}
        ORDER BY CASE status WHEN 'fresh' THEN 0 WHEN 'working' THEN 1 WHEN 'aging_45_90' THEN 2 ELSE 3 END,
          -- Never-called-at-all (any day, not just today) beats everyone
          -- that's been dialed before, full stop -- without this, a lead
@@ -120,7 +125,7 @@ export async function GET(req: NextRequest) {
          -- to clear before it ages further, not new arrivals to rush to.
          CASE WHEN status = 'fresh' THEN -CAST(strftime('%s', purchased_at) AS INTEGER) ELSE CAST(strftime('%s', purchased_at) AS INTEGER) END`
     )
-    .all({ ownerId: user.id, todayStart, workingSelected: categories.includes('working') ? 1 : 0, ...categoryParams }) as { id: string; status: string; state: string | null; first_name: string; last_name: string; calls_today: number; calls_ever: number }[];
+    .all({ ownerId: user.id, todayStart, workingSelected: categories.includes('working') ? 1 : 0, ...categoryParams, ...dateFilter.params }) as { id: string; status: string; state: string | null; first_name: string; last_name: string; calls_today: number; calls_ever: number }[];
 
   // Leads whose local time is outside the 8am-9pm calling window get held
   // back rather than queued dead-on-arrival — they'll be picked up again on
@@ -162,18 +167,21 @@ export async function GET(req: NextRequest) {
   // keeps a plain Power Dial click from ever persisting a stale explicit
   // list that a later default-behavior change wouldn't pick up.
   const storedCategories = categories.length === ALL_CATEGORIES.length ? '' : categories.join(',');
+  const storedImportedFrom = dateFilter.params.importedFrom || '';
+  const storedImportedTo = dateFilter.params.importedTo || '';
   // A brand-new session always starts Auto-Dial off and its stats at zero —
   // even if the user's last session left it on, so Auto-Dial never carries
   // over silently into a session the user hasn't looked at yet.
   db.prepare(
-    `INSERT INTO dial_sessions (user_id, current_lead_id, queue, recycle, pass, auto_dial, auto_dial_pace_ms, session_dials, session_connects, consecutive_no_answer, categories, updated_at)
-     VALUES (?, ?, ?, '', 1, 0, 2000, 0, 0, 0, ?, datetime('now'))
+    `INSERT INTO dial_sessions (user_id, current_lead_id, queue, recycle, pass, auto_dial, auto_dial_pace_ms, session_dials, session_connects, consecutive_no_answer, categories, imported_from, imported_to, updated_at)
+     VALUES (?, ?, ?, '', 1, 0, 2000, 0, 0, 0, ?, ?, ?, datetime('now'))
      ON CONFLICT(user_id) DO UPDATE SET
        current_lead_id = excluded.current_lead_id, queue = excluded.queue,
        recycle = '', pass = 1, auto_dial = 0, auto_dial_pace_ms = 2000,
        session_dials = 0, session_connects = 0, consecutive_no_answer = 0,
-       categories = excluded.categories, updated_at = excluded.updated_at`
-  ).run(user.id, first.id, rest.map((r) => r.id).join(','), storedCategories);
+       categories = excluded.categories, imported_from = excluded.imported_from, imported_to = excluded.imported_to,
+       updated_at = excluded.updated_at`
+  ).run(user.id, first.id, rest.map((r) => r.id).join(','), storedCategories, storedImportedFrom, storedImportedTo);
 
   return NextResponse.redirect(new URL(`/leads/${first.id}?dialing=1`, origin));
 }

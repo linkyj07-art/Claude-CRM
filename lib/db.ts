@@ -91,6 +91,11 @@ function migrate(db: Database.Database) {
   // actually chose when they hit Power Dial, instead of silently pulling in
   // a category they deliberately excluded.
   addColumnIfMissing(db, 'dial_sessions', 'categories', "TEXT NOT NULL DEFAULT ''");
+  // YYYY-MM-DD bounds on the same session -- filters the queue build by
+  // when a lead was actually imported (customers.created_at), independent
+  // of the age-status categories above. Empty = no bound on that side.
+  addColumnIfMissing(db, 'dial_sessions', 'imported_from', "TEXT NOT NULL DEFAULT ''");
+  addColumnIfMissing(db, 'dial_sessions', 'imported_to', "TEXT NOT NULL DEFAULT ''");
   db.exec('CREATE INDEX IF NOT EXISTS idx_customers_owner ON customers(owner_id);');
 
   const defaultUserId = seedDefaultUser(db);
