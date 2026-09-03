@@ -405,5 +405,7 @@ CREATE TABLE IF NOT EXISTS dial_sessions (
   session_connects INTEGER NOT NULL DEFAULT 0,
   consecutive_no_answer INTEGER NOT NULL DEFAULT 0, -- resets on any other outcome; auto-pauses Auto-Dial past a threshold
   categories TEXT NOT NULL DEFAULT '', -- comma-separated statuses this queue was built from; empty = all
+  imported_from TEXT NOT NULL DEFAULT '', -- YYYY-MM-DD; only leads imported on/after this date, empty = no lower bound
+  imported_to TEXT NOT NULL DEFAULT '', -- YYYY-MM-DD; only leads imported on/before this date, empty = no upper bound
   updated_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
