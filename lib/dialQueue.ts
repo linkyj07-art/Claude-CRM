@@ -46,6 +46,15 @@ export function buildImportDateFilter(importedFrom?: string | null, importedTo?:
   return { clause, params };
 }
 
+// Filters the queue by customers.lead_vendor_id -- which vendor the lead was
+// actually bought from, independent of and on top of the age-status
+// category and lead-date filters above. Shared between /dial's own
+// queue-build and fetchEligibleLeads below for the same reason those are.
+export function buildVendorFilter(vendorId?: string | null): { clause: string; params: Record<string, string> } {
+  if (!vendorId) return { clause: '', params: {} };
+  return { clause: ' AND lead_vendor_id = @vendorId', params: { vendorId } };
+}
+
 // The same "is this lead actually dialable right now" rule /dial uses to
 // build a fresh queue (right status, has a phone, under today's call cap,
 // within calling hours or a test lead) — pulled out so the live-queue check
@@ -57,11 +66,12 @@ export function buildImportDateFilter(importedFrom?: string | null, importedTo?:
 // ready" banner never offers a category the agent deliberately excluded
 // when they started this Power Dial session. importedFrom/importedTo mirror
 // dial_sessions.imported_from/imported_to the same way.
-export function fetchEligibleLeads(db: Database.Database, ownerId: string, categories?: string[], importedFrom?: string | null, importedTo?: string | null): EligibleLead[] {
+export function fetchEligibleLeads(db: Database.Database, ownerId: string, categories?: string[], importedFrom?: string | null, importedTo?: string | null, vendorId?: string | null): EligibleLead[] {
   promoteAgingLeads(db, ownerId);
   const cats = categories && categories.length > 0 ? categories : [...ALL_CATEGORIES];
   const workingSelected = cats.includes('working');
   const dateFilter = buildImportDateFilter(importedFrom, importedTo);
+  const vendorFilter = buildVendorFilter(vendorId);
 
   // Was `date(occurred_at) = date('now')` -- a UTC calendar day, while the
   // actual per-call cap check (app/api/leads/[id]/calls/route.ts) and every
@@ -93,6 +103,7 @@ export function fetchEligibleLeads(db: Database.Database, ownerId: string, categ
            GROUP BY customer_id HAVING COUNT(*) >= ${MAX_CALLS_PER_DAY}
          )
          ${dateFilter.clause}
+         ${vendorFilter.clause}
        ORDER BY CASE status WHEN 'fresh' THEN 0 WHEN 'working' THEN 1 WHEN 'aging_45_90' THEN 2 ELSE 3 END,
          -- Same never-called-at-all/not-dialed-today priority /dial's own
          -- queue-build uses -- see the comment there for why this matters
@@ -107,7 +118,7 @@ export function fetchEligibleLeads(db: Database.Database, ownerId: string, categ
          -- banner, the freshest of them is the one offered/queued first.
          CASE WHEN status = 'fresh' THEN -CAST(strftime('%s', purchased_at) AS INTEGER) ELSE CAST(strftime('%s', purchased_at) AS INTEGER) END`
     )
-    .all({ ownerId, todayStart, workingSelected: workingSelected ? 1 : 0, ...categoryParams, ...dateFilter.params }) as EligibleLead[];
+    .all({ ownerId, todayStart, workingSelected: workingSelected ? 1 : 0, ...categoryParams, ...dateFilter.params, ...vendorFilter.params }) as EligibleLead[];
 
   return allRows.filter((r) => isTestLead(r) || isWithinCallingHours(r.state));
 }

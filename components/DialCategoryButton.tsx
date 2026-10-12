@@ -4,7 +4,8 @@ import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useRouter } from 'next/navigation';
 
-type CategoryCounts = { fresh: number; working: number; aging_45_90: number; aging_90_plus: number };
+type Vendor = { id: string; name: string };
+type CategoryCounts = { fresh: number; working: number; aging_45_90: number; aging_90_plus: number; vendors: Vendor[] };
 
 const AGE_CATEGORIES: { key: 'fresh' | 'aging_45_90' | 'aging_90_plus'; label: string }[] = [
   { key: 'fresh', label: 'Fresh' },
@@ -38,15 +39,23 @@ export default function DialCategoryButton() {
   // bucket. Both optional; blank means no bound on that side.
   const [importedFrom, setImportedFrom] = useState('');
   const [importedTo, setImportedTo] = useState('');
+  // Which lead vendor to restrict the queue to -- empty means all vendors,
+  // same "empty = no filter" convention as the date range above.
+  const [vendorId, setVendorId] = useState('');
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
+  // Refetches whenever the vendor changes (not just on first open) since the
+  // category counts themselves are scoped to the selected vendor -- picking
+  // a different vendor without this would leave stale, wrong-vendor counts
+  // on screen until the picker was closed and reopened.
   useEffect(() => {
-    if (!open || counts) return;
+    if (!open) return;
     let cancelled = false;
-    fetch('/api/leads/status-counts')
+    const qs = vendorId ? `?vendor=${encodeURIComponent(vendorId)}` : '';
+    fetch(`/api/leads/status-counts${qs}`)
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
         if (!cancelled && data) setCounts(data);
@@ -55,7 +64,7 @@ export default function DialCategoryButton() {
         // best-effort -- the picker still works without counts, just shows 0s
       });
     return () => { cancelled = true; };
-  }, [open, counts]);
+  }, [open, vendorId]);
 
   function toggle(key: string) {
     setSelected((s) => ({ ...s, [key]: !s[key] }));
@@ -74,10 +83,11 @@ export default function DialCategoryButton() {
     const params = new URLSearchParams({ categories: ['working', ...chosen].join(',') });
     if (importedFrom) params.set('importedFrom', importedFrom);
     if (importedTo) params.set('importedTo', importedTo);
+    if (vendorId) params.set('vendor', vendorId);
     router.push(`/dial?${params.toString()}`);
   }
 
-  const c = counts || { fresh: 0, working: 0, aging_45_90: 0, aging_90_plus: 0 };
+  const c = counts || { fresh: 0, working: 0, aging_45_90: 0, aging_90_plus: 0, vendors: [] };
   const selectedTotal = c.working + AGE_CATEGORIES.reduce((sum, cat) => sum + (selected[cat.key] ? c[cat.key] : 0), 0);
 
   // Portaled straight to document.body rather than rendered inline --
@@ -115,6 +125,15 @@ export default function DialCategoryButton() {
                 </label>
               ))}
             </div>
+            {c.vendors.length > 0 && (
+              <div className="mb-4">
+                <div className="label mb-1">Lead vendor (optional)</div>
+                <select className="input w-full" value={vendorId} onChange={(e) => setVendorId(e.target.value)}>
+                  <option value="">All vendors</option>
+                  {c.vendors.map((v) => <option key={v.id} value={v.id}>{v.name}</option>)}
+                </select>
+              </div>
+            )}
             <div className="mb-4">
               <div className="label mb-1">Lead date (optional)</div>
               <p className="mb-1 text-xs text-slate-400">When the lead was actually bought, per the lead sheet — not when it was uploaded here.</p>

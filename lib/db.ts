@@ -96,6 +96,9 @@ function migrate(db: Database.Database) {
   // of the age-status categories above. Empty = no bound on that side.
   addColumnIfMissing(db, 'dial_sessions', 'imported_from', "TEXT NOT NULL DEFAULT ''");
   addColumnIfMissing(db, 'dial_sessions', 'imported_to', "TEXT NOT NULL DEFAULT ''");
+  // lead_vendors.id this queue was built from, same "empty = all" convention
+  // as categories above -- independent filter by which vendor sold the lead.
+  addColumnIfMissing(db, 'dial_sessions', 'vendor_id', "TEXT NOT NULL DEFAULT ''");
   // The real, never-backdated "when this lead was actually bought" date --
   // see the schema.sql comment on this column for why it's tracked
   // separately from purchased_at (which the aging clock can backdate) and
