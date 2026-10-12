@@ -419,5 +419,6 @@ CREATE TABLE IF NOT EXISTS dial_sessions (
   categories TEXT NOT NULL DEFAULT '', -- comma-separated statuses this queue was built from; empty = all
   imported_from TEXT NOT NULL DEFAULT '', -- YYYY-MM-DD; only leads imported on/after this date, empty = no lower bound
   imported_to TEXT NOT NULL DEFAULT '', -- YYYY-MM-DD; only leads imported on/before this date, empty = no upper bound
+  vendor_id TEXT NOT NULL DEFAULT '', -- lead_vendors.id this queue was built from; empty = all vendors
   updated_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
