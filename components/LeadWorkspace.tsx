@@ -1444,6 +1444,7 @@ export default function LeadWorkspace({
             <button disabled={busy || quoBusy} onClick={() => logCall('disconnected')} className="btn-secondary text-xs px-2 py-1.5">📵 Disconnected</button>
             <button disabled={busy || quoBusy} onClick={() => logCall('connected', 'interested')} className="btn-good text-xs px-2 py-1.5">Connected</button>
             <button disabled={busy || quoBusy} onClick={() => logCall('connected', 'hung_up')} className="btn-secondary text-xs px-2 py-1.5">Connected (HU)</button>
+            <button disabled={busy || quoBusy} onClick={() => logCall('connected', 'hung_up_intro')} className="btn-secondary text-xs px-2 py-1.5">Intro (HU)</button>
             <button disabled={busy || quoBusy} onClick={() => logCall('connected', 'sold')} className="btn-good text-xs px-2 py-1.5">💰 Sold</button>
             <button disabled={busy || quoBusy} onClick={() => logCall('connected', 'not_interested')} className="btn-secondary text-xs px-2 py-1.5">Not Interested</button>
             <button disabled={busy || quoBusy} onClick={() => logCall('connected', 'broke')} className="btn-secondary text-xs px-2 py-1.5">💸 Broke</button>
