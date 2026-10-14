@@ -241,7 +241,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: { 
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-8">
           <StatCard label="Calls" value={String(activity.calls)} />
           <StatCard label="Contacts" value={String(activity.contacts)} />
-          <StatCard label="Conversations" value={String(activity.conversations)} />
+          <StatCard label="Conversations" value={String(activity.conversations)} sub={`${activity.introHangups} hung up on intro`} />
           <StatCard label="Appointments" value={String(activity.appointments)} href="/calendar" />
           <StatCard label="Applications" value={String(activity.applications)} />
           <StatCard label="Issued" value={String(activity.issued)} tone="good" href="/leads?status=sold" />
