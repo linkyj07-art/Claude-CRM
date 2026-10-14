@@ -112,6 +112,7 @@ export interface ActivityStats {
   calls: number;
   contacts: number;
   conversations: number;
+  introHangups: number;
   appointments: number;
   applications: number;
   issued: number;
@@ -136,6 +137,19 @@ export function getActivityStats(db: Database.Database, period: Period, ownerId:
   const contactsRow = db
     .prepare(`SELECT COUNT(DISTINCT ca.customer_id) n FROM calls ca JOIN customers c ON c.id = ca.customer_id WHERE c.owner_id = ? ${vendorClause} ${dateColClause('ca', 'occurred_at')} AND ca.outcome = 'connected'`)
     .get(...args) as { n: number };
+  // Subset of those connects dispositioned "Intro (HU)" -- picked up, but
+  // hung up before the agent got past the intro. Surfaced alongside
+  // Conversations so a string of intro drop-offs (a bad opener, a saturated
+  // vendor's leads already pitched elsewhere) shows up without having to
+  // dig through individual call logs.
+  const introHangups = (
+    db
+      .prepare(
+        `SELECT COUNT(*) n FROM calls ca JOIN customers c ON c.id = ca.customer_id
+         WHERE c.owner_id = ? ${vendorClause} ${dateColClause('ca', 'occurred_at')} AND ca.outcome = 'connected' AND ca.disposition = 'hung_up_intro'`
+      )
+      .get(...args) as { n: number }
+  ).n;
 
   const appointments = (
     db.prepare(`SELECT COUNT(*) n FROM appointments a JOIN customers c ON c.id = a.customer_id WHERE c.owner_id = ? ${vendorClause} ${dateColClause('a', 'created_at')}`).get(...args) as { n: number }
@@ -175,7 +189,7 @@ export function getActivityStats(db: Database.Database, period: Period, ownerId:
     db.prepare(`SELECT COALESCE(SUM(c.lead_cost),0) s FROM customers c WHERE c.owner_id = ? ${vendorClause} ${dateColClause('c', 'purchased_at')}`).get(...args) as { s: number }
   ).s;
 
-  return { calls, contacts: contactsRow.n, conversations, appointments, applications, issued, ap, issuedPaidAp, leads, leadSpend };
+  return { calls, contacts: contactsRow.n, conversations, introHangups, appointments, applications, issued, ap, issuedPaidAp, leads, leadSpend };
 }
 
 export interface ConversionRates {
