@@ -16,6 +16,8 @@ export type DialSessionRow = {
   imported_from: string;
   imported_to: string;
   vendor_id: string;
+  uploaded_from: string;
+  uploaded_to: string;
   updated_at: string;
 };
 

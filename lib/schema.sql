@@ -420,5 +420,7 @@ CREATE TABLE IF NOT EXISTS dial_sessions (
   imported_from TEXT NOT NULL DEFAULT '', -- YYYY-MM-DD; only leads imported on/after this date, empty = no lower bound
   imported_to TEXT NOT NULL DEFAULT '', -- YYYY-MM-DD; only leads imported on/before this date, empty = no upper bound
   vendor_id TEXT NOT NULL DEFAULT '', -- lead_vendors.id this queue was built from; empty = all vendors
+  uploaded_from TEXT NOT NULL DEFAULT '', -- YYYY-MM-DD; only leads whose customers.created_at (real upload timestamp) is on/after this date
+  uploaded_to TEXT NOT NULL DEFAULT '', -- YYYY-MM-DD; only leads whose customers.created_at is on/before this date
   updated_at TEXT NOT NULL DEFAULT (datetime('now'))
 );

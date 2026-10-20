@@ -99,6 +99,14 @@ function migrate(db: Database.Database) {
   // lead_vendors.id this queue was built from, same "empty = all" convention
   // as categories above -- independent filter by which vendor sold the lead.
   addColumnIfMissing(db, 'dial_sessions', 'vendor_id', "TEXT NOT NULL DEFAULT ''");
+  // YYYY-MM-DD bounds filtering by customers.created_at (the real upload
+  // timestamp) -- deliberately separate from imported_from/imported_to
+  // above, which despite the name filter by lead_date (when it was bought).
+  // A batch can be bought one day and not actually uploaded into the CRM
+  // until days later, so "uploaded on X" and "bought on X" are genuinely
+  // different filters.
+  addColumnIfMissing(db, 'dial_sessions', 'uploaded_from', "TEXT NOT NULL DEFAULT ''");
+  addColumnIfMissing(db, 'dial_sessions', 'uploaded_to', "TEXT NOT NULL DEFAULT ''");
   // The real, never-backdated "when this lead was actually bought" date --
   // see the schema.sql comment on this column for why it's tracked
   // separately from purchased_at (which the aging clock can backdate) and

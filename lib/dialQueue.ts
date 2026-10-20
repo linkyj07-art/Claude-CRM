@@ -46,6 +46,29 @@ export function buildImportDateFilter(importedFrom?: string | null, importedTo?:
   return { clause, params };
 }
 
+// Filters the queue by customers.created_at -- the real, never-adjusted
+// moment a lead actually landed in THIS CRM (CSV import, manual add, or a
+// webhook), as opposed to buildImportDateFilter above which filters by
+// lead_date (when it was bought, per the lead sheet). The two deliberately
+// read different columns: a batch bought on one day can sit around and get
+// uploaded days or weeks later, so "show me what I uploaded on the 14th"
+// and "show me what was bought on the 14th" are genuinely different
+// questions. Shared between /dial's own queue-build and fetchEligibleLeads
+// below for the same reason the other filters are.
+export function buildUploadDateFilter(uploadedFrom?: string | null, uploadedTo?: string | null): { clause: string; params: Record<string, string> } {
+  let clause = '';
+  const params: Record<string, string> = {};
+  if (uploadedFrom && DATE_ONLY.test(uploadedFrom)) {
+    clause += ' AND date(created_at) >= date(@uploadedFrom)';
+    params.uploadedFrom = uploadedFrom;
+  }
+  if (uploadedTo && DATE_ONLY.test(uploadedTo)) {
+    clause += ' AND date(created_at) <= date(@uploadedTo)';
+    params.uploadedTo = uploadedTo;
+  }
+  return { clause, params };
+}
+
 // Filters the queue by customers.lead_vendor_id -- which vendor the lead was
 // actually bought from, independent of and on top of the age-status
 // category and lead-date filters above. Shared between /dial's own
@@ -66,12 +89,22 @@ export function buildVendorFilter(vendorId?: string | null): { clause: string; p
 // ready" banner never offers a category the agent deliberately excluded
 // when they started this Power Dial session. importedFrom/importedTo mirror
 // dial_sessions.imported_from/imported_to the same way.
-export function fetchEligibleLeads(db: Database.Database, ownerId: string, categories?: string[], importedFrom?: string | null, importedTo?: string | null, vendorId?: string | null): EligibleLead[] {
+export function fetchEligibleLeads(
+  db: Database.Database,
+  ownerId: string,
+  categories?: string[],
+  importedFrom?: string | null,
+  importedTo?: string | null,
+  vendorId?: string | null,
+  uploadedFrom?: string | null,
+  uploadedTo?: string | null
+): EligibleLead[] {
   promoteAgingLeads(db, ownerId);
   const cats = categories && categories.length > 0 ? categories : [...ALL_CATEGORIES];
   const workingSelected = cats.includes('working');
   const dateFilter = buildImportDateFilter(importedFrom, importedTo);
   const vendorFilter = buildVendorFilter(vendorId);
+  const uploadFilter = buildUploadDateFilter(uploadedFrom, uploadedTo);
 
   // Was `date(occurred_at) = date('now')` -- a UTC calendar day, while the
   // actual per-call cap check (app/api/leads/[id]/calls/route.ts) and every
@@ -104,6 +137,7 @@ export function fetchEligibleLeads(db: Database.Database, ownerId: string, categ
          )
          ${dateFilter.clause}
          ${vendorFilter.clause}
+         ${uploadFilter.clause}
        ORDER BY CASE status WHEN 'fresh' THEN 0 WHEN 'working' THEN 1 WHEN 'aging_45_90' THEN 2 ELSE 3 END,
          -- Same never-called-at-all/not-dialed-today priority /dial's own
          -- queue-build uses -- see the comment there for why this matters
@@ -118,7 +152,7 @@ export function fetchEligibleLeads(db: Database.Database, ownerId: string, categ
          -- banner, the freshest of them is the one offered/queued first.
          CASE WHEN status = 'fresh' THEN -CAST(strftime('%s', purchased_at) AS INTEGER) ELSE CAST(strftime('%s', purchased_at) AS INTEGER) END`
     )
-    .all({ ownerId, todayStart, workingSelected: workingSelected ? 1 : 0, ...categoryParams, ...dateFilter.params, ...vendorFilter.params }) as EligibleLead[];
+    .all({ ownerId, todayStart, workingSelected: workingSelected ? 1 : 0, ...categoryParams, ...dateFilter.params, ...vendorFilter.params, ...uploadFilter.params }) as EligibleLead[];
 
   return allRows.filter((r) => isTestLead(r) || isWithinCallingHours(r.state));
 }
