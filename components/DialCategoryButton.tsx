@@ -42,6 +42,14 @@ export default function DialCategoryButton() {
   // Which lead vendor to restrict the queue to -- empty means all vendors,
   // same "empty = no filter" convention as the date range above.
   const [vendorId, setVendorId] = useState('');
+  // Separate from the Lead date range above -- this filters by
+  // customers.created_at, the real moment a lead landed in THIS CRM (CSV
+  // import, manual add, webhook), not when it was bought. A batch can sit
+  // around after being bought and not get uploaded until days later, so
+  // "uploaded on the 14th" and "bought on the 14th" are genuinely different
+  // filters.
+  const [uploadedFrom, setUploadedFrom] = useState('');
+  const [uploadedTo, setUploadedTo] = useState('');
 
   useEffect(() => {
     setMounted(true);
@@ -84,6 +92,8 @@ export default function DialCategoryButton() {
     if (importedFrom) params.set('importedFrom', importedFrom);
     if (importedTo) params.set('importedTo', importedTo);
     if (vendorId) params.set('vendor', vendorId);
+    if (uploadedFrom) params.set('uploadedFrom', uploadedFrom);
+    if (uploadedTo) params.set('uploadedTo', uploadedTo);
     router.push(`/dial?${params.toString()}`);
   }
 
@@ -162,7 +172,35 @@ export default function DialCategoryButton() {
                 </button>
               )}
             </div>
-            <div className="mb-3 text-xs text-slate-500">{counts ? selectedTotal : '…'} leads match the categories above{(importedFrom || importedTo) ? ', before the lead date filter' : ''}.</div>
+            <div className="mb-4">
+              <div className="label mb-1">Upload date (optional)</div>
+              <p className="mb-1 text-xs text-slate-400">When the lead actually landed in this CRM — not when it was bought.</p>
+              <div className="flex items-center gap-2">
+                <input
+                  type="date"
+                  className="input flex-1"
+                  value={uploadedFrom}
+                  max={uploadedTo || undefined}
+                  onChange={(e) => setUploadedFrom(e.target.value)}
+                  aria-label="Uploaded on or after"
+                />
+                <span className="text-xs text-slate-400">to</span>
+                <input
+                  type="date"
+                  className="input flex-1"
+                  value={uploadedTo}
+                  min={uploadedFrom || undefined}
+                  onChange={(e) => setUploadedTo(e.target.value)}
+                  aria-label="Uploaded on or before"
+                />
+              </div>
+              {(uploadedFrom || uploadedTo) && (
+                <button type="button" className="mt-1 text-xs text-slate-400 hover:underline" onClick={() => { setUploadedFrom(''); setUploadedTo(''); }}>
+                  Clear dates
+                </button>
+              )}
+            </div>
+            <div className="mb-3 text-xs text-slate-500">{counts ? selectedTotal : '…'} leads match the categories above{(importedFrom || importedTo || uploadedFrom || uploadedTo) ? ', before the date filters' : ''}.</div>
             <div className="flex gap-2">
               <button className="btn-secondary flex-1" onClick={() => setOpen(false)}>Cancel</button>
               <button className="btn-primary flex-1" onClick={start}>⚡ Start Power Dial</button>
